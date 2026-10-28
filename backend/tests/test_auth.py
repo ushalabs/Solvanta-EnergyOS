@@ -1,3 +1,4 @@
+import asyncio
 import pytest
 import uuid
 from httpx import AsyncClient
@@ -95,3 +96,33 @@ async def test_auth_registration_and_login_flow(async_client: AsyncClient):
 async def test_auth_me_unauthorized(async_client: AsyncClient):
     response = await async_client.get("/api/v1/auth/me")
     assert response.status_code == 401
+
+@pytest.mark.asyncio
+async def test_concurrent_duplicate_organization_registration(async_client: AsyncClient):
+    """Verifies that concurrent duplicate organization creations trigger flush IntegrityError and return 409."""
+    suffix = str(uuid.uuid4())[:8]
+    org_name = f"Concurrent Org {suffix}"
+
+    res1, res2 = await asyncio.gather(
+        async_client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": f"concurrent_1_{suffix}@solvanta.energy",
+                "password": "SecurePassword123!",
+                "full_name": "Concurrent One",
+                "organization_name": org_name,
+            },
+        ),
+        async_client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": f"concurrent_2_{suffix}@solvanta.energy",
+                "password": "SecurePassword123!",
+                "full_name": "Concurrent Two",
+                "organization_name": org_name,
+            },
+        ),
+    )
+    statuses = {res1.status_code, res2.status_code}
+    assert 201 in statuses
+    assert 409 in statuses

@@ -35,8 +35,16 @@ async def register_user(payload: UserRegister, db: AsyncSession = Depends(get_db
             )
         new_org = Organization(name=cleaned_org_name)
         db.add(new_org)
-        await db.flush()
-        org_id = new_org.id
+        # Flush inside IntegrityError handling to catch concurrent duplicate organization creations
+        try:
+            await db.flush()
+            org_id = new_org.id
+        except IntegrityError:
+            await db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An organization with this name already exists. To join an existing organization, request an invitation from the administrator."
+            )
 
     new_user = User(
         email=payload.email,
@@ -49,7 +57,7 @@ async def register_user(payload: UserRegister, db: AsyncSession = Depends(get_db
     )
     db.add(new_user)
     
-    # 3. Handle concurrent registration race conditions
+    # 3. Handle concurrent user registration race conditions
     try:
         await db.commit()
         await db.refresh(new_user)
