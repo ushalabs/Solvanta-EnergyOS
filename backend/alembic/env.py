@@ -24,7 +24,26 @@ from app.models.audit import AuditLog
 config = context.config
 
 # Dynamically set sqlalchemy.url from application settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+raw_url = config.get_main_option("sqlalchemy.url")
+if not raw_url or "driver://user:pass@localhost/dbname" in raw_url:
+    migration_url = settings.DATABASE_URL
+    config.set_main_option("sqlalchemy.url", migration_url)
+else:
+    migration_url = raw_url
+
+from sqlalchemy.engine import make_url
+
+parsed_migration_url = make_url(migration_url)
+
+if settings.BACKEND_ENV == "test":
+    settings.assert_test_database_isolated(url_override=migration_url)
+else:
+    if settings.POSTGRES_DB != parsed_migration_url.database:
+        raise RuntimeError(
+            f"FATAL SAFETY GUARDRAIL: Mismatched migration target! "
+            f"POSTGRES_DB is '{settings.POSTGRES_DB}' but migration URL targets '{parsed_migration_url.database}'. "
+            "Both settings must match exactly before migrations can execute."
+        )
 
 # Interpret the config file for Python logging.
 if config.config_file_name is not None:
