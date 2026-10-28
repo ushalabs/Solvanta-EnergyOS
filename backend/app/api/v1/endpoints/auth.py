@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from ....core.security import verify_password, hash_password, create_access_token
 from ....db.session import get_db
@@ -13,24 +14,29 @@ router = APIRouter()
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def register_user(payload: UserRegister, db: AsyncSession = Depends(get_db)):
-    # Check if user already exists
+    # 1. Pre-check if email already exists
     existing = await db.execute(select(User).where(User.email == payload.email))
     if existing.scalars().first():
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             detail="A user with this email address already exists."
         )
 
-    # Optional Organization creation
+    # 2. Organization Handling: prevent arbitrary users from joining existing organizations
     org_id = None
-    if payload.organization_name:
-        org_result = await db.execute(select(Organization).where(Organization.name == payload.organization_name))
-        org = org_result.scalars().first()
-        if not org:
-            org = Organization(name=payload.organization_name)
-            db.add(org)
-            await db.flush()
-        org_id = org.id
+    if payload.organization_name and payload.organization_name.strip():
+        cleaned_org_name = payload.organization_name.strip()
+        org_result = await db.execute(select(Organization).where(Organization.name == cleaned_org_name))
+        existing_org = org_result.scalars().first()
+        if existing_org:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An organization with this name already exists. To join an existing organization, request an invitation from the administrator."
+            )
+        new_org = Organization(name=cleaned_org_name)
+        db.add(new_org)
+        await db.flush()
+        org_id = new_org.id
 
     new_user = User(
         email=payload.email,
@@ -39,11 +45,21 @@ async def register_user(payload: UserRegister, db: AsyncSession = Depends(get_db
         role=UserRole.CUSTOMER,
         organization_id=org_id,
         is_active=True,
+        is_superuser=False,
     )
     db.add(new_user)
-    await db.commit()
-    await db.refresh(new_user)
-    return new_user
+    
+    # 3. Handle concurrent registration race conditions
+    try:
+        await db.commit()
+        await db.refresh(new_user)
+        return new_user
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Registration conflict: a user with this email or organization already exists."
+        )
 
 @router.post("/login", response_model=Token)
 async def login(

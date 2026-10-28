@@ -4,10 +4,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const AUTH_TOKEN_KEY = '@solvanta_auth_token';
 
 export function getBaseApiUrl(): string {
+  // 1. Explicit environment override (physical device LAN or custom cloud endpoint)
+  const envUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+  if (envUrl && envUrl.trim().length > 0) {
+    const trimmed = envUrl.trim().replace(/\/+$/, '');
+    return trimmed.endsWith('/api/v1') ? trimmed : `${trimmed}/api/v1`;
+  }
+
+  // 2. Android emulator host loopback address
   if (Platform.OS === 'android') {
-    // Android emulator host loopback address
     return 'http://10.0.2.2:8000/api/v1';
   }
+
+  // 3. Fallback for iOS simulator and Web preview
   return 'http://localhost:8000/api/v1';
 }
 
@@ -33,6 +42,23 @@ export class SolvantaApiError extends Error {
     this.status = status;
     this.data = data;
   }
+}
+
+export interface BuildingPayload {
+  name: string;
+  address?: string;
+  timezone?: string;
+  pv_capacity_kwp: number;
+  inverter_rating_kw: number;
+  battery: {
+    nominal_capacity_kwh: number;
+    usable_capacity_kwh: number;
+    initial_soc_pct: number;
+    minimum_soc_pct: number;
+    max_charge_kw: number;
+    max_discharge_kw: number;
+    round_trip_efficiency: number;
+  };
 }
 
 export class SolvantaApiClient {
@@ -66,7 +92,7 @@ export class SolvantaApiClient {
     await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  async request<T>(endpoint: string, options: RequestInit = {}, timeoutMs: number = 10000): Promise<T> {
     const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
     
     const headers = new Headers(options.headers || {});
@@ -79,48 +105,78 @@ export class SolvantaApiClient {
       headers.set('Authorization', `Bearer ${token}`);
     }
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    if (!response.ok) {
-      let errorData: ApiProblemDetails;
-      try {
-        errorData = await response.json();
-      } catch {
-        errorData = { detail: response.statusText };
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        signal: options.signal || controller.signal,
+      });
+
+      if (!response.ok) {
+        let errorData: ApiProblemDetails;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { detail: response.statusText };
+        }
+        throw new SolvantaApiError(response.status, errorData);
       }
-      throw new SolvantaApiError(response.status, errorData);
-    }
 
-    if (response.status === 204) {
-      return {} as T;
-    }
+      if (response.status === 204) {
+        return {} as T;
+      }
 
-    return await response.json();
+      return await response.json();
+    } catch (err: any) {
+      if (err instanceof SolvantaApiError) {
+        throw err;
+      }
+      if (err?.name === 'AbortError') {
+        throw new SolvantaApiError(408, {
+          error: {
+            code: 'REQUEST_TIMEOUT',
+            message: `API request timed out after ${timeoutMs}ms: ${url}`,
+            status: 408,
+          },
+          detail: `API request timed out after ${timeoutMs}ms`,
+        });
+      }
+      throw new SolvantaApiError(0, {
+        error: {
+          code: 'NETWORK_ERROR',
+          message: `Network failure connecting to ${url}: ${err?.message || 'Host unreachable'}`,
+          status: 0,
+        },
+        detail: `Network failure connecting to ${url}`,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
-  async get<T>(endpoint: string): Promise<T> {
-    return this.request<T>(endpoint, { method: 'GET' });
+  async get<T>(endpoint: string, timeoutMs?: number): Promise<T> {
+    return this.request<T>(endpoint, { method: 'GET' }, timeoutMs);
   }
 
-  async post<T>(endpoint: string, body?: unknown): Promise<T> {
+  async post<T>(endpoint: string, body?: unknown, timeoutMs?: number): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: body ? JSON.stringify(body) : undefined,
-    });
+    }, timeoutMs);
   }
 
-  async patch<T>(endpoint: string, body?: unknown): Promise<T> {
+  async patch<T>(endpoint: string, body?: unknown, timeoutMs?: number): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PATCH',
       body: body ? JSON.stringify(body) : undefined,
-    });
+    }, timeoutMs);
   }
 
-  async delete<T>(endpoint: string): Promise<T> {
-    return this.request<T>(endpoint, { method: 'DELETE' });
+  async delete<T>(endpoint: string, timeoutMs?: number): Promise<T> {
+    return this.request<T>(endpoint, { method: 'DELETE' }, timeoutMs);
   }
 
   // Domain shortcuts
@@ -152,28 +208,19 @@ export class SolvantaApiClient {
   }
 
   async getCurrentUser() {
-    return this.get<{ id: string; email: string; full_name: string; role: string }>('/auth/me');
+    return this.get<{ id: string; email: string; full_name: string; role: string; is_superuser: boolean }>('/auth/me');
   }
 
   async getBuildings() {
-    return this.get<Array<{
-      id: string;
-      name: string;
-      address?: string;
-      pv_capacity_kwp: number;
-      inverter_rating_kw: number;
-      battery_nominal_kwh: number;
-      battery_usable_kwh: number;
-      battery_initial_soc_pct: number;
-      battery_min_soc_pct: number;
-      battery_max_charge_kw: number;
-      battery_max_discharge_kw: number;
-      battery_round_trip_efficiency: number;
-    }>>('/buildings');
+    return this.get<Array<BuildingPayload & { id: string; owner_id: string; organization_id?: string }>>('/buildings');
   }
 
   async getBuilding(buildingId: string) {
-    return this.get<any>(`/buildings/${buildingId}`);
+    return this.get<BuildingPayload & { id: string; owner_id: string; organization_id?: string }>(`/buildings/${buildingId}`);
+  }
+
+  async createBuilding(payload: BuildingPayload) {
+    return this.post<BuildingPayload & { id: string; owner_id: string; organization_id?: string }>('/buildings', payload);
   }
 }
 

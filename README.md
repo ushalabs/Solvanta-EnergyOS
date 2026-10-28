@@ -1,7 +1,8 @@
 # Solvanta — Intelligent Solar and Backup Energy Management Platform
 
-[![FYP-I Milestone](https://img.shields.io/badge/FYP--I-Phase%200%20Audit-lime?style=flat-square)](#phase-gates)
+[![FYP-I Milestone](https://img.shields.io/badge/FYP--I-Phase%2002%20Backend-lime?style=flat-square)](#phase-gates)
 [![Tech Stack](https://img.shields.io/badge/Stack-React%20Native%20%7C%20FastAPI%20%7C%20PostgreSQL%20%7C%20n8n%20%7C%20MCP-black?style=flat-square)](#architecture)
+[![CI Status](https://img.shields.io/badge/CI-GitHub%20Actions-green?style=flat-square)](#)
 [![License](https://img.shields.io/badge/License-Proprietary%20%2F%20Academic-blue?style=flat-square)](#)
 
 > **Solvanta** is an Android-first, software-engineered building energy resilience digital twin. It models solar photovoltaic (PV) generation, battery storage dynamics, and building appliance constraints to simulate shortages and grid outages, optimize flexible appliance schedules, explain resilience decisions, and solicit human approval before executing simulated outcomes.
@@ -42,7 +43,7 @@ $$\text{OBSERVE} \longrightarrow \text{PREDICT} \longrightarrow \text{SIMULATE} 
                                        │
                            REST / WebSocket (FastAPI)
                                        │
-                              FASTAPI BACKEND
+                               FASTAPI BACKEND
                      Auth / Tenancy / Projects / Approvals
                                        │
      ┌─────────────────────────────────┼─────────────────────────────────┐
@@ -51,7 +52,7 @@ SOLAR & ROOF ENGINES          ENERGY DOMAIN ENGINES            OPERATIONS SERVIC
 CV + Roof Polygon Geometry    Deterministic 15m Simulation     Telemetry Provider Abstraction
 Solar PV Sizing & Yield       PV & Load Forecasting            Anomaly Detection & Incidents
 AR 2D/3D Model Fallback       OR-Tools CP-SAT Scheduling       Plan Approval & Verification
-                              Resilience Source Optimizer      Audit Logging
+                               Resilience Source Optimizer      Audit Logging
      │                                 │                                 │
      └─────────────────────────────────┼─────────────────────────────────┘
                                        │
@@ -66,7 +67,7 @@ AR 2D/3D Model Fallback       OR-Tools CP-SAT Scheduling       Plan Approval & V
 ```
 
 ### Stack Components
-- **Mobile Client:** React Native, Expo SDK (evaluated for AR compatibility), Expo Router, TypeScript, SVG charts, persistent Dark/Light appearance.
+- **Mobile Client:** React Native, Expo SDK 57, Expo Router, TypeScript, SVG charts, persistent Dark/Light appearance.
 - **Backend API:** Python 3.11+, FastAPI, Pydantic v2, SQLAlchemy, Alembic.
 - **Database:** PostgreSQL 16 Alpine running in Docker Compose with relational integrity and time-series indexes.
 - **Simulation Engine:** Deterministic, pure-Python energy-balance engine operating on parameterized 15-minute intervals. Zero LLM math.
@@ -125,13 +126,89 @@ To ensure scientific integrity and academic rigor:
 
 ---
 
-## 7. Documentation Index
+## 7. Clean Checkout Setup & Development Runbook
 
-### Phase 1 local testing
+### Prerequisites
+- **Docker Desktop:** Active daemon with Compose v2.
+- **Python:** Version 3.11 to 3.13.
+- **Node.js:** Version 20+ with npm.
+- **Android SDK:** (Optional for native emulator preview) ADB on PATH.
 
-Phase 1 is a fixture-only UI foundation awaiting human review. Backend, numerical engines, database saves, MCP execution, and native AR are not connected. See [the independent audit](docs/ui-evidence/PHASE_01_VISUAL_AUDIT.md).
+### 1. Environment Configuration
+Copy the provided environment template to `.env`:
+```powershell
+cp .env.example .env
+```
+*(The defaults in `.env.example` configure local development ports and database credentials).*
 
-From `mobile/`, install with `npm ci`, then run `npm test -- --runInBand`, `npx tsc --noEmit`, and `npx expo install --check`. With an Android emulator running and matching Expo Go 57 installed, run `./scripts/start-android-preview.ps1` from the repository root. Open `http://localhost:8765` for the live native ADB viewer; click to tap and drag to scroll. The viewer requires Python and the Android SDK and binds only to loopback. `python scripts/audit-android.py` captures native evidence; start it from dark Home with the Expo developer menu closed. UI demo plan approval does not approve a project phase.
+### 2. Start PostgreSQL Container
+Start the PostgreSQL 16 database container in the background:
+```powershell
+docker compose up -d db
+```
+Verify container status:
+```powershell
+docker ps
+```
+The container `solvanta-postgres` will show as `Up (healthy)` on port `5432`.
+
+### 3. Backend Setup & Database Migrations
+Create the Python virtual environment and install dependencies:
+```powershell
+cd backend
+python -m venv .venv
+& .venv/Scripts/Activate.ps1   # On Linux/macOS: source .venv/bin/activate
+pip install -r requirements.txt
+```
+Apply Alembic migrations to set up the relational database tables:
+```powershell
+alembic upgrade head
+```
+Seed the development database with demo organization, users, and building twin:
+```powershell
+python scripts/seed_demo_data.py
+```
+Run backend tests to verify 100% green status:
+```powershell
+pytest -v
+```
+Start the FastAPI development server:
+```powershell
+python run.py
+```
+- Interactive Swagger API docs: `http://localhost:8000/docs`
+- Health probe: `http://localhost:8000/health`
+- Readiness probe: `http://localhost:8000/ready`
+
+Verify authenticated live API flow:
+```powershell
+python scripts/verify_live_api.py
+```
+
+### 4. Mobile Setup & Running the App
+From a second terminal:
+```powershell
+cd mobile
+npm install --legacy-peer-deps
+```
+Run TypeScript typecheck and Jest tests:
+```powershell
+npx tsc --noEmit
+npm test
+```
+Start the Expo Metro Bundler:
+```powershell
+# For Android Emulator (uses http://10.0.2.2:8000/api/v1):
+npm run android
+
+# For Web preview (uses http://localhost:8000/api/v1):
+npm run web
+```
+*(For physical devices on the local Wi-Fi LAN, set `EXPO_PUBLIC_API_BASE_URL=http://<YOUR_LAN_IP>:8000` in `.env` before launching).*
+
+---
+
+## 8. Documentation Index
 
 - [`Solvanta.md`](Solvanta.md) — Master product, domain, and academic specification.
 - [`AntiGravity_prompt.md`](AntiGravity_prompt.md) — Authoritative engineering development contract and acceptance criteria.

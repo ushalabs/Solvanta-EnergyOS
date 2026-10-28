@@ -1,11 +1,13 @@
 import os
-from typing import List, Union
-from pydantic import AnyHttpUrl, field_validator
+from typing import List
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+INSECURE_DEV_SECRET = "solvanta-local-dev-insecure-secret-key-change-in-production-32chars"
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "../.env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore"
@@ -17,7 +19,7 @@ class Settings(BaseSettings):
     BACKEND_ENV: str = "development"
 
     # Security & Auth
-    SECRET_KEY: str = "solvanta-local-dev-insecure-secret-key-change-in-production-32chars"
+    SECRET_KEY: str = INSECURE_DEV_SECRET
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
 
@@ -38,5 +40,14 @@ class Settings(BaseSettings):
         "http://10.0.2.2:8000",
         "exp://localhost:8081",
     ]
+
+    @model_validator(mode="after")
+    def validate_production_security(self) -> "Settings":
+        if self.BACKEND_ENV == "production":
+            if self.SECRET_KEY == INSECURE_DEV_SECRET or "insecure" in self.SECRET_KEY.lower():
+                raise ValueError("Insecure default SECRET_KEY is strictly forbidden in production environment.")
+            if len(self.SECRET_KEY) < 32:
+                raise ValueError("Production SECRET_KEY must be at least 32 characters long.")
+        return self
 
 settings = Settings()

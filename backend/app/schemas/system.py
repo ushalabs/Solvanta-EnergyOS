@@ -10,5 +10,5 @@ class HealthResponse(BaseModel):
 class ReadyResponse(BaseModel):
     ready: bool = True
     database: str = "connected"
-    engines: str = "initialized"
+    engines: str = "uninitialized (scheduled Phase 5+)"
     timestamp: datetime

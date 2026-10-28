@@ -44,10 +44,10 @@ Every time-series metric and numerical output carries an explicit provenance ind
 ### 2.1 System Health
 * **`GET /health`**
   - Returns `200 OK` with basic service status.
-  - Response: `{"status": "ok", "version": "1.0.0", "timestamp": "2026-10-28T16:00:00Z"}`
+  - Response: `{"status": "ok", "version": "1.0.0", "environment": "development", "timestamp": "2026-10-28T16:00:00Z"}`
 * **`GET /ready`**
-  - Returns `200 OK` when DB connection and core engine dependencies are active.
-  - Response: `{"ready": true, "database": "connected", "engines": "initialized"}`
+  - Returns `200 OK` when DB connection is verified. Engine readiness reflects development phase status.
+  - Response: `{"ready": true, "database": "connected", "engines": "uninitialized (scheduled Phase 5+)", "timestamp": "2026-10-28T16:00:00Z"}`
 
 ### 2.2 Buildings & Equipment
 * **`POST /api/v1/buildings`**
