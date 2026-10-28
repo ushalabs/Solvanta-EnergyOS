@@ -24,10 +24,12 @@ from app.models.audit import AuditLog
 config = context.config
 
 # Dynamically set sqlalchemy.url from application settings
-migration_url = config.get_main_option("sqlalchemy.url")
-if not migration_url:
+raw_url = config.get_main_option("sqlalchemy.url")
+if not raw_url or "driver://user:pass@localhost/dbname" in raw_url:
     migration_url = settings.DATABASE_URL
     config.set_main_option("sqlalchemy.url", migration_url)
+else:
+    migration_url = raw_url
 
 from sqlalchemy.engine import make_url
 
