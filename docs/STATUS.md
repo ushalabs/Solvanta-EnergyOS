@@ -1,10 +1,10 @@
 # Solvanta — Current Project Status
 
 **Last Updated:** 28 October 2026  
-**Active Phase:** Phase 0 — Verified repo audit, requirements and research contracts  
+**Active Phase:** Phase 1 — Reference-matched UI foundation + 7 functional-screen shells  
 **Overall FYP-I Target:** Complete local working prototype through MCP by 10 November 2026  
 **Current Git Remote:** `https://github.com/ushalabs/Solvanta-EnergyOS`  
-**Current Branch:** `main` (feature branch `phase/00-repo-audit`)  
+**Current Branch:** `phase/01-mobile-theme`  
 **Approval Protocol:** STRICT — Work 1 phase → test → commit → push → provide evidence → ask user approval → STOP.
 
 ---
@@ -13,8 +13,8 @@
 
 | Phase | Milestone | Owner | Status | Tests | Blockers | Target Date |
 |---|---|---|---|---|---|---|
-| **00** | **Repo Audit & Contracts** | Antigravity / Team | **IN PROGRESS (Ready for Review)** | PASS (Toolchain & files verified) | None | 28 Oct 2026 |
-| 01 | Mobile UI Foundation & Shells | Antigravity / Team | NOT STARTED | - | Requires Phase 0 Approval | 28 Oct 2026 |
+| **00** | **Repo Audit & Contracts** | Antigravity / Team | **COMPLETED & APPROVED** | PASS (Toolchain & files verified) | None | 28 Oct 2026 |
+| **01** | **Mobile UI Foundation & Shells** | Antigravity / Team | **COMPLETED (Pending Review)** | PASS (8 tests, tsc, web bundle) | None | 28 Oct 2026 |
 | 02 | Backend, PostgreSQL & Local Runtime | Antigravity / Team | NOT STARTED | - | Requires Phase 1 Approval | 29 Oct 2026 |
 | 03 | Building & Equipment Configuration | Antigravity / Team | NOT STARTED | - | Requires Phase 2 Approval | 29 Oct 2026 |
 | 04 | Rooftop CV & Geometry Editor | Antigravity / Team | NOT STARTED | - | Requires Phase 3 Approval | 30 Oct 2026 |
