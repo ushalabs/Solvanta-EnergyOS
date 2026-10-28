@@ -10,8 +10,8 @@ In accordance with Section K of `AntiGravity_prompt.md`, **no phase may begin un
 
 | Phase | Title | Branch | Commit SHA | Tests | UI Evidence | GPT Review | User Approval | Approval Date | Notes |
 |:---:|---|---|---|:---:|:---:|:---:|:---:|:---:|---|
-| **00** | Audit & Delivery Contract | `phase/00-repo-audit` | `b29e88b` | PASS | N/A (Doc phase) | Pending | **PENDING** | - | Initial repository audit, contracts, ADRs, test plan, competitor matrix |
-| **01** | Mobile UI Foundation & Shells | `phase/01-mobile-theme` | - | - | - | - | **LOCKED** | - | Awaiting Phase 0 Approval |
+| **00** | Audit & Delivery Contract | `phase/00-repo-audit` | `50140d3` | PASS | N/A (Doc phase) | Completed | **APPROVED** | 28 Oct 2026 | User approved; ADB added to PATH; team names removed from README |
+| **01** | Mobile UI Foundation & Shells | `phase/01-mobile-theme` | *[Pending Commit]* | PASS (8 tests) | PASS (Visual Audit) | Pending | **PENDING** | - | Expo app, neon tokens, floating dock, 7 screens matching reference |
 | **02** | Backend & Local Runtime | `phase/02-backend-db` | - | - | - | - | **LOCKED** | - | Awaiting Phase 1 Approval |
 | **03** | Building & Equipment Models | `phase/03-building-models` | - | - | - | - | **LOCKED** | - | Awaiting Phase 2 Approval |
 | **04** | Rooftop CV & Geometry | `phase/04-roof-geometry` | - | - | - | - | **LOCKED** | - | Awaiting Phase 3 Approval |
