@@ -22,14 +22,14 @@ $$\text{OBSERVE} \longrightarrow \text{PREDICT} \longrightarrow \text{SIMULATE} 
 
 ---
 
-## 2. Team and Ownership
+## 2. Engineering Subsystems and Ownership
 
-| Team Member | ID | Core Responsibility |
-|---|---:|---|
-| **M. Usman** | 49649 | Project Lead; solar site intelligence, rooftop CV geometry, panel placement, PV design engine, AR visualization, and architecture oversight |
-| **Ahmad Arsalan** | 54381 | Building load digital twin, discrete-time energy balance & battery degradation engine, PV and load forecasting |
-| **Hamzah Ahsan** | 56187 | Appliance scheduling, outage resilience optimization, what-if configuration engine, recommendations, and human approval state machine |
-| **Salman Akbar** | 53002 | Telemetry provider abstraction, simulated telemetry provider, n8n workflow orchestration, anomaly detection, incident diagnosis, and post-plan verification |
+| Subsystem | Functional Scope |
+|---|---|
+| **Solar Site Intelligence & AR** | Solar site intelligence, rooftop CV geometry, panel placement, PV design engine, AR visualization, and architecture |
+| **Energy Simulation & Forecast** | Building load digital twin, discrete-time energy balance & battery degradation engine, PV and load forecasting |
+| **Optimization & Resilience** | Appliance scheduling, outage resilience optimization, what-if configuration engine, recommendations, and human approval state machine |
+| **Operations & Orchestration** | Telemetry provider abstraction, simulated telemetry provider, n8n workflow orchestration, anomaly detection, incident diagnosis, and post-plan verification |
 
 ---
 

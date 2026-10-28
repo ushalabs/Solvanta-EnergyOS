@@ -14,20 +14,20 @@
 | Phase | Milestone | Owner | Status | Tests | Blockers | Target Date |
 |---|---|---|---|---|---|---|
 | **00** | **Repo Audit & Contracts** | Antigravity / Team | **IN PROGRESS (Ready for Review)** | PASS (Toolchain & files verified) | None | 28 Oct 2026 |
-| 01 | Mobile UI Foundation & Shells | Antigravity / Usman | NOT STARTED | - | Requires Phase 0 Approval | 28 Oct 2026 |
-| 02 | Backend, PostgreSQL & Local Runtime | Antigravity / Arsalan | NOT STARTED | - | Requires Phase 1 Approval | 29 Oct 2026 |
-| 03 | Building & Equipment Configuration | Antigravity / Usman | NOT STARTED | - | Requires Phase 2 Approval | 29 Oct 2026 |
-| 04 | Rooftop CV & Geometry Editor | Antigravity / Usman | NOT STARTED | - | Requires Phase 3 Approval | 30 Oct 2026 |
-| 05 | PV Sizing & Generation Engine | Antigravity / Usman | NOT STARTED | - | Requires Phase 4 Approval | 30 Oct 2026 |
-| 06 | Appliance Digital Twin | Antigravity / Arsalan | NOT STARTED | - | Requires Phase 5 Approval | 31 Oct 2026 |
-| 07 | Energy & Outage Simulator | Antigravity / Arsalan | NOT STARTED | - | Requires Phase 6 Approval | 01 Nov 2026 |
-| 08 | Forecasting & Shortage Risk | Antigravity / Arsalan | NOT STARTED | - | Requires Phase 7 Approval | 02 Nov 2026 |
-| 09 | Appliance Scheduling (OR-Tools) | Antigravity / Hamzah | NOT STARTED | - | Requires Phase 8 Approval | 03 Nov 2026 |
-| 10 | Outage Resilience Optimizer | Antigravity / Hamzah | NOT STARTED | - | Requires Phase 9 Approval | 04 Nov 2026 |
-| 11 | What-If & Approval State Machine | Antigravity / Hamzah | NOT STARTED | - | Requires Phase 10 Approval | 05 Nov 2026 |
-| 12 | Digital Twin Replay & AR Preview | Antigravity / Usman | NOT STARTED | - | Requires Phase 11 Approval | 06 Nov 2026 |
-| 13 | n8n Workflow Automation | Antigravity / Salman | NOT STARTED | - | Requires Phase 12 Approval | 07 Nov 2026 |
-| 14 | Simulated Telemetry & Anomaly Ops | Antigravity / Salman | NOT STARTED | - | Requires Phase 13 Approval | 08 Nov 2026 |
+| 01 | Mobile UI Foundation & Shells | Antigravity / Team | NOT STARTED | - | Requires Phase 0 Approval | 28 Oct 2026 |
+| 02 | Backend, PostgreSQL & Local Runtime | Antigravity / Team | NOT STARTED | - | Requires Phase 1 Approval | 29 Oct 2026 |
+| 03 | Building & Equipment Configuration | Antigravity / Team | NOT STARTED | - | Requires Phase 2 Approval | 29 Oct 2026 |
+| 04 | Rooftop CV & Geometry Editor | Antigravity / Team | NOT STARTED | - | Requires Phase 3 Approval | 30 Oct 2026 |
+| 05 | PV Sizing & Generation Engine | Antigravity / Team | NOT STARTED | - | Requires Phase 4 Approval | 30 Oct 2026 |
+| 06 | Appliance Digital Twin | Antigravity / Team | NOT STARTED | - | Requires Phase 5 Approval | 31 Oct 2026 |
+| 07 | Energy & Outage Simulator | Antigravity / Team | NOT STARTED | - | Requires Phase 6 Approval | 01 Nov 2026 |
+| 08 | Forecasting & Shortage Risk | Antigravity / Team | NOT STARTED | - | Requires Phase 7 Approval | 02 Nov 2026 |
+| 09 | Appliance Scheduling (OR-Tools) | Antigravity / Team | NOT STARTED | - | Requires Phase 8 Approval | 03 Nov 2026 |
+| 10 | Outage Resilience Optimizer | Antigravity / Team | NOT STARTED | - | Requires Phase 9 Approval | 04 Nov 2026 |
+| 11 | What-If & Approval State Machine | Antigravity / Team | NOT STARTED | - | Requires Phase 10 Approval | 05 Nov 2026 |
+| 12 | Digital Twin Replay & AR Preview | Antigravity / Team | NOT STARTED | - | Requires Phase 11 Approval | 06 Nov 2026 |
+| 13 | n8n Workflow Automation | Antigravity / Team | NOT STARTED | - | Requires Phase 12 Approval | 07 Nov 2026 |
+| 14 | Simulated Telemetry & Anomaly Ops | Antigravity / Team | NOT STARTED | - | Requires Phase 13 Approval | 08 Nov 2026 |
 | 15 | E2E Integration & Security Audit | Antigravity / Team | NOT STARTED | - | Requires Phase 14 Approval | 09 Nov 2026 |
 | 16 | MCP Server & AI Operations Tools | Antigravity / Team | NOT STARTED | - | Requires Phase 15 Approval | 09 Nov 2026 |
 | 17 | FYP-I Release Candidate & Handoff | Antigravity / Team | NOT STARTED | - | Requires Phase 16 Approval | 10 Nov 2026 |
@@ -42,9 +42,9 @@
 - **Python:** 3.13.7 (Verified)
 - **Docker Engine / CLI:** 29.5.2 (Verified; Desktop daemon needs to be running for Phase 2)
 - **Git:** 2.55.0.windows.5 (Verified)
-- **GitHub Remote:** `https://github.com/ushalabs/Solvanta-EnergyOS` (Verified, write access configured)
+- **Git Remote:** `https://github.com/ushalabs/Solvanta-EnergyOS` (Verified, write access configured)
 - **GitHub CLI (`gh`):** Not installed (Git commands used directly)
-- **Android ADB / Java:** Not present in user PATH; Expo web preview and Expo development client workflows planned for mobile development, with explicit device hardware blocker gate documented for native AR.
+- **Android ADB:** Added to User PATH and verified (`C:\Users\HP\AppData\Local\Android\Sdk\platform-tools\adb.exe`, v1.0.41). ANDROID_HOME and ANDROID_SDK_ROOT configured.
 
 ---
 
