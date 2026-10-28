@@ -12,7 +12,7 @@ In accordance with Section K of `AntiGravity_prompt.md`, **no phase may begin un
 |:---:|---|---|---|:---:|:---:|:---:|:---:|:---:|---|
 | **00** | Audit & Delivery Contract | `phase/00-repo-audit` | `50140d3` | PASS | N/A (Doc phase) | Completed | **APPROVED** | 28 Oct 2026 | User approved; ADB added to PATH; team names removed from README |
 | **01** | Mobile UI Foundation & Shells | `phase/01-mobile-theme` | `d8c918a` | PASS (10 unit/persistence tests; tsc clean) | PASS (Native Expo Go & Web evidence in `docs/ui-evidence/`) | Completed | **APPROVED** | 28 Oct 2026 | User tested and approved; peer corrections committed |
-| **02** | Backend & Local Runtime | `phase/02-backend-db` | *[Pending Push]* | PASS (7 backend pytest tests; 13 mobile jest tests) | N/A (Backend API phase) | Completed | **AWAITING USER APPROVAL** | - | FastAPI, Docker PostgreSQL, Alembic migrations, JWT auth, buildings CRUD, seed script, mobile API client |
+| **02** | Backend & Local Runtime | `phase/02-backend-db` | `e9d558a` | PASS (7 backend pytest tests; 13 mobile jest tests) | N/A (Backend API phase) | Completed | **AWAITING USER APPROVAL** | - | FastAPI, Docker PostgreSQL, Alembic migrations, JWT auth, buildings CRUD, seed script, mobile API client |
 | **03** | Building & Equipment Models | `phase/03-building-models` | - | - | - | - | **LOCKED** | - | Awaiting Phase 2 Approval |
 | **04** | Rooftop CV & Geometry | `phase/04-roof-geometry` | - | - | - | - | **LOCKED** | - | Awaiting Phase 3 Approval |
 | **05** | PV Sizing & Generation Engine | `phase/05-pv-engine` | - | - | - | - | **LOCKED** | - | Awaiting Phase 4 Approval |
