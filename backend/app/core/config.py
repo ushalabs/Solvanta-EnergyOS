@@ -42,12 +42,29 @@ class Settings(BaseSettings):
     ]
 
     @model_validator(mode="after")
-    def validate_production_security(self) -> "Settings":
+    def validate_environment_and_security(self) -> "Settings":
         if self.BACKEND_ENV == "production":
             if self.SECRET_KEY == INSECURE_DEV_SECRET or "insecure" in self.SECRET_KEY.lower():
                 raise ValueError("Insecure default SECRET_KEY is strictly forbidden in production environment.")
             if len(self.SECRET_KEY) < 32:
                 raise ValueError("Production SECRET_KEY must be at least 32 characters long.")
+        elif self.BACKEND_ENV == "test":
+            # Isolate test database from development database
+            if self.POSTGRES_DB == "solvanta_db" and "solvanta_test_db" not in self.DATABASE_URL:
+                self.POSTGRES_DB = "solvanta_test_db"
+                self.DATABASE_URL = f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/solvanta_test_db"
         return self
+
+    def assert_test_database_isolated(self) -> None:
+        """Enforces guardrail: tests must NEVER run against development or production databases."""
+        db_name = self.POSTGRES_DB.lower()
+        url = self.DATABASE_URL.lower()
+        if "test" not in db_name and "test" not in url:
+            raise RuntimeError(
+                f"FATAL SAFETY GUARDRAIL: Refusing to run tests against non-test database: '{self.POSTGRES_DB}'. "
+                f"DATABASE_URL is '{self.DATABASE_URL}'. "
+                "Tests can only run against a dedicated database containing 'test' in its name (e.g. 'solvanta_test_db'). "
+                "Set BACKEND_ENV=test or configure DATABASE_URL=postgresql+asyncpg://.../solvanta_test_db."
+            )
 
 settings = Settings()

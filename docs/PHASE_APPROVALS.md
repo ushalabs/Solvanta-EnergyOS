@@ -11,11 +11,8 @@ In accordance with Section K of `AntiGravity_prompt.md`, **no phase may begin un
 | Phase | Title | Branch | Commit SHA | Tests | UI Evidence | GPT Review | User Approval | Approval Date | Notes |
 |:---:|---|---|---|:---:|:---:|:---:|:---:|:---:|---|
 | **00** | Audit & Delivery Contract | `phase/00-repo-audit` | `50140d3` | PASS | N/A (Doc phase) | Completed | **APPROVED** | 28 Oct 2026 | User approved; ADB added to PATH; team names removed from README |
-| **01** | Mobile UI Foundation & Shells | `phase/01-mobile-theme` | Base `f4ab108` + local corrections (uncommitted) | 10 tests; typecheck; dependency check; web export | Native Expo Go evidence: `docs/ui-evidence/android/` | Independent review recorded; limits documented | **PENDING** | - | User testing requested; Phase 2 remains locked |
-| **02** | Backend & Local Runtime | `phase/02-backend-db` | - | - | - | - | **LOCKED** | - | Awaiting Phase 1 Approval |
-=======
 | **01** | Mobile UI Foundation & Shells | `phase/01-mobile-theme` | `d8c918a` | PASS (10 unit/persistence tests; tsc clean) | PASS (Native Expo Go & Web evidence in `docs/ui-evidence/`) | Completed | **APPROVED** | 28 Oct 2026 | User tested and approved; peer corrections committed |
-| **02** | Backend & Local Runtime | `fix/phase-02-review-corrections` | `fd0586b` | PASS (11 backend tests; 16 mobile tests; CI workflow) | N/A (Backend API phase) | Review Corrections Completed | **AWAITING USER APPROVAL** | - | Phase 2 Review corrections: org scoping, superuser privilege, building constraints, contract payload, timeouts, CI pipeline |
+| **02** | Backend & Local Runtime | `fix/phase-02-final-corrections` | *[Pending Push]* | PASS (13 backend tests; 16 mobile tests; CI workflow) | N/A (Backend API phase) | Final Reviewer Corrections Completed | **AWAITING USER APPROVAL** | - | Isolated test DB, concurrent org registration, cleaned ledgers, Expo env instructions |
 | **03** | Building & Equipment Models | `phase/03-building-models` | - | - | - | - | **LOCKED** | - | Awaiting Phase 2 Approval |
 | **04** | Rooftop CV & Geometry | `phase/04-roof-geometry` | - | - | - | - | **LOCKED** | - | Awaiting Phase 3 Approval |
 | **05** | PV Sizing & Generation Engine | `phase/05-pv-engine` | - | - | - | - | **LOCKED** | - | Awaiting Phase 4 Approval |

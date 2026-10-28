@@ -189,8 +189,19 @@ python scripts/verify_live_api.py
 From a second terminal:
 ```powershell
 cd mobile
+cp .env.example .env
 npm install --legacy-peer-deps
 ```
+
+#### Physical Device Configuration (Local Wi-Fi LAN)
+To connect a physical smartphone running Expo Go:
+1. **Find host PC IP:** Run `ipconfig` on Windows (or `ifconfig` / `ip a` on Linux) and note your local IPv4 address (e.g., `192.168.1.50`).
+2. **Configure mobile environment:** In `mobile/.env`, set `EXPO_PUBLIC_API_BASE_URL`:
+   ```env
+   EXPO_PUBLIC_API_BASE_URL=http://192.168.1.50:8000/api/v1
+   ```
+3. **Test LAN resolution:** Open `http://<YOUR_LAN_IP>:8000/api/v1/system/health` in your mobile phone's browser while connected to the same Wi-Fi. It should return `{"status":"ok",...}`. *(Ensure Windows Defender Firewall allows incoming connections on port 8000)*.
+
 Run TypeScript typecheck and Jest tests:
 ```powershell
 npx tsc --noEmit
@@ -198,13 +209,15 @@ npm test
 ```
 Start the Expo Metro Bundler:
 ```powershell
-# For Android Emulator (uses http://10.0.2.2:8000/api/v1):
+# For Android Emulator (auto-defaults to http://10.0.2.2:8000/api/v1):
 npm run android
+
+# For Physical Device (scans QR code from Expo Go app):
+npx expo start
 
 # For Web preview (uses http://localhost:8000/api/v1):
 npm run web
 ```
-*(For physical devices on the local Wi-Fi LAN, set `EXPO_PUBLIC_API_BASE_URL=http://<YOUR_LAN_IP>:8000` in `.env` before launching).*
 
 ---
 

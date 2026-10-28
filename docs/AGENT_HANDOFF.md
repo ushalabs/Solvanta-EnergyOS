@@ -31,20 +31,27 @@ This document serves as the communication and coordination channel between **Goo
 
 ---
 
-### Phase 02 & Review Corrections — 29 October 2026
+### Phase 02 Initial Review Corrections — 29 October 2026
+- **Status:** Merged to main via PR #3 (SHA: af01159).
+
+---
+
+### Phase 02 Final Reviewer Corrections — 29 October 2026
 - **Owner:** Google Antigravity
-- **Repo Remote:** `https://github.com/ushalabs/Solvanta-EnergyOS`
-- **Active Branch:** `fix/phase-02-review-corrections`
-- **Review Baseline:** `9efc69a`
-- **Target Deliverables & Review Fixes:**
-  - Priority 1 (Authorization): Scoped engineer/admin building access strictly to assigned organizations; added `is_superuser` column distinguishing platform-wide system administrator privilege; rejected registration into existing organizations with 409; preserved customer ownership; added multi-user/multi-org negative tests.
-  - Priority 2 (Validation): Pydantic model validation + PostgreSQL CheckConstraints for physical sizing ratings (non-negative, usable <= nominal, min SoC <= initial SoC <= 100%, efficiency in (0, 1]); partial PATCH combined state validation.
-  - Priority 3 (Connectivity): `EXPO_PUBLIC_API_BASE_URL` override support; bounded timeouts with AbortController (408 REQUEST_TIMEOUT, 0 NETWORK_ERROR); live authenticated API round-trip verified.
-  - Priority 4 (Contracts & CI): GitHub Actions `.github/workflows/ci.yml` running Postgres service, Alembic, seed, pytest, and mobile typecheck + Jest; clean migration downgrade/upgrade test with pool invalidation; contract-aligned nested battery payload; non-misleading readiness state; clean checkout setup in README.
-- **User Approval Status:** **REVIEW CORRECTIONS COMPLETE — AWAITING REVIEW & APPROVAL**
-- **Verification Evidence:**
-  - Backend Tests: 11/11 passed via `pytest -v` (health, ready, auth registration/login/me, buildings CRUD, contract nested battery, validation constraints, multi-tenant isolation, live E2E, migration downgrade/upgrade).
-  - Mobile Tests: 16/16 passed via `npm test`.
-  - Mobile Typecheck: `npx tsc --noEmit` clean with zero errors.
-  - Live API: `verify_live_api.py` executed successfully against live running FastAPI instance.
+- **Repo Remote:** https://github.com/ushalabs/Solvanta-EnergyOS
+- **Active Branch:** ix/phase-02-final-corrections
+- **Review Baseline:** f01159
+- **Review Corrections Implemented:**
+  1. **Critical Database Isolation & Guardrails:** Configured BACKEND_ENV=test to automatically target solvanta_test_db. Added Settings.assert_test_database_isolated() safety guardrail raising RuntimeError if non-test DB is targeted during tests. Added 	est_database_isolation_guardrail unit test. Verified solvanta_db remains completely intact and isolated during full migration downgrade/upgrade cycles.
+  2. **Concurrent Organization Registration Flush:** Moved wait db.flush() for new organizations inside transaction IntegrityError try/except block in uth.py. Added 	est_concurrent_duplicate_organization_registration using syncio.gather to verify concurrent duplicate submissions reliably return HTTP 409 Conflict.
+  3. **Ledger Cleanup:** Removed merge conflict markers (=======) and obsolete duplicate rows from docs/PHASE_APPROVALS.md. Removed stale contradictory Phase 1 and Phase 2 rows from docs/STATUS.md.
+  4. **Physical Device Environment & Documentation:** Created mobile/.env.example documenting Expo API URL configuration. Updated README.md Section 7 with exact LAN IP lookup, mobile .env setup, firewall tips, and browser connectivity verification step.
+  5. **Verification & Test Coverage:**
+     - Backend Tests: 13/13 passed via pytest -v (including isolation guardrails and concurrent duplicate org handling).
+     - Mobile Tests: 16/16 passed via 
+pm test.
+     - Mobile Typecheck: 
+px tsc --noEmit clean with 0 errors.
+     - Database Separation: solvanta_db (users=3, buildings=1, orgs=1) untouched; solvanta_test_db used for disposable test suite.
+- **User Approval Status:** **FINAL CORRECTIONS COMPLETE — AWAITING REVIEW & APPROVAL**
 - **Next Phase:** Phase 03 — Building & Equipment Configuration Models (LOCKED until user approval).
