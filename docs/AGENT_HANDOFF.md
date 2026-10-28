@@ -31,31 +31,20 @@ This document serves as the communication and coordination channel between **Goo
 
 ---
 
-### Phase 02 — 28 October 2026
+### Phase 02 & Review Corrections — 29 October 2026
 - **Owner:** Google Antigravity
 - **Repo Remote:** `https://github.com/ushalabs/Solvanta-EnergyOS`
-- **Active Branch:** `phase/02-backend-db`
-- **Repo HEAD:** `d8c918a`
-- **Reserved File Paths:**
-  - `backend/*`
-  - `docker-compose.yml`
-  - `docs/PHASE_APPROVALS.md`, `docs/STATUS.md`, `docs/AGENT_HANDOFF.md`
-- **Target Deliverables:**
-  - PostgreSQL 16 container running in local Docker Compose with healthchecks.
-  - FastAPI application structure (`app/core/`, `app/db/`, `app/models/`, `app/schemas/`, `app/api/v1/`, `app/services/`).
-  - Async SQLAlchemy 2.0 engine + Alembic migration configuration.
-  - System health and readiness endpoints: `GET /health` and `GET /ready`.
-  - JWT Authentication, password hashing, and tenant/role isolation primitives.
-  - Core initial database models and migration: `users`, `organizations`, `buildings`.
-  - Reliable seed script (`scripts/seed_demo_data.py`) creating Demo Residential Building and test user.
-  - Mobile API client configuration (`mobile/src/api/client.ts`) pointing to `10.0.2.2:8000` for Android emulator and `localhost:8000` for web.
-  - Comprehensive pytest test suite (`backend/tests/`) asserting health, readiness, auth tokens, and tenant checks.
-- **User Approval Status:** **COMPLETED — AWAITING USER APPROVAL**
+- **Active Branch:** `fix/phase-02-review-corrections`
+- **Review Baseline:** `9efc69a`
+- **Target Deliverables & Review Fixes:**
+  - Priority 1 (Authorization): Scoped engineer/admin building access strictly to assigned organizations; added `is_superuser` column distinguishing platform-wide system administrator privilege; rejected registration into existing organizations with 409; preserved customer ownership; added multi-user/multi-org negative tests.
+  - Priority 2 (Validation): Pydantic model validation + PostgreSQL CheckConstraints for physical sizing ratings (non-negative, usable <= nominal, min SoC <= initial SoC <= 100%, efficiency in (0, 1]); partial PATCH combined state validation.
+  - Priority 3 (Connectivity): `EXPO_PUBLIC_API_BASE_URL` override support; bounded timeouts with AbortController (408 REQUEST_TIMEOUT, 0 NETWORK_ERROR); live authenticated API round-trip verified.
+  - Priority 4 (Contracts & CI): GitHub Actions `.github/workflows/ci.yml` running Postgres service, Alembic, seed, pytest, and mobile typecheck + Jest; clean migration downgrade/upgrade test with pool invalidation; contract-aligned nested battery payload; non-misleading readiness state; clean checkout setup in README.
+- **User Approval Status:** **REVIEW CORRECTIONS COMPLETE — AWAITING REVIEW & APPROVAL**
 - **Verification Evidence:**
-  - Docker: `solvanta-postgres` (PostgreSQL 16 Alpine) healthy on `0.0.0.0:5432`.
-  - Alembic: migration `c096aa2185f1_initial_schema.py` applied (`upgrade head`).
-  - Database Seeding: `seed_demo_data.py` created `Demo EPC Solar`, `demo@solvanta.energy` (engineer), `customer@solvanta.energy` (customer), and `Demo Residential Hybrid Solar` building (10kWp PV / 10kWh battery).
-  - Backend Tests: 7/7 passed via `pytest` (health, ready, auth registration/login/me, buildings CRUD).
-  - Mobile Tests: 13/13 passed via `jest` (tokens, theme persistence, domain fixtures, API client).
-  - Mobile Client: `mobile/src/api/client.ts` configured for Android emulator (`http://10.0.2.2:8000/api/v1`) and web/iOS (`http://localhost:8000/api/v1`) with JWT auth injection.
+  - Backend Tests: 11/11 passed via `pytest -v` (health, ready, auth registration/login/me, buildings CRUD, contract nested battery, validation constraints, multi-tenant isolation, live E2E, migration downgrade/upgrade).
+  - Mobile Tests: 16/16 passed via `npm test`.
+  - Mobile Typecheck: `npx tsc --noEmit` clean with zero errors.
+  - Live API: `verify_live_api.py` executed successfully against live running FastAPI instance.
 - **Next Phase:** Phase 03 — Building & Equipment Configuration Models (LOCKED until user approval).

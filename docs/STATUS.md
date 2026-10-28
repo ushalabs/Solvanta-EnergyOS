@@ -17,7 +17,7 @@
 | **01** | **Mobile UI Foundation & Shells** | Codex review | **USER TESTING / APPROVAL PENDING** | 10 tests, typecheck, Expo dependency check, web export; native evidence in `docs/ui-evidence/android/` | Native AR remains unverified; standalone APK not built | 28 Oct 2026 |
 | 02 | Backend, PostgreSQL & Local Runtime | Antigravity / Team | NOT STARTED | - | Requires Phase 1 Approval | 29 Oct 2026 |
 | **01** | **Mobile UI Foundation & Shells** | Antigravity / Team | **COMPLETED & APPROVED** | PASS (10 tests; tsc clean; live ADB & web evidence) | None | 28 Oct 2026 |
-| **02** | **Backend, PostgreSQL & Local Runtime** | Antigravity / Team | **AWAITING USER APPROVAL** | PASS (7 backend tests, 13 mobile tests) | None | 28 Oct 2026 |
+| **02** | **Backend, PostgreSQL & Local Runtime** | Antigravity / Team | **AWAITING USER APPROVAL** | PASS (11 backend tests, 16 mobile tests, live API verified) | None | 28 Oct 2026 |
 | 03 | Building & Equipment Configuration | Antigravity / Team | NOT STARTED | - | Requires Phase 2 Approval | 29 Oct 2026 |
 | 04 | Rooftop CV & Geometry Editor | Antigravity / Team | NOT STARTED | - | Requires Phase 3 Approval | 30 Oct 2026 |
 | 05 | PV Sizing & Generation Engine | Antigravity / Team | NOT STARTED | - | Requires Phase 4 Approval | 30 Oct 2026 |

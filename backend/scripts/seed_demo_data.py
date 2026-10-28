@@ -10,9 +10,14 @@ from app.db.session import AsyncSessionLocal
 from app.core.security import hash_password
 from app.models.user import User, Organization, UserRole
 from app.models.building import Building
+from app.core.config import settings
 
 async def seed():
-    print("[*] Solvanta EnergyOS -- Seeding Demo Database...")
+    if settings.BACKEND_ENV == "production":
+        print("[CAUTION] Seeding demo credentials in a production environment is prohibited.")
+        return
+
+    print("[*] Solvanta EnergyOS -- Seeding Demo Database (Development / Testing Only)...")
     async with AsyncSessionLocal() as session:
         # 1. Organization
         org_result = await session.execute(
@@ -27,7 +32,28 @@ async def seed():
         else:
             print("  [=] Organization Demo EPC Solar already exists.")
 
-        # 2. Engineer / Admin User
+        # 2. System Administrator User
+        admin_result = await session.execute(
+            select(User).where(User.email == "admin@solvanta.energy")
+        )
+        admin = admin_result.scalars().first()
+        if not admin:
+            admin = User(
+                email="admin@solvanta.energy",
+                hashed_password=hash_password("Solvanta2026!"),
+                full_name="Solvanta System Admin",
+                role=UserRole.ADMIN,
+                organization_id=org.id,
+                is_active=True,
+                is_superuser=True,
+            )
+            session.add(admin)
+            await session.flush()
+            print("  [+] Created System Admin: admin@solvanta.energy (Superuser: True)")
+        else:
+            print("  [=] User admin@solvanta.energy already exists.")
+
+        # 3. Engineer User
         eng_result = await session.execute(
             select(User).where(User.email == "demo@solvanta.energy")
         )
@@ -40,6 +66,7 @@ async def seed():
                 role=UserRole.ENGINEER,
                 organization_id=org.id,
                 is_active=True,
+                is_superuser=False,
             )
             session.add(engineer)
             await session.flush()
@@ -47,7 +74,7 @@ async def seed():
         else:
             print("  [=] User demo@solvanta.energy already exists.")
 
-        # 3. Customer User
+        # 4. Customer User
         cust_result = await session.execute(
             select(User).where(User.email == "customer@solvanta.energy")
         )
@@ -60,6 +87,7 @@ async def seed():
                 role=UserRole.CUSTOMER,
                 organization_id=org.id,
                 is_active=True,
+                is_superuser=False,
             )
             session.add(customer)
             await session.flush()
@@ -67,7 +95,7 @@ async def seed():
         else:
             print("  [=] User customer@solvanta.energy already exists.")
 
-        # 4. Demo Building Digital Twin
+        # 5. Demo Building Digital Twin
         bld_result = await session.execute(
             select(Building).where(Building.name == "Demo Residential Hybrid Solar")
         )

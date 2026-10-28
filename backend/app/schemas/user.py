@@ -8,6 +8,7 @@ class UserBase(BaseModel):
     full_name: str
     role: UserRole = UserRole.CUSTOMER
     is_active: bool = True
+    is_superuser: bool = False
 
 class UserCreate(UserBase):
     password: str

@@ -46,7 +46,7 @@ async def root_ready(db: AsyncSession = Depends(get_db)):
         return ReadyResponse(
             ready=True,
             database="connected",
-            engines="initialized",
+            engines="uninitialized (scheduled Phase 5+)",
             timestamp=datetime.now(timezone.utc),
         )
     except Exception as e:
