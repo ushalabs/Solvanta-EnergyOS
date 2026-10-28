@@ -89,4 +89,8 @@
   - `/ai`
   - `/scheduling`
   - `/settings`
-  - Plus tabs layouts and sitemaps.
+  ## 4. Live Android Emulator Evidence
+- **Device Name:** `emulator-5554` (AVD: `Downshift_Phase1`)
+- **Status:** Booted, connected via ADB, and running live at `http://10.0.2.2:8081`.
+- **Screenshot Artifact:** [`docs/ui-evidence/android_emulator_screen.png`](android_emulator_screen.png) captured via `adb shell screencap` and pulled via `adb pull`.
+- **Live Server:** Serving static bundle on port `8081` with interactive live inspection.
