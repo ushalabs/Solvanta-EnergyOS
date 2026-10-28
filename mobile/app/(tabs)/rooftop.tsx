@@ -33,7 +33,7 @@ export default function RooftopScreen() {
 
         <TouchableOpacity
           activeOpacity={0.8}
-          onPress={() => Alert.alert('Saved', 'Rooftop polygon geometry & 10.0 kWp configuration persisted.')}
+          onPress={() => Alert.alert('Demo Layout', 'This is a static layout preview. Saving geometry is planned for Phase 4; nothing has been persisted.')}
           style={[styles.saveBtn, { backgroundColor: tokens.lime }]}
           accessibilityLabel="Save rooftop layout"
         >
@@ -59,10 +59,10 @@ export default function RooftopScreen() {
         panelCount={24}
         totalKwp={10.0}
         onAdjustCorners={() =>
-          Alert.alert('Adjust Corners', 'Drag vertex handles to fit roof edge boundaries.')
+          Alert.alert('Demo Geometry', 'Vertex editing is planned for Phase 4. This Phase 1 canvas is a static preview.')
         }
         onDefineScale={() =>
-          Alert.alert('Scale Calibration', 'Enter confirmed physical reference distance (e.g. parapet length = 8.5m).')
+          Alert.alert('Demo Scale', 'Scale calibration is planned for Phase 4. No measured roof dimensions are available yet.')
         }
       />
 

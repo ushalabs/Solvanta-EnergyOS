@@ -27,8 +27,8 @@ export default function SchedulingScreen() {
   const handleApprove = (id: string) => {
     setPlanStatus('APPROVED');
     Alert.alert(
-      'Plan Approved by User',
-      `Energy Plan "${id}" marked APPROVED in PostgreSQL audit log. Revised digital twin simulation dispatched with 100% critical coverage verified.`
+      'Demo Plan Approved Locally',
+      `Demo plan "${id}" changed in this screen only. Nothing was saved to a database and no simulation was dispatched. This does not approve a project phase.`
     );
   };
 
@@ -47,7 +47,7 @@ export default function SchedulingScreen() {
       <View style={styles.headerRow}>
         <TouchableOpacity
           activeOpacity={0.8}
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/')}
           style={[styles.backBtn, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
           accessibilityLabel="Go back"
         >
@@ -59,7 +59,7 @@ export default function SchedulingScreen() {
             RESILIENCE SCHEDULER
           </Text>
           <Text style={[styles.subtitle, { color: tokens.textMuted }]}>
-            Constraint-Aware Load Dispatch • Google OR-Tools
+            DEMO schedule • Solver not connected
           </Text>
         </View>
 

@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { View, StyleSheet, ScrollView, StatusBar, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, StatusBar, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { SPACING } from '../theme/tokens';
@@ -41,6 +41,9 @@ export const SolvantaScreen: React.FC<SolvantaScreenProps> = ({
           ]}
           showsVerticalScrollIndicator={false}
         >
+          <Text style={{ color: tokens.amber, fontSize: 11, marginBottom: 10 }}>
+            DEMO • Phase 1 UI preview • Fixture data, no engine or backend connected
+          </Text>
           {children}
         </ScrollView>
       ) : (

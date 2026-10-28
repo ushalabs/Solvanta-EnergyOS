@@ -25,7 +25,7 @@ export const ARCapabilityFallback: React.FC<ARCapabilityFallbackProps> = ({
     >
       <View style={[styles.badge, { backgroundColor: 'rgba(249, 188, 70, 0.15)' }]}>
         <Text style={[styles.badgeText, { color: tokens.amber }]}>
-          AR HARDWARE STATUS: 2D FALLBACK ACTIVE
+          DEMO • NATIVE AR NOT INTEGRATED
         </Text>
       </View>
 
@@ -38,11 +38,11 @@ export const ARCapabilityFallback: React.FC<ARCapabilityFallbackProps> = ({
       </Text>
 
       <Text style={[styles.body, { color: tokens.textMuted }]}>
-        The interactive 2D rooftop canvas and polygon editor remain 100% operational on this device.
+        A static 2D layout preview is available. Hardware support has not been detected or verified; polygon editing is planned for Phase 4 and native AR for Phase 12.
       </Text>
 
       <LimeCTA
-        title="Continue in High-Precision 2D Canvas"
+        title="Return to 2D Layout Preview"
         onPress={onContinue2D}
         style={styles.cta}
       />

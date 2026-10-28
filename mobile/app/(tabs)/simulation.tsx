@@ -24,8 +24,8 @@ export default function SimulationScreen() {
       setIsRunning(false);
       setHasRun(true);
       Alert.alert(
-        'Simulation Complete',
-        '15-minute discrete energy balance calculated. In baseline, AC exhausts battery reserve at 21:30 causing 1.2 kWh unserved critical load. Recommended optimization plan available.'
+        'Demo Trace Loaded',
+        'This is a prewritten visual fixture with 30-minute samples. No energy simulation was executed. The deterministic engine is planned for Phase 7.'
       );
     }, 800);
   };
@@ -39,7 +39,7 @@ export default function SimulationScreen() {
             SIMULATION LAB
           </Text>
           <Text style={[styles.subtitle, { color: tokens.textMuted }]}>
-            15-Min Discrete Energy Balance • Invariant Protected
+            DEMO trace • Engine not connected
           </Text>
         </View>
       </View>
@@ -170,7 +170,7 @@ export default function SimulationScreen() {
 
       {/* Primary Simulation CTA */}
       <LimeCTA
-        title="Execute 15-Min Energy Simulation"
+        title="Preview Demo Outage Trace"
         loading={isRunning}
         onPress={handleRunSimulation}
         icon={<Play size={16} color={tokens.onLime} style={{ marginRight: 6 }} />}

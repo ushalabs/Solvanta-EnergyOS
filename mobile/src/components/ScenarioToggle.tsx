@@ -7,12 +7,14 @@ interface ScenarioToggleProps {
   value: boolean;
   onValueChange: (val: boolean) => void;
   disabled?: boolean;
+  accessibilityLabel?: string;
 }
 
 export const ScenarioToggle: React.FC<ScenarioToggleProps> = ({
   value,
   onValueChange,
   disabled = false,
+  accessibilityLabel = 'Scenario load active toggle',
 }) => {
   const { tokens } = useTheme();
 
@@ -23,7 +25,7 @@ export const ScenarioToggle: React.FC<ScenarioToggleProps> = ({
       onPress={() => onValueChange(!value)}
       accessibilityRole="switch"
       accessibilityState={{ checked: value }}
-      accessibilityLabel="Scenario load active toggle"
+      accessibilityLabel={accessibilityLabel}
       style={[
         styles.track,
         {

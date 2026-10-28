@@ -39,11 +39,11 @@ export const MCPToolResultCard: React.FC<MCPToolResultCardProps> = ({
       <View style={styles.header}>
         <View style={[styles.badge, { backgroundColor: 'rgba(198, 244, 61, 0.15)' }]}>
           <Text style={[styles.badgeText, { color: tokens.lime }]}>
-            TOOL RESULT • SIMULATED
+            DEMO TOOL RESULT • FIXTURE
           </Text>
         </View>
         <Text style={[styles.duration, { color: tokens.textMuted }]}>
-          {durationMs}ms
+          Demo timing
         </Text>
       </View>
 
@@ -134,6 +134,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   metaRow: {
+    flexWrap: 'wrap',
+    rowGap: 4,
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,

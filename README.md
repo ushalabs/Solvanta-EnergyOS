@@ -127,6 +127,12 @@ To ensure scientific integrity and academic rigor:
 
 ## 7. Documentation Index
 
+### Phase 1 local testing
+
+Phase 1 is a fixture-only UI foundation awaiting human review. Backend, numerical engines, database saves, MCP execution, and native AR are not connected. See [the independent audit](docs/ui-evidence/PHASE_01_VISUAL_AUDIT.md).
+
+From `mobile/`, install with `npm ci`, then run `npm test -- --runInBand`, `npx tsc --noEmit`, and `npx expo install --check`. With an Android emulator running and matching Expo Go 57 installed, run `./scripts/start-android-preview.ps1` from the repository root. Open `http://localhost:8765` for the live native ADB viewer; click to tap and drag to scroll. The viewer requires Python and the Android SDK and binds only to loopback. `python scripts/audit-android.py` captures native evidence; start it from dark Home with the Expo developer menu closed. UI demo plan approval does not approve a project phase.
+
 - [`Solvanta.md`](Solvanta.md) — Master product, domain, and academic specification.
 - [`AntiGravity_prompt.md`](AntiGravity_prompt.md) — Authoritative engineering development contract and acceptance criteria.
 - [`UI_DESIGN_SPEC.md`](UI_DESIGN_SPEC.md) — Exact visual design tokens, component wireframes, and screen specs.
