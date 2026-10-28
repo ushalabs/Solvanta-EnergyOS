@@ -1,0 +1,41 @@
+name: Solvanta CI
+
+on:
+  push:
+    branches: [ main, master, 'phase/**' ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  audit:
+    name: Repository Audit & Integrity Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verify Documentation & Contracts
+        run: |
+          test -f Solvanta.md
+          test -f AntiGravity_prompt.md
+          test -f UI_DESIGN_SPEC.md
+          test -f README.md
+          test -f docs/STATUS.md
+          test -f docs/PHASE_APPROVALS.md
+          test -f docs/DECISIONS.md
+          test -f docs/ARCHITECTURE.md
+          test -f docs/API_CONTRACT.md
+          test -f docs/DOMAIN_ASSUMPTIONS.md
+          test -f docs/TEST_PLAN.md
+          test -f docs/COMPETITOR_MATRIX.md
+          echo "Phase 0 delivery contract verified."

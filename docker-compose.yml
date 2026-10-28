@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: solvanta-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-solvanta_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-solvanta_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-solvanta_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-solvanta_user} -d ${POSTGRES_DB:-solvanta_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: solvanta-n8n
+    restart: unless-stopped
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-solvanta_admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-solvanta_n8n_dev_password}
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=Asia/Karachi
+    volumes:
+      - n8ndata:/home/node/.n8n
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+    driver: local
+  n8ndata:
+    driver: local
