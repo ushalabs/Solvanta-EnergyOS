@@ -36,7 +36,7 @@ export const RoofPolygonEditor: React.FC<RoofPolygonEditorProps> = ({
           ROOFTOP GEOMETRY & PANEL PLACEMENT
         </Text>
         <Text style={[styles.badge, { color: tokens.lime }]}>
-          2D/3D FALLBACK ACTIVE
+          DEMO 2D LAYOUT
         </Text>
       </View>
 
@@ -62,21 +62,15 @@ export const RoofPolygonEditor: React.FC<RoofPolygonEditorProps> = ({
 
           {/* Panel Grid Footprints (Rows of Panels) */}
           {/* Row 1 */}
-          {[60, 95, 130, 165, 200, 235].map((x, i) => (
-            <Rect key={`r1_${i}`} x={x} y={55} width="28" height="20" rx="3" fill="rgba(198, 244, 61, 0.35)" stroke={tokens.lime} strokeWidth="1" />
-          ))}
-          {/* Row 2 */}
-          {[65, 100, 135, 170, 205].map((x, i) => (
-            <Rect key={`r2_${i}`} x={x} y={85} width="28" height="20" rx="3" fill="rgba(198, 244, 61, 0.35)" stroke={tokens.lime} strokeWidth="1" />
-          ))}
-          {/* Row 3 */}
-          {[75, 110, 145, 180, 215].map((x, i) => (
-            <Rect key={`r3_${i}`} x={x} y={115} width="28" height="20" rx="3" fill="rgba(198, 244, 61, 0.35)" stroke={tokens.lime} strokeWidth="1" />
-          ))}
+          {[55, 78, 101, 124].flatMap((y, row) =>
+            [75, 103, 131, 159, 187, 215].map((x, col) => (
+              <Rect key={`${row}_${col}`} x={x} y={y} width="22" height="18" rx="3" fill="rgba(198, 244, 61, 0.35)" stroke={tokens.lime} strokeWidth="1" />
+            ))
+          )}
 
           {/* Obstacle (e.g. Water Tank / Parapet) */}
-          <Circle cx="240" cy="115" r="14" fill="rgba(255, 98, 106, 0.25)" stroke={tokens.red} strokeWidth="1.5" />
-          <SvgText x="233" y="119" fill={tokens.red} fontSize="10" fontWeight="bold">✕</SvgText>
+          <Circle cx="260" cy="75" r="12" fill="rgba(255, 98, 106, 0.25)" stroke={tokens.red} strokeWidth="1.5" />
+          <SvgText x="256" y="79" fill={tokens.red} fontSize="10" fontWeight="bold">✕</SvgText>
         </Svg>
       </View>
 
@@ -130,9 +124,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 6,
     marginBottom: SPACING.sm,
   },
   title: {

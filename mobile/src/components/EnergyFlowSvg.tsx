@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Text } from 'react-native';
-import Svg, { Circle, Line, Rect, Path } from 'react-native-svg';
+import Svg, { Circle, Line, Rect, Path, G } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';
 import { SPACING, RADIUS } from '../theme/tokens';
 
@@ -82,15 +82,23 @@ export const EnergyFlowSvg: React.FC<EnergyFlowSvgProps> = ({
 
           {/* Node 1: Solar (Top Left) */}
           <Circle cx="70" cy="40" r="24" fill={tokens.surfaceElevated} stroke={isSolarGenerating ? tokens.lime : tokens.border} strokeWidth="2" />
+          <G stroke={tokens.textSecondary} strokeWidth="2" fill="none">
+            <Circle cx="70" cy="40" r="7" />
+            <Path d="M70 26v-4 M70 54v4 M56 40h-4 M84 40h4 M60 30l-3-3 M80 50l3 3 M60 50l-3 3 M80 30l3-3" />
+          </G>
 
           {/* Node 2: Battery (Top Right) */}
           <Circle cx="230" cy="40" r="24" fill={tokens.surfaceElevated} stroke={tokens.lime} strokeWidth="2" />
+          <Rect x="218" y="33" width="22" height="14" rx="3" stroke={tokens.lime} strokeWidth="2" fill="none" />
+          <Path d="M243 37v6 M222 37v6 M227 37v6 M232 37v6" stroke={tokens.lime} strokeWidth="2" />
 
           {/* Node 3: Home / Load (Center) */}
           <Rect x="125" y="55" width="50" height="50" rx="14" fill={tokens.lime} />
+          <Path d="M136 78l14-12 14 12 M140 75v18h20V75 M147 93V83h6v10" fill="none" stroke={tokens.onLime} strokeWidth="2.5" strokeLinejoin="round" />
 
           {/* Node 4: Grid (Bottom Center) */}
           <Circle cx="150" cy="130" r="18" fill={tokens.surfaceElevated} stroke={gridAvailable ? tokens.cyan : tokens.red} strokeWidth="1.5" />
+          <Path d="M150 119l-8 12h7l-1 10 10-14h-8z" fill="none" stroke={gridAvailable ? tokens.cyan : tokens.red} strokeWidth="1.5" strokeLinejoin="round" />
         </Svg>
       </View>
 

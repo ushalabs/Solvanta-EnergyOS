@@ -45,7 +45,7 @@ export const ApprovalActions: React.FC<ApprovalActionsProps> = ({
       </View>
 
       <Text style={[styles.disclaimer, { color: tokens.textMuted }]}>
-        FYP-I Notice: Approving executes a verified revised simulation; it does not actuate physical home circuits.
+        DEMO: These buttons change local preview state only. No plan is saved, simulation executed, or project phase approved.
       </Text>
 
       <View style={styles.buttonRow}>
@@ -91,6 +91,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   header: {
+    flexWrap: 'wrap',
+    gap: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

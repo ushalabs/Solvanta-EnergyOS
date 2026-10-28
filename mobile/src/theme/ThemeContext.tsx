@@ -63,6 +63,9 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const tokens = isDark ? darkTokens : lightTokens;
   const heroGradient = isDark ? HERO_LIME_GRADIENT : HERO_LIME_GRADIENT_LIGHT;
 
+  // Do not render the default theme before the saved preference has loaded.
+  if (!isReady) return null;
+
   return (
     <ThemeContext.Provider
       value={{

@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "runtime": "Expo Go 57.0.9 / Expo SDK 57 / React Native 0.86.3",
+  "screens": "7 dark + 3 light, plus light overview after JS reload",
+  "checks": [
+    "five dock destinations",
+    "settings and scheduling navigation",
+    "light theme retained after JS reload",
+    "AC toggle: 2.45 to 0.95 kW and back",
+    "restored dark Home for user testing"
+  ],
+  "limitations": [
+    "Fixture-only UI",
+    "No standalone Solvanta APK",
+    "Native AR not integrated or hardware-tested"
+  ]
+}

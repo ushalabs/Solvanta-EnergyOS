@@ -87,6 +87,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   header: {
+    flexWrap: 'wrap',
+    gap: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

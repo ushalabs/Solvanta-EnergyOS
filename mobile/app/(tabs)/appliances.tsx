@@ -52,7 +52,7 @@ export default function AppliancesScreen() {
           onPress={() =>
             Alert.alert(
               'Add Appliance',
-              'Form opens in full edit mode to specify name, rated power, priority tier, and flexibility windows.'
+              'Appliance registration is planned for Phase 6. You can filter and toggle the five demo scenario loads in this preview.'
             )
           }
           style={[styles.addBtn, { backgroundColor: tokens.lime }]}
@@ -132,7 +132,7 @@ export default function AppliancesScreen() {
         onPress={() =>
           Alert.alert(
             'New Appliance Form',
-            'Register appliance nameplate W, runtime constraints, and priority.'
+            'Registration is planned for Phase 6. This Phase 1 preview uses five prewritten demo appliances.'
           )
         }
         style={{ marginTop: SPACING.md, marginBottom: SPACING.xl }}

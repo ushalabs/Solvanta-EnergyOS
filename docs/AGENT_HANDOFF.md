@@ -6,6 +6,17 @@ This document serves as the communication and coordination channel between **Goo
 
 ## Current Agent State
 
+### Codex continuation — 28 October 2026
+
+- User requested an independent Phase 1 check and live ADB testing before authorizing Phase 2.
+- Reviewed local `f4ab108`, fetched GitHub refs, and compared remote main `594cfcb`. Main contains the Phase 1 merge; the branch adds the earlier emulator screenshot. No unrelated source changes were missing from this checkout.
+- Corrected misleading database/simulation/MCP/AR messages, dependency alignment, saved-theme hydration, direct-entry back buttons, small-screen text wrapping, scenario accessibility labels, and diagram clarity.
+- Added two theme lifecycle tests (10 tests total) and a reproducible native UI evidence script. See `scripts/audit-android.py` and `docs/ui-evidence/PHASE_01_VISUAL_AUDIT.md`.
+- Native app runs in Expo Go 57.0.9 on `emulator-5554`. Local ADB viewer: `http://localhost:8765`; Metro: `http://127.0.0.1:8081`. Click to tap; drag to scroll.
+- Restart instructions: `scripts/start-android-preview.ps1`. Requires a running emulator with the matching Expo Go client installed. No standalone Solvanta APK was built. Native AR remains unverified; see `docs/AR_COMPATIBILITY.md`.
+- Corrections and evidence are local and uncommitted. Preserve the pre-existing untracked `mobile/.gitignore`.
+- **User approval is pending. Phase 2 has not started.** Older Antigravity entries below are historical claims, superseded by this review.
+
 ### Phase 00 — 28 October 2026
 - **Status:** APPROVED BY USER (28 Oct 2026)
 - **Commit SHA:** `50140d3` on `main` and `phase/00-repo-audit`

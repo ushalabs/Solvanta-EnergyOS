@@ -48,7 +48,7 @@ export default function OverviewScreen() {
 
       {/* Signature Neon Hero Banner: Resilience Mode */}
       <NeonHeroCard
-        badgeText="POLICY ACTIVE"
+        badgeText={resilienceModeActive ? 'DEMO POLICY ON' : 'DEMO POLICY OFF'}
         title="RESILIENCE MODE"
         subtitle="Critical building loads prioritized during evening grid failure."
         rightElement={

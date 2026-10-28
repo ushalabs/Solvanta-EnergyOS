@@ -21,8 +21,8 @@ export default function AIScreen() {
   const handleSend = () => {
     if (!query.trim()) return;
     Alert.alert(
-      'MCP Engine Invocation',
-      `Invoking typed MCP tool optimize_resilience for scenario "scen_lahore_01". Calculations handled strictly by verified Python engine.`
+      'Demo Operations Preview',
+      'Showing a fixture result card. No MCP tool or Python engine was invoked. MCP integration is planned for Phase 16.'
     );
     setQuery('');
     setShowToolResult(true);
@@ -37,14 +37,14 @@ export default function AIScreen() {
             SOLVANTA AI OPERATIONS
           </Text>
           <Text style={[styles.subtitle, { color: tokens.textMuted }]}>
-            MCP Engine Gateway • Physics-Bound Tool Execution
+            DEMO operations • MCP not connected
           </Text>
         </View>
 
         <View style={[styles.mcpBadge, { backgroundColor: tokens.surfaceElevated }]}>
           <Terminal size={14} color={tokens.lime} style={{ marginRight: 4 }} />
           <Text style={[styles.mcpBadgeText, { color: tokens.lime }]}>
-            MCP ACTIVE
+            MCP DEMO
           </Text>
         </View>
       </View>
@@ -79,14 +79,14 @@ export default function AIScreen() {
           toolName="optimize_resilience"
           engineName="app.engines.resilience.ResilienceOptimizer"
           scenarioId="scen_lahore_01"
-          resultSummary="Optimized load shedding policy formulated. Shedding 1.5 kW AC load at 18:00 avoids 1.2 kWh critical fridge outage and preserves 31% ending battery reserve."
+          resultSummary="Illustrative fixture: AC deferred during an outage. Coverage and battery values are layout examples, not calculated or verified results."
           criticalCoveragePct={100}
           durationMs={42}
           onViewPlan={() => router.push('/scheduling')}
           onReviewEvidence={() =>
             Alert.alert(
-              'Audit Evidence',
-              'Energy balance conservation error: 0.0000 kWh. Battery minimum 20% reserve strictly respected.'
+              'Demo Evidence',
+              'No engine audit exists yet. This card displays fixture values for UI review only.'
             )
           }
         />
@@ -120,7 +120,7 @@ export default function AIScreen() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Ask operations or execute MCP tool..."
+          placeholder="Preview a demo operations query..."
           placeholderTextColor={tokens.textMuted}
           style={[styles.input, { color: tokens.textPrimary }]}
         />

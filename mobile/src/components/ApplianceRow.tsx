@@ -54,6 +54,7 @@ export const ApplianceRow: React.FC<ApplianceRowProps> = ({
 
       <View style={styles.rightCol}>
         <ScenarioToggle
+          accessibilityLabel={`${name} scenario load`}
           value={scenarioOn}
           onValueChange={(val) => onToggle(id, val)}
         />

@@ -117,7 +117,7 @@ export interface SimulationInterval {
   optimizedLoadKw: number;
 }
 
-// 24 intervals across a 6-hour outage (18:00 to 24:00)
+// Illustrative 30-minute samples across 6 hours, not an energy-engine result.
 export const DEMO_SIMULATION_TRACE: SimulationInterval[] = [
   { minute: 0, timeLabel: '18:00', baselineSoc: 70, optimizedSoc: 70, solarKw: 0.0, baselineLoadKw: 2.45, optimizedLoadKw: 0.95 },
   { minute: 30, timeLabel: '18:30', baselineSoc: 63, optimizedSoc: 67, solarKw: 0.0, baselineLoadKw: 2.45, optimizedLoadKw: 0.95 },
