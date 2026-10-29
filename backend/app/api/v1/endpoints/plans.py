@@ -28,6 +28,8 @@ class PlanAction(BaseModel):
 
 def serialize(plan):
  d=copy.deepcopy(plan.snapshot);d.pop('receipts',None)
+ selected=d['variants'][d['selected_variant']]['snapshot']
+ d['scenario']=dict(options=selected['options'],pv_source=selected['pv']['source'],plant=selected['plant'],selected_loads=[dict(name=a['name'],rated_power_w=a['rated_power_w'],critical=a['critical']) for a in selected['appliances'] if a['selected']])
  for v in d['variants']:v.pop('snapshot',None)
  return dict(id=plan.id,created_at=plan.created_at,**d)
 

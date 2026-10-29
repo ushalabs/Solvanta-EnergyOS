@@ -29,6 +29,15 @@ def solve_schedule(items,budget):
     if len(budget)!=1440 or any(not math.isfinite(v) or v<0 for v in budget):raise ValueError('Expected 1440 finite nonnegative power budgets')
     appliances=[a for a in items if a['selected']]
     if len(appliances)>20:raise ValueError('Prototype scheduler supports at most 20 selected appliances')
+    earliest=[dict(appliance_id=a['id'],name=a['name'],priority=a['priority'],rated_power_w=a['rated_power_w'],segments=[dict(start_min=a['earliest_min'],end_min=a['earliest_min']+a['required_runtime_min'])]) for a in appliances]
+    try:
+        validate_schedule([a|{'rated_power_w':math.ceil(a['rated_power_w'])} for a in items],[math.floor(v+1e-9) for v in budget],earliest)
+    except ValueError:
+        pass
+    else:
+        # Each job already uses its earliest N distinct minutes: its objective lower bound.
+        objective=sum(WEIGHTS[a['priority']]*a['required_runtime_min']*(a['required_runtime_min']-1)/2 for a in appliances)
+        return completed_schedule(items,budget,earliest,'OPTIMAL',objective,'Earliest-start objective lower-bound certificate')
     model=cp_model.CpModel();variables={};terms=[];columns=[[] for _ in range(1440)]
     for a in appliances:
         start,end=a['earliest_min'],a['latest_min'];count=a['required_runtime_min'];prev=0;starts=[];xs=[]
@@ -57,8 +66,11 @@ def solve_schedule(items,budget):
             if segments and segments[-1]['end_min']==minute:segments[-1]['end_min']=minute+1
             else:segments.append(dict(start_min=minute,end_min=minute+1))
         entries.append(dict(appliance_id=a['id'],name=a['name'],priority=a['priority'],rated_power_w=a['rated_power_w'],segments=segments))
+    return completed_schedule(items,budget,entries,name,solver.objective_value,'OR-Tools CP-SAT')
+
+def completed_schedule(items,budget,entries,status,objective,method):
     power=validate_schedule(items,budget,entries)
-    return dict(status=name,validated=True,entries=entries,reasons=[],objective=solver.objective_value,
+    return dict(solver_method=method,status=status,validated=True,entries=entries,reasons=[],objective=objective,
       objective_description='Minimize priority-weighted delay of each required minute; all selected loads must complete.',
       demand_kwh=sum(power)/60000,budget_kwh=sum(budget)/60000,
       timeline=[dict(minute=i*15,load_kw=sum(power[i*15:i*15+15])/15000,available_kw=sum(budget[i*15:i*15+15])/15000) for i in range(96)])

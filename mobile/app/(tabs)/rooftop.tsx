@@ -10,9 +10,9 @@ import { useTheme } from '../../src/theme/ThemeContext';
 import { PVDesigner } from '../../src/components/PVDesigner';
 import { ARCapabilityFallback } from '../../src/components/ARCapabilityFallback';
 
-export default function RooftopScreen() {
+function RooftopWorkspace({buildingId}:{buildingId:string}) {
   const { tokens: t } = useTheme();
-  const building = useBuildings();
+  const building = {id:buildingId};
   const [showAR, setShowAR] = useState(false);
   const [roof, setRoof] = useState<RoofInput>(emptyRoof);
   const [layout, setLayout] = useState<Layout | null>(null);
@@ -59,11 +59,10 @@ export default function RooftopScreen() {
       if (draft.length) throw new Error('Finish or discard the obstacle before calculating.');
       if (!distance.trim() || payload.scale_distance_m <= 0 || payload.scale_points.length !== 2) throw new Error('Mark two scale points and enter their measured distance in metres.');
       if (save) { apply(await api.request<RoofRecord>(`/buildings/${building.id}/roof`, { method: 'PUT', body: JSON.stringify(payload) })); setMessage('Saved geometry and photo to this building.'); }
-      else { setLayout(await api.post<Layout>(`/buildings/${building.id}/roof/preview`, payload)); setRoof(payload); setMessage('Calculated preview â€” not saved yet.'); }
+      else { setLayout(await api.post<Layout>(`/buildings/${building.id}/roof/preview`, payload)); setRoof(payload); setMessage('Calculated preview — not saved yet.'); }
     } catch (e: any) { setMessage(e.message); } finally { setBusy(false); }
   };
-  return <SolvantaScreen banner="ROOFTOP â€¢ Measured geometry â€¢ Preliminary engineering">
-    <Label>ROOFTOP STUDIO</Label><BuildingPicker state={building} />
+  return <>
     <Card><Label>Use a top-down, rectified roof image. Perspective photos cannot provide reliable dimensions from one scale line. No automatic CV detection is claimed.</Label>
       <Action title="Import Roof Photo" onPress={() => importImage(false)} /><Action title="Take Roof Photo" onPress={() => importImage(true)} />
       <Label>Tap to add vertices. Current mode: {mode}</Label>
@@ -82,15 +81,20 @@ export default function RooftopScreen() {
       <Action title="Undo Last Point" onPress={() => { if (mode === 'obstacle') setDraft(draft.slice(0, -1)); else if (mode === 'scale') change({ ...roof, scale_points: roof.scale_points.slice(0, -1) }); else { const boundary = roof.boundary.slice(0, -1); change({ ...roof, boundary }); setCoords(formatPoints(boundary)); } }} />
       <Action title="Finish Obstacle" disabled={draft.length < 3} onPress={() => { change({ ...roof, obstacles: [...roof.obstacles, draft] }); setDraft([]); }} />
       <Action title="Remove Last Obstacle" onPress={() => { change({ ...roof, obstacles: roof.obstacles.slice(0, -1) }); setDraft([]); }} />
-      <Field label="Roof vertices (x,y; x,y) â€” edit to correct" value={coords} onChange={v => { setCoords(v); setLayout(null); try { setRoof({ ...roof, boundary: parsePoints(v) }); } catch {} }} />
+      <Field label="Roof vertices (x,y; x,y) — edit to correct" value={coords} onChange={v => { setCoords(v); setLayout(null); try { setRoof({ ...roof, boundary: parsePoints(v) }); } catch {} }} />
       <Field label="Measured scale distance (m)" numeric value={distance} onChange={v => { setDistance(v); setLayout(null); }} />
       {(['setback_m', 'panel_width_m', 'panel_height_m', 'gap_m'] as const).map(key => <Field key={key} label={key.replaceAll('_', ' ')} numeric value={String(roof[key])} onChange={v => change({ ...roof, [key]: v === '' ? 0 : Number(v) })} />)}
       <Action title="Calculate Placement" disabled={!building.id || busy} onPress={() => calculate(false)} />
       <Action title="Save Roof" disabled={!building.id || busy} onPress={() => calculate(true)} />
       <Label>{message}</Label>
-      {layout && <><Label>{layout.usable_area_m2.toFixed(2)} mÂ² usable Â· {layout.panel_count} panels</Label><Label>{layout.method}</Label></>}
+      {layout && <><Label>{layout.usable_area_m2.toFixed(2)} m² usable · {layout.panel_count} panels</Label><Label>{layout.method}</Label></>}
       <Action title="Check Native AR Preview" onPress={() => setShowAR(true)} />{showAR && <ARCapabilityFallback onContinue2D={() => setShowAR(false)} />}
     </Card>
     <PVDesigner buildingId={building.id} />
-  </SolvantaScreen>;
+  </>;
+}
+
+export default function RooftopScreen() {
+ const building=useBuildings();
+ return <SolvantaScreen banner="ROOFTOP - Measured geometry - Preliminary engineering"><Label>ROOFTOP STUDIO</Label><BuildingPicker state={building}/><RooftopWorkspace key={building.id} buildingId={building.id}/></SolvantaScreen>;
 }

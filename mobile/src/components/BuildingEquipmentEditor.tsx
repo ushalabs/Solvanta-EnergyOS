@@ -165,7 +165,8 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
         setAvailableBuildings(options);
         
         // Select first authorized building
-        const activeBld = buildings[0];
+        const savedSelection = await AsyncStorage.getItem(`@solvanta_selected_building_${userId}`);
+        const activeBld = buildings.find(b => b.id === savedSelection) || buildings[0];
         setBuildingId(activeBld.id);
         
         // Load authoritative equipment profile
@@ -201,6 +202,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
       setSyncStatus('synced');
       if (currentUser) {
         await AsyncStorage.setItem(getStorageKey(currentUser.id, id), JSON.stringify(equip));
+        await AsyncStorage.setItem(`@solvanta_selected_building_${currentUser.id}`, id);
       }
     } catch (err: any) {
       setErrorMsg(`Failed to load building ${id}: ${err.message}`);
@@ -217,7 +219,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
     setAuthLoading(true);
     setAuthError(null);
     try {
-      await api.login(loginEmail.trim(), loginPassword.trim());
+      await api.login(loginEmail.trim(), loginPassword);
       const me = await api.getCurrentUser();
       setCurrentUser(me);
       await loadUserBuildings(me.id);

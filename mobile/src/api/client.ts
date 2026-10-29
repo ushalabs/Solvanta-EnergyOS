@@ -38,7 +38,7 @@ export interface ApiProblemDetails {
     details?: Array<{ field?: string; issue?: string }>;
     timestamp?: string;
   };
-  detail?: string;
+  detail?: string | Array<{ loc?: Array<string | number>; msg?: string }>;
 }
 
 export class SolvantaApiError extends Error {
@@ -46,7 +46,8 @@ export class SolvantaApiError extends Error {
   data: ApiProblemDetails;
 
   constructor(status: number, data: ApiProblemDetails) {
-    const message = data.error?.message || data.detail || `API request failed with status ${status}`;
+    const detail = Array.isArray(data.detail) ? data.detail.map(d => `${d.loc?.join('.') || 'input'}: ${d.msg || 'Invalid value'}`).join('; ') : data.detail;
+    const message = data.error?.message || detail || `API request failed with status ${status}`;
     super(message);
     this.name = 'SolvantaApiError';
     this.status = status;
@@ -165,13 +166,16 @@ export class SolvantaApiClient {
     }
 
     const controller = new AbortController();
+    const cancel = () => controller.abort();
+    if (options.signal?.aborted) controller.abort();
+    options.signal?.addEventListener('abort', cancel, { once: true });
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const response = await fetch(url, {
         ...options,
         headers,
-        signal: options.signal || controller.signal,
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -193,6 +197,7 @@ export class SolvantaApiClient {
       if (err instanceof SolvantaApiError) {
         throw err;
       }
+      if (options.signal?.aborted) throw new SolvantaApiError(499, { detail: 'Request cancelled' });
       if (controller.signal.aborted || err?.name === 'AbortError') {
         throw new SolvantaApiError(408, {
           error: {
@@ -213,6 +218,7 @@ export class SolvantaApiClient {
       });
     } finally {
       clearTimeout(timer);
+      options.signal?.removeEventListener('abort', cancel);
     }
   }
 

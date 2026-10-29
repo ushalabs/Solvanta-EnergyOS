@@ -13,8 +13,8 @@ import {AutomationCard} from '../../src/components/AutomationCard';
 import {TelemetryCard} from '../../src/components/TelemetryCard';
 import {TwinReplay} from '../../src/components/TwinReplay';
 import {EnergyRun,parseOutages} from '../../src/api/simulation';
-export default function SimulationScreen(){
- const {tokens:t}=useTheme();const building=useBuildings();
+function SimulationWorkspace({buildingId}:{buildingId:string}){
+ const {tokens:t}=useTheme();const building={id:buildingId};
  const [outages,setOutages]=useState('480-600');const [generator,setGenerator]=useState(false);
  const [run,setRun]=useState<EnergyRun|null>(null);const [step,setStep]=useState(0);
  const [history,setHistory]=useState<Array<{id:string;created_at:string}>>([]);
@@ -25,23 +25,28 @@ export default function SimulationScreen(){
  }catch(e:any){setMessage(e.message);}finally{setBusy(false);}}
  async function open(id:string){setBusy(true);try{setRun(await api.get<EnergyRun>(`/buildings/${building.id}/simulations/${id}`));setStep(0);setMessage('Loaded immutable saved run.');}catch(e:any){setMessage(e.message);}finally{setBusy(false);}}
  const p=run?.result.trace[step];
- return <SolvantaScreen banner="SIMULATED ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Saved 15-minute energy balance"><Label>ENERGY & OUTAGE SIMULATOR</Label><BuildingPicker state={building}/>
- <Card><Field label="Outages: minute ranges (0ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ1440), separated by commas" value={outages} onChange={setOutages}/><Label>Example: 480-600 means 08:00ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ10:00. Blank means grid available all day.</Label>
+ return <>
+ <Card><Field label="Outages: minute ranges (0–1440), separated by commas" value={outages} onChange={setOutages}/><Label>Example: 480-600 means 08:00–10:00. Blank means grid available all day.</Label>
  <View style={{flexDirection:'row',justifyContent:'space-between'}}><Label>Use configured generator</Label><Switch accessibilityLabel="Use configured generator" value={generator} onValueChange={setGenerator} trackColor={{true:t.lime}}/></View>
  <Action title="Run & Save Simulation" disabled={busy||!building.id} onPress={execute}/><Label>{message}</Label><Action title="Open Scheduling" onPress={()=>router.push('/scheduling')}/></Card>
  {run&&<TwinReplay run={run}/>}
- {run&&p&&<Card><Label>RUN {run.id.slice(0,8)} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {run.snapshot.pv.source}</Label>
- <Label>Requested {run.result.summary.load_kwh.toFixed(2)} kWh ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Unmet {run.result.summary.unmet_kwh.toFixed(2)} kWh</Label>
- <Label>Critical unmet {run.result.summary.unserved_critical_kwh.toFixed(2)} kWh ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Grid import {run.result.summary.grid_import_kwh.toFixed(2)} kWh</Label>
- <Label>Generator fuel {run.result.summary.generator_fuel_l.toFixed(2)} L ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Curtailed {run.result.summary.curtailed_kwh.toFixed(2)} kWh</Label>
- <View style={{alignItems:'center'}}><Svg width={150} height={150}><Circle cx={75} cy={75} r={60} stroke={t.border} strokeWidth={12} fill="none"/><Circle cx={75} cy={75} r={60} stroke={t.lime} strokeWidth={12} fill="none" strokeDasharray={`${p.soc_pct/100*377} 377`} rotation={-90} origin="75,75"/></Svg><Label>Battery {p.soc_pct.toFixed(1)}% ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {p.battery_end_kwh.toFixed(3)} kWh</Label></View>
+ {run&&p&&<Card><Label>RUN {run.id.slice(0,8)} · {run.snapshot.pv.source}</Label>
+ <Label>Requested {run.result.summary.load_kwh.toFixed(2)} kWh · Unmet {run.result.summary.unmet_kwh.toFixed(2)} kWh</Label>
+ <Label>Critical unmet {run.result.summary.unserved_critical_kwh.toFixed(2)} kWh · Grid import {run.result.summary.grid_import_kwh.toFixed(2)} kWh</Label>
+ <Label>Generator fuel {run.result.summary.generator_fuel_l.toFixed(2)} L · Curtailed {run.result.summary.curtailed_kwh.toFixed(2)} kWh</Label>
+ <View style={{alignItems:'center'}}><Svg width={150} height={150}><Circle cx={75} cy={75} r={60} stroke={t.border} strokeWidth={12} fill="none"/><Circle cx={75} cy={75} r={60} stroke={t.lime} strokeWidth={12} fill="none" strokeDasharray={`${p.soc_pct/100*377} 377`} rotation={-90} origin="75,75"/></Svg><Label>Battery {p.soc_pct.toFixed(1)}% · {p.battery_end_kwh.toFixed(3)} kWh</Label></View>
  <View accessibilityLabel="Battery state of charge over 24 hours" style={{height:80,flexDirection:'row',alignItems:'flex-end',gap:1}}>{run.result.trace.map((v,i)=><View key={i} style={{flex:1,height:Math.max(1,v.soc_pct*.8),backgroundColor:i===step?t.cyan:t.lime}}/>)}</View>
- <Label>Interval {step+1}/96 ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {Math.floor(p.minute/60).toString().padStart(2,'0')}:{(p.minute%60).toString().padStart(2,'0')} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Grid {p.grid_available?'available':'outage'}</Label>
+ <Label>Interval {step+1}/96 · {Math.floor(p.minute/60).toString().padStart(2,'0')}:{(p.minute%60).toString().padStart(2,'0')} · Grid {p.grid_available?'available':'outage'}</Label>
  <Action title="Previous Interval" disabled={step===0} onPress={()=>setStep(step-1)}/><Action title="Next Interval" disabled={step===95} onPress={()=>setStep(step+1)}/>
- <Label>PV {p.pv_kw.toFixed(3)} kW ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Load {p.load_kw.toFixed(3)} kW</Label><Label>Grid {p.grid_import_kw.toFixed(3)} kW ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Generator {p.generator_kw.toFixed(3)} kW</Label>
- <Label>Charge {p.charge_kw.toFixed(3)} kW ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Discharge {p.discharge_kw.toFixed(3)} kW ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Unmet {p.unmet_kw.toFixed(3)} kW</Label>
+ <Label>PV {p.pv_kw.toFixed(3)} kW · Load {p.load_kw.toFixed(3)} kW</Label><Label>Grid {p.grid_import_kw.toFixed(3)} kW · Generator {p.generator_kw.toFixed(3)} kW</Label>
+ <Label>Charge {p.charge_kw.toFixed(3)} kW · Discharge {p.discharge_kw.toFixed(3)} kW · Unmet {p.unmet_kw.toFixed(3)} kW</Label>
  {run.result.assumptions.map(a=><Label key={a}>{a}</Label>)}
  </Card>}
- <TelemetryCard buildingId={building.id} runId={run?.id}/><AutomationCard buildingId={building.id}/><PlanCard buildingId={building.id} outages={outages} useGenerator={generator}/><ResilienceCard buildingId={building.id} outages={outages} useGenerator={generator}/><ForecastCard buildingId={building.id} outages={outages} useGenerator={generator}/><Card><Label>SAVED RUNS (LATEST 20)</Label>{history.map(r=><Action key={r.id} disabled={busy} title={`${new Date(r.created_at).toLocaleString()} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ${r.id.slice(0,8)}`} onPress={()=>open(r.id)}/>)}</Card>
- </SolvantaScreen>;
+ <TelemetryCard key={run?.id||building.id} buildingId={building.id} runId={run?.id}/><AutomationCard buildingId={building.id}/><PlanCard buildingId={building.id} outages={outages} useGenerator={generator}/><ResilienceCard key={`resilience-${building.id}-${outages}-${generator}`} buildingId={building.id} outages={outages} useGenerator={generator}/><ForecastCard key={`forecast-${building.id}-${outages}-${generator}`} buildingId={building.id} outages={outages} useGenerator={generator}/><Card><Label>SAVED RUNS (LATEST 20)</Label>{history.map(r=><Action key={r.id} disabled={busy} title={`${new Date(r.created_at).toLocaleString()} · ${r.id.slice(0,8)}`} onPress={()=>open(r.id)}/>)}</Card>
+ </>;
+}
+
+export default function SimulationScreen() {
+ const building=useBuildings();
+ return <SolvantaScreen banner="SIMULATED - Saved 15-minute energy balance"><Label>ENERGY & OUTAGE SIMULATOR</Label><BuildingPicker state={building}/><SimulationWorkspace key={building.id} buildingId={building.id}/></SolvantaScreen>;
 }

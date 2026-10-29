@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { useFocusEffect, router } from 'expo-router';
 import { useTheme } from '../theme/ThemeContext';
 import { api } from '../api/client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export function Card({ children }: { children: React.ReactNode }) {
   const { tokens: t } = useTheme();
@@ -24,13 +25,18 @@ export function useBuildings() {
   const [buildings, setBuildings] = useState<Array<{ id: string; name: string }>>([]);
   const [id, setId] = useState('');
   const [error, setError] = useState('');
+  const [selectionKey, setSelectionKey] = useState('');
   useFocusEffect(useCallback(() => {
     let active = true;
-    api.getBuildings().then(list => { if (active) { setBuildings(list); setId(old => list.some(b => b.id === old) ? old : (list[0]?.id || '')); setError(list.length ? '' : 'Create a building in Settings first.'); } })
-      .catch(e => { if (active) { setBuildings([]); setId(''); setError(e.message); } });
+    Promise.all([api.getBuildings(),api.getCurrentUser()]).then(async ([list,user]) => {
+      const key=`@solvanta_selected_building_${user.id}`;
+      const saved=await AsyncStorage.getItem(key);
+      if(active){setBuildings(list);setSelectionKey(key);setId(list.some(b=>b.id===saved)?saved!:list[0]?.id||'');setError(list.length?'':'Create a building in Settings first.');}
+    }).catch(e=>{if(active){setBuildings([]);setId('');setSelectionKey('');setError(e.message);}});
     return () => { active = false; };
   }, []));
-  return { buildings, id, setId, error };
+  const select=(value:string)=>{if(buildings.some(b=>b.id===value)){setId(value);if(selectionKey)AsyncStorage.setItem(selectionKey,value).catch(()=>{});}};
+  return { buildings, id, setId:select, error };
 }
 export function BuildingPicker({ state }: { state: ReturnType<typeof useBuildings> }) {
   return <Card><Label>BUILDING DIGITAL TWIN</Label>{state.error ? <><Label>{state.error}</Label><Action title="Open Settings / Sign In" onPress={() => router.push('/settings')} /></> : state.buildings.map(b => <Action key={b.id} title={`${state.id === b.id ? '✓ ' : ''}${b.name}`} onPress={() => state.setId(b.id)} />)}</Card>;

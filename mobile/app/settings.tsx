@@ -1,4 +1,5 @@
 import React from 'react';
+import { APP_RUNTIME } from '../src/config/runtime';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Moon, Sun, CheckCircle, Database, ShieldAlert, Cpu } from 'lucide-react-native';
@@ -27,7 +28,7 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={{ color: tokens.lime, fontSize: 11, marginBottom: 12 }}>LIVE TWIN • Phase 3 Building & Equipment Configuration Active</Text>
+        <Text style={{ color: tokens.lime, fontSize: 11, marginBottom: 12 }}>LIVE TWIN • Authenticated building and equipment configuration</Text>
 
         {/* Building & Equipment Profile Section */}
         <Text style={[styles.sectionHeader, { color: tokens.textMuted }]}>
@@ -119,7 +120,7 @@ export default function SettingsScreen() {
             <Text style={[styles.infoVal, { color: tokens.amber }]}>SIMULATED (FYP-I)</Text>
           </View>
           <Text style={[styles.noticeText, { color: tokens.textMuted }]}>
-            Phase 1 displays prewritten fixtures. No telemetry provider, energy engine, database, or MCP service is connected. Physical inverter integration and mains breaker controls are reserved for FYP-II.
+            Building and appliance records are saved through the authenticated API. Energy runs and telemetry observations are explicitly simulated. Physical inverter integration and electrical controls remain outside this prototype.
           </Text>
         </View>
 
@@ -134,12 +135,12 @@ export default function SettingsScreen() {
               <Cpu size={16} color={tokens.lime} style={{ marginRight: 8 }} />
               <Text style={[styles.infoLabel, { color: tokens.textSecondary }]}>Expo SDK Version</Text>
             </View>
-            <Text style={[styles.infoVal, { color: tokens.lime }]}>SDK 57 • AR unverified</Text>
+            <Text style={[styles.infoVal, { color: tokens.lime }]}>Expo {APP_RUNTIME.expo} • AR deferred</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: tokens.textSecondary }]}>React Native Engine</Text>
-            <Text style={[styles.infoVal, { color: tokens.textPrimary }]}>0.86.3</Text>
+            <Text style={[styles.infoVal, { color: tokens.textPrimary }]}>{APP_RUNTIME.reactNative}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.infoRow}>

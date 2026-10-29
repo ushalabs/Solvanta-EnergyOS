@@ -55,3 +55,11 @@ async def test_schedule_save_and_access(async_client):
   assert (await c.post(base+'/schedules',headers=oh,json={})).status_code==403
   assert (await c.get(base+'/schedules',headers=oh)).status_code==403
  finally:await c.delete(base,headers=h)
+
+def test_full_day_nonbinding_budget_has_certified_optimum():
+ items=[appliance('flex',required_runtime_min=120,latest_min=1440),appliance('fixed',flexible=False,earliest_min=120,required_runtime_min=120,latest_min=1440)]
+ r=solve_schedule(items,[10000]*1440)
+ assert r['validated'] and r['status']=='OPTIMAL'
+ assert r['solver_method'].startswith('Earliest-start')
+ assert r['entries'][0]['segments']==[{'start_min':0,'end_min':120}]
+ validate_schedule(items,[10000]*1440,r['entries'])

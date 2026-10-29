@@ -65,6 +65,7 @@ export const FloatingTabDock: React.FC<FloatingTabDockProps> = ({
               style={styles.tabButton}
               accessibilityRole="tab"
               accessibilityState={{ selected: isSelected }}
+              aria-selected={isSelected}
               accessibilityLabel={`${tab.label} tab`}
             >
               {isSelected ? (
