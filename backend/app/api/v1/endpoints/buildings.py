@@ -5,7 +5,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ....db.session import get_db
 from ....models.building import Building
 from ....models.user import User, UserRole
-from ....schemas.building import BuildingCreate, BuildingRead, BuildingUpdate
+from ....schemas.building import (
+    BuildingCreate,
+    BuildingRead,
+    BuildingUpdate,
+    EquipmentSummary,
+    SolarConfig,
+    InverterConfig,
+    BatteryConfig,
+    GeneratorConfig,
+    GridConfig,
+)
 from ...deps import get_current_user
 
 router = APIRouter()
@@ -31,6 +41,7 @@ def check_building_access(user: User, building: Building) -> None:
         detail="Access denied to this building digital twin."
     )
 
+@router.post("", response_model=BuildingRead, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 @router.post("/", response_model=BuildingRead, status_code=status.HTTP_201_CREATED)
 async def create_building(
     payload: BuildingCreate,
@@ -38,7 +49,9 @@ async def create_building(
     db: AsyncSession = Depends(get_db),
 ):
     """Register a new building digital twin associated with the authenticated user."""
-    create_dict = payload.model_dump(exclude={"battery"})
+    create_dict = payload.model_dump(
+        exclude={"battery", "solar", "inverter", "generator", "grid"}
+    )
     building = Building(
         **create_dict,
         owner_id=current_user.id,
@@ -49,6 +62,7 @@ async def create_building(
     await db.refresh(building)
     return building
 
+@router.get("", response_model=List[BuildingRead], include_in_schema=False)
 @router.get("/", response_model=List[BuildingRead])
 async def list_buildings(
     current_user: User = Depends(get_current_user),
@@ -89,6 +103,71 @@ async def get_building(
     check_building_access(current_user, building)
     return building
 
+@router.get("/{building_id}/equipment", response_model=EquipmentSummary)
+async def get_building_equipment(
+    building_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve full decomposed equipment profile with units, ratings, and physical invariant checks."""
+    result = await db.execute(select(Building).where(Building.id == building_id))
+    building = result.scalars().first()
+    if not building:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Building not found")
+
+    check_building_access(current_user, building)
+
+    validation_messages = []
+    if building.battery_usable_kwh > building.battery_nominal_kwh:
+        validation_messages.append("Battery usable capacity exceeds nominal rating.")
+    if building.battery_initial_soc_pct < building.battery_min_soc_pct:
+        validation_messages.append("Initial battery state of charge is below minimum threshold.")
+    if building.has_generator and building.generator_rating_kw <= 0:
+        validation_messages.append("Generator is enabled but rated output is 0 kW.")
+
+    return EquipmentSummary(
+        building_id=building.id,
+        building_name=building.name,
+        solar=SolarConfig(
+            pv_capacity_kwp=building.pv_capacity_kwp,
+            panel_tilt_deg=building.pv_panel_tilt_deg,
+            panel_azimuth_deg=building.pv_panel_azimuth_deg,
+            system_losses_pct=building.pv_system_losses_pct,
+            module_count=building.pv_module_count,
+            module_wattage_w=building.pv_module_wattage_w,
+        ),
+        inverter=InverterConfig(
+            rating_kw=building.inverter_rating_kw,
+            efficiency_pct=building.inverter_efficiency_pct,
+            inverter_type=building.inverter_type,
+        ),
+        battery=BatteryConfig(
+            nominal_capacity_kwh=building.battery_nominal_kwh,
+            usable_capacity_kwh=building.battery_usable_kwh,
+            initial_soc_pct=building.battery_initial_soc_pct,
+            minimum_soc_pct=building.battery_min_soc_pct,
+            max_charge_kw=building.battery_max_charge_kw,
+            max_discharge_kw=building.battery_max_discharge_kw,
+            round_trip_efficiency=building.battery_round_trip_efficiency,
+            chemistry=building.battery_chemistry,
+        ),
+        generator=GeneratorConfig(
+            enabled=building.has_generator,
+            rating_kw=building.generator_rating_kw,
+            fuel_type=building.generator_fuel_type,
+            fuel_consumption_l_per_kwh=building.generator_fuel_consumption_l_per_kwh,
+            min_runtime_min=building.generator_min_runtime_min,
+        ),
+        grid=GridConfig(
+            connection_type=building.grid_connection_type,
+            import_limit_kw=building.grid_import_limit_kw,
+            export_limit_kw=building.grid_export_limit_kw,
+            has_net_metering=building.has_net_metering,
+        ),
+        is_valid=len(validation_messages) == 0,
+        validation_messages=validation_messages,
+    )
+
 @router.patch("/{building_id}", response_model=BuildingRead)
 async def update_building(
     building_id: str,
@@ -96,7 +175,7 @@ async def update_building(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update building physical sizing, battery thresholds, or metadata with consistency checks."""
+    """Update building physical sizing, battery thresholds, generator, or metadata with consistency checks."""
     result = await db.execute(select(Building).where(Building.id == building_id))
     building = result.scalars().first()
     if not building:
@@ -104,7 +183,10 @@ async def update_building(
     
     check_building_access(current_user, building)
     
-    update_data = payload.model_dump(exclude_unset=True, exclude={"battery"})
+    update_data = payload.model_dump(
+        exclude_unset=True,
+        exclude={"battery", "solar", "inverter", "generator", "grid"}
+    )
 
     # Validate combined state invariants
     effective_nominal = update_data.get("battery_nominal_kwh", building.battery_nominal_kwh)
