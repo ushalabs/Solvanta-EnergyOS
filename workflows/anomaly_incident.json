@@ -2,7 +2,7 @@
   "id": "solvanta-anomaly_incident",
   "name": "Solvanta Anomaly Incident",
   "active": false,
-  "versionId": "a7fc2889-444f-40b9-b022-42da6783fcf6",
+  "versionId": "f906656e-4af7-43cb-aea1-217754d03572",
   "nodes": [
     {
       "id": "056e9872-fce1-45eb-bb4c-df4a3ccc7bb9",
@@ -51,7 +51,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "const input=$json.body || $json; return [{json:{building_id:input.building_id || 'CONFIGURE_BUILDING_ID',event_id:input.event_id || 'n8n-'+$execution.id+'-anomaly_incident',correlation_id:input.correlation_id || 'n8n-'+$execution.id,kind:'anomaly_incident',outages:input.outages || [{start_min:480,end_min:600}],use_generator:input.use_generator || false,expiry_minutes:input.expiry_minutes || 60}}];"
+        "jsCode": "const input=$json.body || $json; return [{json:{building_id:input.building_id || 'CONFIGURE_BUILDING_ID',event_id:input.event_id || 'n8n-'+$execution.id+'-anomaly_incident',correlation_id:input.correlation_id || 'n8n-'+$execution.id,kind:'anomaly_incident',incident_id:input.incident_id || null,outages:input.outages || [{start_min:480,end_min:600}],use_generator:input.use_generator || false,expiry_minutes:input.expiry_minutes || 60}}];"
       }
     },
     {
@@ -73,7 +73,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({event_id:$json.event_id,correlation_id:$json.correlation_id,kind:$json.kind,outages:$json.outages,use_generator:$json.use_generator,expiry_minutes:$json.expiry_minutes}) }}"
+        "jsonBody": "={{ JSON.stringify({event_id:$json.event_id,correlation_id:$json.correlation_id,kind:$json.kind,incident_id:$json.incident_id,outages:$json.outages,use_generator:$json.use_generator,expiry_minutes:$json.expiry_minutes}) }}"
       },
       "credentials": {
         "httpHeaderAuth": {
@@ -299,6 +299,53 @@
         300
       ],
       "parameters": {}
+    },
+    {
+      "id": "537185af-27b9-4e7d-bae9-89f0cb2b6210",
+      "name": "Poll Incidents Each Minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        600
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/1 * * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "6c1919dd-ad05-44dd-be63-1d71377a402d",
+      "name": "Load Pending Incidents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        210,
+        600
+      ],
+      "parameters": {
+        "url": "http://host.docker.internal:8000/api/v1/buildings/CONFIGURE_BUILDING_ID/incidents/pending",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "solvanta-backend-auth",
+          "name": "Solvanta Backend Auth"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
     }
   ],
   "connections": {
@@ -438,6 +485,28 @@
         [
           {
             "node": "Durable Approval Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Poll Incidents Each Minute": {
+      "main": [
+        [
+          {
+            "node": "Load Pending Incidents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Pending Incidents": {
+      "main": [
+        [
+          {
+            "node": "Prepare Event",
             "type": "main",
             "index": 0
           }

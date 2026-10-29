@@ -1,0 +1,108 @@
+{
+  "source": "SIMULATED",
+  "telemetry_id": "c872586e-9ae5-4fa4-a8f6-015541d58f56",
+  "source_run_id": "e68256b4-bb5a-4d5a-bc97-bec16377403a",
+  "incident_id": "b1ef9866-7fa5-487d-9b4d-1eebb670a0f4",
+  "code": "load_mismatch",
+  "evidence": [
+    {
+      "minute": 480,
+      "expected": 0.2,
+      "observed": 2.197840282574313,
+      "residual": 1.9978402825743131,
+      "threshold": 0.5,
+      "unit": "kW"
+    },
+    {
+      "minute": 495,
+      "expected": 0.2,
+      "observed": 2.1979888050084027,
+      "residual": 1.9979888050084027,
+      "threshold": 0.5,
+      "unit": "kW"
+    },
+    {
+      "minute": 510,
+      "expected": 0.2,
+      "observed": 2.198330998642529,
+      "residual": 1.998330998642529,
+      "threshold": 0.5,
+      "unit": "kW"
+    },
+    {
+      "minute": 525,
+      "expected": 0.2,
+      "observed": 2.2004889070344946,
+      "residual": 2.0004889070344944,
+      "threshold": 0.5,
+      "unit": "kW"
+    }
+  ],
+  "event_id": "11343a69-206a-451d-bc30-1014203c568d",
+  "correlation_id": "b1ef9866-7fa5-487d-9b4d-1eebb670a0f4",
+  "plan_id": "c59f5c62-ffdb-47f4-94fb-3a7e3d9c54f5",
+  "plan_state": "VERIFIED",
+  "verification_match": {
+    "verification_id": "b2acebdb-592b-44c3-b439-704fc9b99ff9",
+    "digest": "02ca1ef467b14530b711391249e8b0d40878778bcfe44a3c5b0688d5a7619c23",
+    "plan_id": "c59f5c62-ffdb-47f4-94fb-3a7e3d9c54f5",
+    "run_id": "2e52053d-8ebf-461a-b64f-37db6f3c997c",
+    "source": "SIMULATED synthetic observations from saved energy trace",
+    "state": "MODEL_MATCH",
+    "remaining_codes": [],
+    "sample_count": 96,
+    "created_at": "2026-10-29T12:19:11.853460+00:00",
+    "meaning": "Synthetic post-plan model consistency only; no physical incident resolution claimed"
+  },
+  "verification_mismatch": {
+    "verification_id": "5c4b9323-af8d-4e00-99b7-91d2c2f554a3",
+    "digest": "e1a3a8d97e19109e3ceabdeaae903b25eedcb4f8f9bdf72e9d48ba69cda7ff64",
+    "plan_id": "c59f5c62-ffdb-47f4-94fb-3a7e3d9c54f5",
+    "run_id": "2e52053d-8ebf-461a-b64f-37db6f3c997c",
+    "source": "SIMULATED synthetic observations from saved energy trace",
+    "state": "FAILED",
+    "remaining_codes": [
+      "load_mismatch"
+    ],
+    "sample_count": 96,
+    "created_at": "2026-10-29T12:19:11.888891+00:00",
+    "meaning": "Synthetic post-plan model consistency only; no physical incident resolution claimed"
+  },
+  "executions": [
+    {
+      "id": 6,
+      "workflowId": "solvanta-anomaly_incident",
+      "status": "success",
+      "startedAt": "2026-10-29 12:20:00.050",
+      "stoppedAt": "2026-10-29 12:20:00.130"
+    },
+    {
+      "id": 5,
+      "workflowId": "solvanta-anomaly_incident",
+      "status": "success",
+      "startedAt": "2026-10-29 12:19:00.049",
+      "stoppedAt": "2026-10-29 12:19:00.137"
+    },
+    {
+      "id": 4,
+      "workflowId": "solvanta-anomaly_incident",
+      "status": "success",
+      "startedAt": "2026-10-29 12:18:00.105",
+      "stoppedAt": "2026-10-29 12:19:11.295"
+    },
+    {
+      "id": 3,
+      "workflowId": "solvanta-anomaly_incident",
+      "status": "success",
+      "startedAt": "2026-10-29 12:10:17.533",
+      "stoppedAt": "2026-10-29 12:11:28.264"
+    },
+    {
+      "id": 2,
+      "workflowId": "solvanta-daily_planner",
+      "status": "success",
+      "startedAt": "2026-10-29 12:10:16.457",
+      "stoppedAt": "2026-10-29 12:11:26.956"
+    }
+  ]
+}
