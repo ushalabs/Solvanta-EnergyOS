@@ -107,3 +107,6 @@ Implemented measured roof geometry and persisted placement. See PHASE_04_REVIEW.
 
 ### Phase 5 — Codex
 PV design and 24-hour typed generation profile added. See PHASE_05_REVIEW.md. User authorized continuation through Phase 6.
+
+### Phase 6 — Codex
+Saved appliance CRUD, validated run windows and interruption limits, and separate scenario selections with server-calculated demand. See PHASE_06_REVIEW.md. No physical switching implemented.

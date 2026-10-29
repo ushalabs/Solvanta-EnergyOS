@@ -20,6 +20,7 @@ from app.models.building import Building
 from app.models.audit import AuditLog
 from app.models.roof import Roof
 from app.models.pv import PVDesign
+from app.models.appliance import Appliance, ScenarioSelection
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
