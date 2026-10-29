@@ -1,6 +1,6 @@
 export type EnergyStep = { minute:number; duration_hours:number; pv_kw:number; load_kw:number; critical_kw:number; grid_available:boolean; grid_import_kw:number; grid_export_kw:number; generator_kw:number; charge_kw:number; discharge_kw:number; curtailed_kw:number; unmet_kw:number; unserved_critical_kw:number; battery_start_kwh:number; battery_end_kwh:number; soc_pct:number; balance_error_kw:number };
 export type EnergyResult = { schema_version:string; step_minutes:number; trace:EnergyStep[]; summary:Record<string,number>; assumptions:string[] };
-export type EnergyRun = { id:string; created_at:string; result:EnergyResult; snapshot: { pv: {source:string} } };
+export type EnergyRun = { id:string; created_at:string; result:EnergyResult; snapshot: { pv: {source:string}; appliances?: Array<{id:string;name:string;selected:boolean;earliest_min:number;required_runtime_min:number;critical:boolean}> } };
 export function parseOutages(text:string) {
  if(!text.trim())return [];
  const outages=text.split(',').map(pair=>{

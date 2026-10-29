@@ -25,7 +25,7 @@ export const ARCapabilityFallback: React.FC<ARCapabilityFallbackProps> = ({
     >
       <View style={[styles.badge, { backgroundColor: 'rgba(249, 188, 70, 0.15)' }]}>
         <Text style={[styles.badgeText, { color: tokens.amber }]}>
-          DEMO • NATIVE AR NOT INTEGRATED
+          DEMO â€¢ NATIVE AR NOT INTEGRATED
         </Text>
       </View>
 
@@ -38,7 +38,7 @@ export const ARCapabilityFallback: React.FC<ARCapabilityFallbackProps> = ({
       </Text>
 
       <Text style={[styles.body, { color: tokens.textMuted }]}>
-        A static 2D layout preview is available. Hardware support has not been detected or verified; polygon editing is planned for Phase 4 and native AR for Phase 12.
+        The measured 2D editor and saved panel placement are available. This Expo SDK 58 build has no native AR module. The checked ViroReact package excludes SDK 58, and no physical ARCore device is connected for validation.
       </Text>
 
       <LimeCTA
