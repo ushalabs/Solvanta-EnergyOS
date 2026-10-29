@@ -17,7 +17,7 @@ async def test_root_ready(async_client: AsyncClient):
     data = response.json()
     assert data["ready"] is True
     assert data["database"] == "connected"
-    assert "uninitialized" in data["engines"]
+    assert "PV estimate available" in data["engines"]
 
 @pytest.mark.asyncio
 async def test_v1_system_health(async_client: AsyncClient):
@@ -33,4 +33,4 @@ async def test_v1_system_ready(async_client: AsyncClient):
     data = response.json()
     assert data["ready"] is True
     assert data["database"] == "connected"
-    assert "uninitialized" in data["engines"]
+    assert "PV estimate available" in data["engines"]
