@@ -5,6 +5,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { SPACING } from '../theme/tokens';
 
 interface SolvantaScreenProps {
+  banner?: string;
   children: ReactNode;
   scrollable?: boolean;
   style?: ViewStyle;
@@ -12,6 +13,7 @@ interface SolvantaScreenProps {
 }
 
 export const SolvantaScreen: React.FC<SolvantaScreenProps> = ({
+  banner = 'DEMO • Fixture preview; live tools are labelled separately',
   children,
   scrollable = true,
   style,
@@ -42,7 +44,7 @@ export const SolvantaScreen: React.FC<SolvantaScreenProps> = ({
           showsVerticalScrollIndicator={false}
         >
           <Text style={{ color: tokens.amber, fontSize: 11, marginBottom: 10 }}>
-            DEMO • Phase 1 UI preview • Fixture data, no engine or backend connected
+            {banner}
           </Text>
           {children}
         </ScrollView>

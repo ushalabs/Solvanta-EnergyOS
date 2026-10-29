@@ -101,3 +101,6 @@ This document records chronological handoffs between engineering agents, autonom
 - Removed the local pinned API IP. Client now follows Expo hostUri on each request, with explicit URL override retained for hosted APIs. Added changing-network and React Native cancellation regressions; emulator preview reverses API and Metro ports.
 - Validation: 21 backend tests, 25 mobile tests, TypeScript clean. Physical phone follow-up remains user validation; no claim that Wi-Fi isolation was tested remotely.
 - User explicitly authorized continuation through Phase 6, end-of-phase validation and commit/push after each phase. This supersedes earlier per-phase approval gates through 6.
+
+### Phase 4 — Codex
+Implemented measured roof geometry and persisted placement. See PHASE_04_REVIEW.md for validation and limitations. Optional CV proposals remain omitted; manual geometry is functional.
