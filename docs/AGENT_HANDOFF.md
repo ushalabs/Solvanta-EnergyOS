@@ -116,3 +116,6 @@ Phase 4 dedicated branch phase/04-roof-geometry merged to main at 5152a0a (origi
 
 ### Phase 7 — Codex
 Deterministic quarter-hour energy balance, saved input snapshots and trace, authenticated history and mobile interval replay. Validation: 47 backend / 29 mobile tests, TypeScript and web export. See PHASE_07_REVIEW.md.
+
+### Phase 8 — Codex
+Deterministic configured/latest-simulation forecast providers with explicit provenance and shortage projection, low-data fallback and mobile PV/load chart. No trained-model accuracy claimed. Full suite: 50 backend, 29 mobile tests, TypeScript and web export. See PHASE_08_REVIEW.md.

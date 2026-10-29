@@ -1,10 +1,10 @@
 # Solvanta — Current Project Status
 
-**Last Updated:** 29 October 2026 (Phase 6 Appliance Digital Twin)
-**Active Phase:** Phase 7 complete; Phase 8 next
+**Last Updated:** 29 October 2026 (Phase 8 Shortage Forecast)
+**Active Phase:** Phase 8 complete; Phase 9 next
 **Overall FYP-I Target:** Complete local working prototype through MCP by 10 November 2026  
 **Current Git Remote:** `https://github.com/ushalabs/Solvanta-EnergyOS`  
-**Current Branch:** `main` (Phase 4–6 branches merged)  
+**Current Branch:** `main` (Phase 4–8 branches merged)  
 **Approval Protocol:** User authorized continued sequential phases until session capacity, with complete phase validation, separate branch push, and merge to main after each phase.
 
 ---
@@ -21,7 +21,7 @@
 | 05 | PV Sizing & Generation Engine | Codex | COMPLETED | 33 backend, 27 mobile, TypeScript; web export 14 routes | None | 30 Oct 2026 |
 | 06 | Appliance Digital Twin | Codex | COMPLETED | 41 backend, 28 mobile, TypeScript, web export | Native device test pending | 31 Oct 2026 |
 | 07 | Energy & Outage Simulator | Codex | COMPLETED | 47 backend, 29 mobile, TypeScript, web export | Native device interaction unverified | 01 Nov 2026 |
-| 08 | Forecasting & Shortage Risk | Antigravity / Team | NOT STARTED | - | Requires Phase 7 Approval | 02 Nov 2026 |
+| 08 | Forecasting & Shortage Risk | Codex | COMPLETED | 50 backend, 29 mobile, TypeScript, web export | No observed telemetry for trained models | 02 Nov 2026 |
 | 09 | Appliance Scheduling (OR-Tools) | Antigravity / Team | NOT STARTED | - | Requires Phase 8 Approval | 03 Nov 2026 |
 | 10 | Outage Resilience Optimizer | Antigravity / Team | NOT STARTED | - | Requires Phase 9 Approval | 04 Nov 2026 |
 | 11 | What-If & Approval State Machine | Antigravity / Team | NOT STARTED | - | Requires Phase 10 Approval | 05 Nov 2026 |
