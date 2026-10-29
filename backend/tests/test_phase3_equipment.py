@@ -240,3 +240,178 @@ async def test_phase3_role_primitives_organization_access(async_client: AsyncCli
         headers={"Authorization": f"Bearer {eng_token}"},
     )
     assert denied_res.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_phase3_flat_vs_nested_conflict_detection(async_client: AsyncClient):
+    """Verifies that contradictory values between flat and nested sub-schemas are rejected with 422."""
+    uid = str(uuid.uuid4())[:8]
+    email = f"conflict_{uid}@solvanta.energy"
+    await async_client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": "SecurePassword123!", "full_name": "Conflict User"},
+    )
+    token = (await async_client.post(
+        "/api/v1/auth/login", data={"username": email, "password": "SecurePassword123!"}
+    )).json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Conflict on Create: flat pv_capacity_kwp != nested solar.pv_capacity_kwp
+    conflict_solar = {
+        "name": f"Conflict Solar {uid}",
+        "pv_capacity_kwp": 10.0,
+        "inverter_rating_kw": 8.0,
+        "solar": {"pv_capacity_kwp": 15.0},
+        "battery": {"nominal_capacity_kwh": 10.0, "usable_capacity_kwh": 8.0},
+    }
+    res1 = await async_client.post("/api/v1/buildings", json=conflict_solar, headers=headers)
+    assert res1.status_code == 422
+    assert "Conflicting values provided for 'pv_capacity_kwp'" in res1.text
+
+    # 2. Conflict on Create: flat battery_nominal_kwh != nested battery.nominal_capacity_kwh
+    conflict_bat = {
+        "name": f"Conflict Battery {uid}",
+        "pv_capacity_kwp": 10.0,
+        "inverter_rating_kw": 8.0,
+        "battery_nominal_kwh": 10.0,
+        "battery": {"nominal_capacity_kwh": 14.0, "usable_capacity_kwh": 8.0},
+    }
+    res2 = await async_client.post("/api/v1/buildings", json=conflict_bat, headers=headers)
+    assert res2.status_code == 422
+    assert "Conflicting values provided for 'battery_nominal_kwh'" in res2.text
+
+    # 3. Create clean building
+    clean_payload = {
+        "name": f"Clean Base {uid}",
+        "pv_capacity_kwp": 10.0,
+        "inverter_rating_kw": 8.0,
+        "battery": {"nominal_capacity_kwh": 10.0, "usable_capacity_kwh": 8.0},
+    }
+    bld = (await async_client.post("/api/v1/buildings", json=clean_payload, headers=headers)).json()
+
+    # 4. Conflict on Update: flat inverter_rating_kw != nested inverter.rating_kw
+    conflict_update = {
+        "inverter_rating_kw": 8.0,
+        "inverter": {"rating_kw": 12.0},
+    }
+    res3 = await async_client.patch(f"/api/v1/buildings/{bld['id']}", json=conflict_update, headers=headers)
+    assert res3.status_code == 422
+    assert "Conflicting values provided for 'inverter_rating_kw'" in res3.text
+
+
+@pytest.mark.asyncio
+async def test_phase3_pv_module_capacity_consistency(async_client: AsyncClient):
+    """Verifies that PV module count x module wattage is physically consistent with declared capacity."""
+    uid = str(uuid.uuid4())[:8]
+    email = f"pv_phys_{uid}@solvanta.energy"
+    await async_client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": "SecurePassword123!", "full_name": "PV Physics User"},
+    )
+    token = (await async_client.post(
+        "/api/v1/auth/login", data={"username": email, "password": "SecurePassword123!"}
+    )).json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Inconsistent PV: declared 20.0 kWp, but 10 modules x 400W = 4.0 kWp (exceeds allowable tolerance)
+    inconsistent_payload = {
+        "name": f"Inconsistent PV {uid}",
+        "pv_capacity_kwp": 20.0,
+        "pv_module_count": 10,
+        "pv_module_wattage_w": 400.0,
+        "inverter_rating_kw": 15.0,
+        "battery": {"nominal_capacity_kwh": 10.0, "usable_capacity_kwh": 8.0},
+    }
+    res1 = await async_client.post("/api/v1/buildings", json=inconsistent_payload, headers=headers)
+    assert res1.status_code == 422
+    assert "PV capacity mismatch" in res1.text
+
+    # 2. Consistent PV: declared 10.0 kWp, 18 modules x 550W = 9.9 kWp (within +/- 0.5 kWp tolerance)
+    consistent_payload = {
+        "name": f"Consistent PV {uid}",
+        "pv_capacity_kwp": 10.0,
+        "pv_module_count": 18,
+        "pv_module_wattage_w": 550.0,
+        "inverter_rating_kw": 8.0,
+        "battery": {"nominal_capacity_kwh": 10.0, "usable_capacity_kwh": 8.0},
+    }
+    res2 = await async_client.post("/api/v1/buildings", json=consistent_payload, headers=headers)
+    assert res2.status_code == 201
+    bld_id = res2.json()["id"]
+
+    # 3. Patching PV module count to inconsistent value is rejected
+    bad_patch = {
+        "solar": {"module_count": 4, "module_wattage_w": 550.0}  # 2.2 kWp vs existing 10.0 kWp
+    }
+    res3 = await async_client.patch(f"/api/v1/buildings/{bld_id}", json=bad_patch, headers=headers)
+    assert res3.status_code == 422
+    assert "PV capacity mismatch" in res3.text
+
+
+@pytest.mark.asyncio
+async def test_phase3_generator_validation(async_client: AsyncClient):
+    """Verifies that an enabled backup generator with 0 or negative rated capacity is rejected."""
+    uid = str(uuid.uuid4())[:8]
+    email = f"gen_val_{uid}@solvanta.energy"
+    await async_client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": "SecurePassword123!", "full_name": "Generator User"},
+    )
+    token = (await async_client.post(
+        "/api/v1/auth/login", data={"username": email, "password": "SecurePassword123!"}
+    )).json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Enabled generator with 0 kW rating on Create -> rejected
+    zero_gen = {
+        "name": f"Zero Gen {uid}",
+        "pv_capacity_kwp": 10.0,
+        "inverter_rating_kw": 8.0,
+        "battery": {"nominal_capacity_kwh": 10.0, "usable_capacity_kwh": 8.0},
+        "generator": {
+            "enabled": True,
+            "rating_kw": 0.0,
+        },
+    }
+    res1 = await async_client.post("/api/v1/buildings", json=zero_gen, headers=headers)
+    assert res1.status_code == 422
+    assert "rating greater than 0 kW" in res1.text
+
+    # 2. Disabled generator with 0 kW rating on Create -> valid
+    disabled_gen = {
+        "name": f"Disabled Gen {uid}",
+        "pv_capacity_kwp": 10.0,
+        "inverter_rating_kw": 8.0,
+        "battery": {"nominal_capacity_kwh": 10.0, "usable_capacity_kwh": 8.0},
+        "generator": {
+            "enabled": False,
+            "rating_kw": 0.0,
+        },
+    }
+    res2 = await async_client.post("/api/v1/buildings", json=disabled_gen, headers=headers)
+    assert res2.status_code == 201
+    bld_id = res2.json()["id"]
+
+    # 3. Enabling generator without rating on Update -> rejected
+    enable_zero = {
+        "generator": {
+            "enabled": True,
+            "rating_kw": 0.0,
+        }
+    }
+    res3 = await async_client.patch(f"/api/v1/buildings/{bld_id}", json=enable_zero, headers=headers)
+    assert res3.status_code == 422
+    assert "rating greater than 0 kW" in res3.text
+
+    # 4. Enabling generator with positive rating -> valid
+    enable_valid = {
+        "generator": {
+            "enabled": True,
+            "rating_kw": 6.5,
+            "fuel_type": "diesel",
+        }
+    }
+    res4 = await async_client.patch(f"/api/v1/buildings/{bld_id}", json=enable_valid, headers=headers)
+    assert res4.status_code == 200
+    assert res4.json()["generator"]["rating_kw"] == 6.5
+    assert res4.json()["generator"]["enabled"] is True

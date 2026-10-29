@@ -169,6 +169,7 @@ async def get_building_equipment(
     )
 
 @router.patch("/{building_id}", response_model=BuildingRead)
+@router.put("/{building_id}", response_model=BuildingRead)
 async def update_building(
     building_id: str,
     payload: BuildingUpdate,
@@ -188,11 +189,16 @@ async def update_building(
         exclude={"battery", "solar", "inverter", "generator", "grid"}
     )
 
-    # Validate combined state invariants
+    # Validate combined state invariants against existing DB state
     effective_nominal = update_data.get("battery_nominal_kwh", building.battery_nominal_kwh)
     effective_usable = update_data.get("battery_usable_kwh", building.battery_usable_kwh)
     effective_initial = update_data.get("battery_initial_soc_pct", building.battery_initial_soc_pct)
     effective_min = update_data.get("battery_min_soc_pct", building.battery_min_soc_pct)
+    effective_has_gen = update_data.get("has_generator", building.has_generator)
+    effective_gen_rating = update_data.get("generator_rating_kw", building.generator_rating_kw)
+    effective_pv_kwp = update_data.get("pv_capacity_kwp", building.pv_capacity_kwp)
+    effective_mod_cnt = update_data.get("pv_module_count", building.pv_module_count)
+    effective_mod_watt = update_data.get("pv_module_wattage_w", building.pv_module_wattage_w)
 
     if effective_usable > effective_nominal:
         raise HTTPException(
@@ -204,6 +210,24 @@ async def update_building(
             status_code=422,
             detail=f"Battery initial SoC ({effective_initial}%) cannot be lower than minimum SoC limit ({effective_min}%)",
         )
+    if effective_has_gen and effective_gen_rating <= 0.0:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Enabled backup generator must have a rating greater than 0 kW (got {effective_gen_rating} kW)",
+        )
+    if (
+        effective_mod_cnt is not None
+        and effective_mod_watt is not None
+        and effective_mod_cnt > 0
+        and effective_mod_watt > 0
+    ):
+        calc_kwp = round((effective_mod_cnt * effective_mod_watt) / 1000.0, 3)
+        tolerance = max(0.5, 0.05 * effective_pv_kwp)
+        if abs(effective_pv_kwp - calc_kwp) > tolerance:
+            raise HTTPException(
+                status_code=422,
+                detail=f"PV capacity mismatch: declared pv_capacity_kwp ({effective_pv_kwp} kWp) is inconsistent with module count {effective_mod_cnt} × {effective_mod_watt}W = {calc_kwp} kWp (exceeds allowable tolerance of ±5% or ±0.5 kWp)",
+            )
 
     for field, value in update_data.items():
         setattr(building, field, value)

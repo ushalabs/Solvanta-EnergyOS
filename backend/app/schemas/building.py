@@ -2,6 +2,21 @@ from datetime import datetime
 from typing import Optional, Any
 from pydantic import BaseModel, Field, ConfigDict, model_validator
 
+
+def check_field_conflict(flat_val: Any, nested_val: Any, field_name: str, tolerance: float = 1e-4) -> None:
+    """Detect conflicts between flat and nested sub-schema values instead of silently overriding."""
+    if flat_val is not None and nested_val is not None:
+        if isinstance(flat_val, (int, float)) and isinstance(nested_val, (int, float)):
+            if abs(float(flat_val) - float(nested_val)) > tolerance:
+                raise ValueError(
+                    f"Conflicting values provided for '{field_name}': flat field has {flat_val} but nested field has {nested_val}"
+                )
+        elif flat_val != nested_val:
+            raise ValueError(
+                f"Conflicting values provided for '{field_name}': flat field has '{flat_val}' but nested field has '{nested_val}'"
+            )
+
+
 # -----------------------------------------------------------------------------
 # 1. Solar PV Configuration Sub-Schema
 # -----------------------------------------------------------------------------
@@ -10,10 +25,39 @@ class SolarConfig(BaseModel):
     panel_tilt_deg: float = Field(25.0, ge=0.0, le=90.0, description="Panel tilt from horizontal (0=flat, 90=vertical)")
     panel_azimuth_deg: float = Field(180.0, ge=0.0, le=360.0, description="Panel azimuth angle (180=South, 90=East, 270=West)")
     system_losses_pct: float = Field(14.0, ge=0.0, le=50.0, description="Estimated DC/AC wiring, dust, mismatch losses")
-    module_count: int = Field(18, ge=0, le=2000, description="Number of installed PV modules")
-    module_wattage_w: float = Field(550.0, ge=0.0, le=1000.0, description="Individual module peak rating in Watts")
+    module_count: Optional[int] = Field(None, ge=0, le=2000, description="Number of installed PV modules")
+    module_wattage_w: Optional[float] = Field(None, ge=0.0, le=1000.0, description="Individual module peak rating in Watts")
 
     model_config = ConfigDict(populate_by_name=True)
+
+    @model_validator(mode="after")
+    def validate_solar_consistency(self) -> "SolarConfig":
+        if self.module_count is None and self.module_wattage_w is None:
+            if self.pv_capacity_kwp > 0:
+                self.module_count = max(1, round((self.pv_capacity_kwp * 1000.0) / 550.0))
+                self.module_wattage_w = round((self.pv_capacity_kwp * 1000.0) / self.module_count, 1)
+            else:
+                self.module_count = 0
+                self.module_wattage_w = 0.0
+        elif self.module_count is not None and self.module_wattage_w is None:
+            if self.module_count > 0:
+                self.module_wattage_w = round((self.pv_capacity_kwp * 1000.0) / self.module_count, 1)
+            else:
+                self.module_wattage_w = 0.0
+        elif self.module_count is None and self.module_wattage_w is not None:
+            if self.module_wattage_w > 0:
+                self.module_count = max(1, round((self.pv_capacity_kwp * 1000.0) / self.module_wattage_w))
+            else:
+                self.module_count = 0
+        elif self.module_count > 0 and self.module_wattage_w > 0:
+            calc_kwp = round((self.module_count * self.module_wattage_w) / 1000.0, 3)
+            tolerance = max(0.5, 0.05 * self.pv_capacity_kwp)
+            if abs(self.pv_capacity_kwp - calc_kwp) > tolerance:
+                raise ValueError(
+                    f"PV capacity mismatch: declared pv_capacity_kwp ({self.pv_capacity_kwp} kWp) is inconsistent with module count {self.module_count} × {self.module_wattage_w}W = {calc_kwp} kWp (exceeds allowable tolerance of ±5% or ±0.5 kWp)"
+                )
+        return self
+
 
 class SolarUpdateConfig(BaseModel):
     pv_capacity_kwp: Optional[float] = Field(None, ge=0.0, le=500.0)
@@ -24,6 +68,23 @@ class SolarUpdateConfig(BaseModel):
     module_wattage_w: Optional[float] = Field(None, ge=0.0, le=1000.0)
 
     model_config = ConfigDict(populate_by_name=True)
+
+    @model_validator(mode="after")
+    def validate_solar_update_consistency(self) -> "SolarUpdateConfig":
+        if (
+            self.pv_capacity_kwp is not None
+            and self.module_count is not None
+            and self.module_wattage_w is not None
+            and self.module_count > 0
+            and self.module_wattage_w > 0
+        ):
+            calc_kwp = round((self.module_count * self.module_wattage_w) / 1000.0, 3)
+            tolerance = max(0.5, 0.05 * self.pv_capacity_kwp)
+            if abs(self.pv_capacity_kwp - calc_kwp) > tolerance:
+                raise ValueError(
+                    f"PV capacity mismatch: declared pv_capacity_kwp ({self.pv_capacity_kwp} kWp) is inconsistent with module count {self.module_count} × {self.module_wattage_w}W = {calc_kwp} kWp (exceeds allowable tolerance of ±5% or ±0.5 kWp)"
+                )
+        return self
 
 # -----------------------------------------------------------------------------
 # 2. Inverter Configuration Sub-Schema
@@ -105,6 +166,12 @@ class GeneratorConfig(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
+    @model_validator(mode="after")
+    def validate_generator(self) -> "GeneratorConfig":
+        if self.enabled and self.rating_kw <= 0.0:
+            raise ValueError("Enabled generator must have a rating greater than 0 kW (rating_kw > 0)")
+        return self
+
 class GeneratorUpdateConfig(BaseModel):
     enabled: Optional[bool] = None
     rating_kw: Optional[float] = Field(None, ge=0.0, le=500.0)
@@ -113,6 +180,12 @@ class GeneratorUpdateConfig(BaseModel):
     min_runtime_min: Optional[int] = Field(None, ge=0, le=1440)
 
     model_config = ConfigDict(populate_by_name=True)
+
+    @model_validator(mode="after")
+    def validate_generator_update(self) -> "GeneratorUpdateConfig":
+        if self.enabled is True and self.rating_kw is not None and self.rating_kw <= 0.0:
+            raise ValueError("Enabled generator must have a rating greater than 0 kW (rating_kw > 0)")
+        return self
 
 # -----------------------------------------------------------------------------
 # 5. Grid Interconnection Sub-Schema
@@ -155,8 +228,8 @@ class BuildingCreate(BaseModel):
     pv_panel_tilt_deg: float = Field(25.0, ge=0.0, le=90.0)
     pv_panel_azimuth_deg: float = Field(180.0, ge=0.0, le=360.0)
     pv_system_losses_pct: float = Field(14.0, ge=0.0, le=50.0)
-    pv_module_count: int = Field(18, ge=0, le=2000)
-    pv_module_wattage_w: float = Field(550.0, ge=0.0, le=1000.0)
+    pv_module_count: Optional[int] = Field(None, ge=0, le=2000)
+    pv_module_wattage_w: Optional[float] = Field(None, ge=0.0, le=1000.0)
 
     inverter_efficiency_pct: float = Field(96.0, gt=50.0, le=100.0)
     inverter_type: str = Field("hybrid", max_length=32)
@@ -185,53 +258,172 @@ class BuildingCreate(BaseModel):
     @classmethod
     def normalize_payload(cls, data: Any) -> Any:
         if isinstance(data, dict):
-            # Normalize battery
+            # 1. Normalize battery
             bat = data.get("battery")
             if isinstance(bat, dict):
-                data.setdefault("battery_nominal_kwh", bat.get("nominal_capacity_kwh", bat.get("nominal_kwh")))
-                data.setdefault("battery_usable_kwh", bat.get("usable_capacity_kwh", bat.get("usable_kwh")))
-                data.setdefault("battery_initial_soc_pct", bat.get("initial_soc_pct", 70.0))
-                data.setdefault("battery_min_soc_pct", bat.get("minimum_soc_pct", bat.get("min_soc_pct", 20.0)))
-                data.setdefault("battery_max_charge_kw", bat.get("max_charge_kw", 4.0))
-                data.setdefault("battery_max_discharge_kw", bat.get("max_discharge_kw", 4.0))
-                data.setdefault("battery_round_trip_efficiency", bat.get("round_trip_efficiency", 0.90))
-                data.setdefault("battery_chemistry", bat.get("chemistry", "LFP"))
-            
-            # Normalize solar
+                nom = bat.get("nominal_capacity_kwh", bat.get("nominal_kwh"))
+                check_field_conflict(data.get("battery_nominal_kwh"), nom, "battery_nominal_kwh")
+                if nom is not None:
+                    data["battery_nominal_kwh"] = nom
+
+                usa = bat.get("usable_capacity_kwh", bat.get("usable_kwh"))
+                check_field_conflict(data.get("battery_usable_kwh"), usa, "battery_usable_kwh")
+                if usa is not None:
+                    data["battery_usable_kwh"] = usa
+
+                init_soc = bat.get("initial_soc_pct")
+                check_field_conflict(data.get("battery_initial_soc_pct"), init_soc, "battery_initial_soc_pct")
+                if init_soc is not None:
+                    data["battery_initial_soc_pct"] = init_soc
+
+                min_soc = bat.get("minimum_soc_pct", bat.get("min_soc_pct"))
+                check_field_conflict(data.get("battery_min_soc_pct"), min_soc, "battery_min_soc_pct")
+                if min_soc is not None:
+                    data["battery_min_soc_pct"] = min_soc
+
+                mc = bat.get("max_charge_kw")
+                check_field_conflict(data.get("battery_max_charge_kw"), mc, "battery_max_charge_kw")
+                if mc is not None:
+                    data["battery_max_charge_kw"] = mc
+
+                md = bat.get("max_discharge_kw")
+                check_field_conflict(data.get("battery_max_discharge_kw"), md, "battery_max_discharge_kw")
+                if md is not None:
+                    data["battery_max_discharge_kw"] = md
+
+                rte = bat.get("round_trip_efficiency")
+                check_field_conflict(data.get("battery_round_trip_efficiency"), rte, "battery_round_trip_efficiency")
+                if rte is not None:
+                    data["battery_round_trip_efficiency"] = rte
+
+                chem = bat.get("chemistry")
+                check_field_conflict(data.get("battery_chemistry"), chem, "battery_chemistry")
+                if chem is not None:
+                    data["battery_chemistry"] = chem
+
+            # 2. Normalize solar
             sol = data.get("solar")
             if isinstance(sol, dict):
-                if "pv_capacity_kwp" in sol:
-                    data.setdefault("pv_capacity_kwp", sol["pv_capacity_kwp"])
-                data.setdefault("pv_panel_tilt_deg", sol.get("panel_tilt_deg", 25.0))
-                data.setdefault("pv_panel_azimuth_deg", sol.get("panel_azimuth_deg", 180.0))
-                data.setdefault("pv_system_losses_pct", sol.get("system_losses_pct", 14.0))
-                data.setdefault("pv_module_count", sol.get("module_count", 18))
-                data.setdefault("pv_module_wattage_w", sol.get("module_wattage_w", 550.0))
+                pv = sol.get("pv_capacity_kwp")
+                check_field_conflict(data.get("pv_capacity_kwp"), pv, "pv_capacity_kwp")
+                if pv is not None:
+                    data["pv_capacity_kwp"] = pv
 
-            # Normalize inverter
+                tilt = sol.get("panel_tilt_deg")
+                check_field_conflict(data.get("pv_panel_tilt_deg"), tilt, "pv_panel_tilt_deg")
+                if tilt is not None:
+                    data["pv_panel_tilt_deg"] = tilt
+
+                az = sol.get("panel_azimuth_deg")
+                check_field_conflict(data.get("pv_panel_azimuth_deg"), az, "pv_panel_azimuth_deg")
+                if az is not None:
+                    data["pv_panel_azimuth_deg"] = az
+
+                loss = sol.get("system_losses_pct")
+                check_field_conflict(data.get("pv_system_losses_pct"), loss, "pv_system_losses_pct")
+                if loss is not None:
+                    data["pv_system_losses_pct"] = loss
+
+                cnt = sol.get("module_count")
+                check_field_conflict(data.get("pv_module_count"), cnt, "pv_module_count")
+                if cnt is not None:
+                    data["pv_module_count"] = cnt
+
+                watt = sol.get("module_wattage_w")
+                check_field_conflict(data.get("pv_module_wattage_w"), watt, "pv_module_wattage_w")
+                if watt is not None:
+                    data["pv_module_wattage_w"] = watt
+
+            # Derived-capacity rule: if module count / wattage not explicitly provided, derive from pv_capacity_kwp
+            pv_kwp = data.get("pv_capacity_kwp")
+            has_cnt = "pv_module_count" in data and data["pv_module_count"] is not None
+            has_watt = "pv_module_wattage_w" in data and data["pv_module_wattage_w"] is not None
+
+            if pv_kwp is not None and float(pv_kwp) > 0:
+                if not has_cnt and not has_watt:
+                    cnt = max(1, round((float(pv_kwp) * 1000.0) / 550.0))
+                    data["pv_module_count"] = cnt
+                    data["pv_module_wattage_w"] = round((float(pv_kwp) * 1000.0) / cnt, 1)
+                elif has_cnt and not has_watt:
+                    cnt = int(data["pv_module_count"])
+                    if cnt > 0:
+                        data["pv_module_wattage_w"] = round((float(pv_kwp) * 1000.0) / cnt, 1)
+                elif not has_cnt and has_watt:
+                    watt = float(data["pv_module_wattage_w"])
+                    if watt > 0:
+                        data["pv_module_count"] = max(1, round((float(pv_kwp) * 1000.0) / watt))
+            elif pv_kwp == 0:
+                data.setdefault("pv_module_count", 0)
+                data.setdefault("pv_module_wattage_w", 0.0)
+
+            # 3. Normalize inverter
             inv = data.get("inverter")
             if isinstance(inv, dict):
-                if "rating_kw" in inv:
-                    data.setdefault("inverter_rating_kw", inv["rating_kw"])
-                data.setdefault("inverter_efficiency_pct", inv.get("efficiency_pct", 96.0))
-                data.setdefault("inverter_type", inv.get("inverter_type", "hybrid"))
+                inv_r = inv.get("rating_kw")
+                check_field_conflict(data.get("inverter_rating_kw"), inv_r, "inverter_rating_kw")
+                if inv_r is not None:
+                    data["inverter_rating_kw"] = inv_r
 
-            # Normalize generator
+                eff = inv.get("efficiency_pct")
+                check_field_conflict(data.get("inverter_efficiency_pct"), eff, "inverter_efficiency_pct")
+                if eff is not None:
+                    data["inverter_efficiency_pct"] = eff
+
+                itype = inv.get("inverter_type")
+                check_field_conflict(data.get("inverter_type"), itype, "inverter_type")
+                if itype is not None:
+                    data["inverter_type"] = itype
+
+            # 4. Normalize generator
             gen = data.get("generator")
             if isinstance(gen, dict):
-                data.setdefault("has_generator", gen.get("enabled", gen.get("has_generator", False)))
-                data.setdefault("generator_rating_kw", gen.get("rating_kw", gen.get("generator_rating_kw", 0.0)))
-                data.setdefault("generator_fuel_type", gen.get("fuel_type", gen.get("generator_fuel_type")))
-                data.setdefault("generator_fuel_consumption_l_per_kwh", gen.get("fuel_consumption_l_per_kwh", 0.35))
-                data.setdefault("generator_min_runtime_min", gen.get("min_runtime_min", 15))
+                has_g = gen.get("enabled", gen.get("has_generator"))
+                check_field_conflict(data.get("has_generator"), has_g, "has_generator")
+                if has_g is not None:
+                    data["has_generator"] = has_g
 
-            # Normalize grid
+                gen_r = gen.get("rating_kw", gen.get("generator_rating_kw"))
+                check_field_conflict(data.get("generator_rating_kw"), gen_r, "generator_rating_kw")
+                if gen_r is not None:
+                    data["generator_rating_kw"] = gen_r
+
+                fuel = gen.get("fuel_type", gen.get("generator_fuel_type"))
+                check_field_conflict(data.get("generator_fuel_type"), fuel, "generator_fuel_type")
+                if fuel is not None:
+                    data["generator_fuel_type"] = fuel
+
+                cons = gen.get("fuel_consumption_l_per_kwh")
+                check_field_conflict(data.get("generator_fuel_consumption_l_per_kwh"), cons, "generator_fuel_consumption_l_per_kwh")
+                if cons is not None:
+                    data["generator_fuel_consumption_l_per_kwh"] = cons
+
+                min_run = gen.get("min_runtime_min")
+                check_field_conflict(data.get("generator_min_runtime_min"), min_run, "generator_min_runtime_min")
+                if min_run is not None:
+                    data["generator_min_runtime_min"] = min_run
+
+            # 5. Normalize grid
             grd = data.get("grid")
             if isinstance(grd, dict):
-                data.setdefault("grid_connection_type", grd.get("connection_type", "single_phase"))
-                data.setdefault("grid_import_limit_kw", grd.get("import_limit_kw", 15.0))
-                data.setdefault("grid_export_limit_kw", grd.get("export_limit_kw", 10.0))
-                data.setdefault("has_net_metering", grd.get("has_net_metering", True))
+                conn = grd.get("connection_type")
+                check_field_conflict(data.get("grid_connection_type"), conn, "grid_connection_type")
+                if conn is not None:
+                    data["grid_connection_type"] = conn
+
+                imp = grd.get("import_limit_kw")
+                check_field_conflict(data.get("grid_import_limit_kw"), imp, "grid_import_limit_kw")
+                if imp is not None:
+                    data["grid_import_limit_kw"] = imp
+
+                exp = grd.get("export_limit_kw")
+                check_field_conflict(data.get("grid_export_limit_kw"), exp, "grid_export_limit_kw")
+                if exp is not None:
+                    data["grid_export_limit_kw"] = exp
+
+                net = grd.get("has_net_metering")
+                check_field_conflict(data.get("has_net_metering"), net, "has_net_metering")
+                if net is not None:
+                    data["has_net_metering"] = net
 
         return data
 
@@ -247,6 +439,17 @@ class BuildingCreate(BaseModel):
             if self.battery_initial_soc_pct < self.battery_min_soc_pct:
                 raise ValueError(
                     f"Battery initial SoC ({self.battery_initial_soc_pct}%) cannot be lower than minimum SoC limit ({self.battery_min_soc_pct}%)"
+                )
+        if self.has_generator and self.generator_rating_kw <= 0.0:
+            raise ValueError(
+                f"Enabled backup generator must have a rating greater than 0 kW (got {self.generator_rating_kw} kW)"
+            )
+        if self.pv_module_count > 0 and self.pv_module_wattage_w > 0:
+            calc_kwp = round((self.pv_module_count * self.pv_module_wattage_w) / 1000.0, 3)
+            tolerance = max(0.5, 0.05 * self.pv_capacity_kwp)
+            if abs(self.pv_capacity_kwp - calc_kwp) > tolerance:
+                raise ValueError(
+                    f"PV capacity mismatch: declared pv_capacity_kwp ({self.pv_capacity_kwp} kWp) is inconsistent with module count {self.pv_module_count} × {self.pv_module_wattage_w}W = {calc_kwp} kWp (exceeds allowable tolerance of ±5% or ±0.5 kWp)"
                 )
         return self
 
@@ -299,79 +502,114 @@ class BuildingUpdate(BaseModel):
     @classmethod
     def normalize_update_payload(cls, data: Any) -> Any:
         if isinstance(data, dict):
-            # Battery normalization
+            # 1. Battery normalization & conflict checks
             bat = data.get("battery")
             if isinstance(bat, dict):
-                if "nominal_capacity_kwh" in bat or "nominal_kwh" in bat:
-                    data.setdefault("battery_nominal_kwh", bat.get("nominal_capacity_kwh", bat.get("nominal_kwh")))
-                if "usable_capacity_kwh" in bat or "usable_kwh" in bat:
-                    data.setdefault("battery_usable_kwh", bat.get("usable_capacity_kwh", bat.get("usable_kwh")))
-                if "initial_soc_pct" in bat:
-                    data.setdefault("battery_initial_soc_pct", bat["initial_soc_pct"])
-                if "minimum_soc_pct" in bat or "min_soc_pct" in bat:
-                    data.setdefault("battery_min_soc_pct", bat.get("minimum_soc_pct", bat.get("min_soc_pct")))
-                if "max_charge_kw" in bat:
-                    data.setdefault("battery_max_charge_kw", bat["max_charge_kw"])
-                if "max_discharge_kw" in bat:
-                    data.setdefault("battery_max_discharge_kw", bat["max_discharge_kw"])
-                if "round_trip_efficiency" in bat:
-                    data.setdefault("battery_round_trip_efficiency", bat["round_trip_efficiency"])
-                if "chemistry" in bat:
-                    data.setdefault("battery_chemistry", bat["chemistry"])
+                nom = bat.get("nominal_capacity_kwh", bat.get("nominal_kwh"))
+                check_field_conflict(data.get("battery_nominal_kwh"), nom, "battery_nominal_kwh")
+                if nom is not None:
+                    data["battery_nominal_kwh"] = nom
 
-            # Solar normalization
+                usa = bat.get("usable_capacity_kwh", bat.get("usable_kwh"))
+                check_field_conflict(data.get("battery_usable_kwh"), usa, "battery_usable_kwh")
+                if usa is not None:
+                    data["battery_usable_kwh"] = usa
+
+                if "initial_soc_pct" in bat:
+                    check_field_conflict(data.get("battery_initial_soc_pct"), bat["initial_soc_pct"], "battery_initial_soc_pct")
+                    data["battery_initial_soc_pct"] = bat["initial_soc_pct"]
+
+                min_soc = bat.get("minimum_soc_pct", bat.get("min_soc_pct"))
+                check_field_conflict(data.get("battery_min_soc_pct"), min_soc, "battery_min_soc_pct")
+                if min_soc is not None:
+                    data["battery_min_soc_pct"] = min_soc
+
+                if "max_charge_kw" in bat:
+                    check_field_conflict(data.get("battery_max_charge_kw"), bat["max_charge_kw"], "battery_max_charge_kw")
+                    data["battery_max_charge_kw"] = bat["max_charge_kw"]
+
+                if "max_discharge_kw" in bat:
+                    check_field_conflict(data.get("battery_max_discharge_kw"), bat["max_discharge_kw"], "battery_max_discharge_kw")
+                    data["battery_max_discharge_kw"] = bat["max_discharge_kw"]
+
+                if "round_trip_efficiency" in bat:
+                    check_field_conflict(data.get("battery_round_trip_efficiency"), bat["round_trip_efficiency"], "battery_round_trip_efficiency")
+                    data["battery_round_trip_efficiency"] = bat["round_trip_efficiency"]
+
+                if "chemistry" in bat:
+                    check_field_conflict(data.get("battery_chemistry"), bat["chemistry"], "battery_chemistry")
+                    data["battery_chemistry"] = bat["chemistry"]
+
+            # 2. Solar normalization & conflict checks
             sol = data.get("solar")
             if isinstance(sol, dict):
                 if "pv_capacity_kwp" in sol:
-                    data.setdefault("pv_capacity_kwp", sol["pv_capacity_kwp"])
+                    check_field_conflict(data.get("pv_capacity_kwp"), sol["pv_capacity_kwp"], "pv_capacity_kwp")
+                    data["pv_capacity_kwp"] = sol["pv_capacity_kwp"]
                 if "panel_tilt_deg" in sol:
-                    data.setdefault("pv_panel_tilt_deg", sol["panel_tilt_deg"])
+                    check_field_conflict(data.get("pv_panel_tilt_deg"), sol["panel_tilt_deg"], "pv_panel_tilt_deg")
+                    data["pv_panel_tilt_deg"] = sol["panel_tilt_deg"]
                 if "panel_azimuth_deg" in sol:
-                    data.setdefault("pv_panel_azimuth_deg", sol["panel_azimuth_deg"])
+                    check_field_conflict(data.get("pv_panel_azimuth_deg"), sol["panel_azimuth_deg"], "pv_panel_azimuth_deg")
+                    data["pv_panel_azimuth_deg"] = sol["panel_azimuth_deg"]
                 if "system_losses_pct" in sol:
-                    data.setdefault("pv_system_losses_pct", sol["system_losses_pct"])
+                    check_field_conflict(data.get("pv_system_losses_pct"), sol["system_losses_pct"], "pv_system_losses_pct")
+                    data["pv_system_losses_pct"] = sol["system_losses_pct"]
                 if "module_count" in sol:
-                    data.setdefault("pv_module_count", sol["module_count"])
+                    check_field_conflict(data.get("pv_module_count"), sol["module_count"], "pv_module_count")
+                    data["pv_module_count"] = sol["module_count"]
                 if "module_wattage_w" in sol:
-                    data.setdefault("pv_module_wattage_w", sol["module_wattage_w"])
+                    check_field_conflict(data.get("pv_module_wattage_w"), sol["module_wattage_w"], "pv_module_wattage_w")
+                    data["pv_module_wattage_w"] = sol["module_wattage_w"]
 
-            # Inverter normalization
+            # 3. Inverter normalization & conflict checks
             inv = data.get("inverter")
             if isinstance(inv, dict):
                 if "rating_kw" in inv:
-                    data.setdefault("inverter_rating_kw", inv["rating_kw"])
+                    check_field_conflict(data.get("inverter_rating_kw"), inv["rating_kw"], "inverter_rating_kw")
+                    data["inverter_rating_kw"] = inv["rating_kw"]
                 if "efficiency_pct" in inv:
-                    data.setdefault("inverter_efficiency_pct", inv["efficiency_pct"])
+                    check_field_conflict(data.get("inverter_efficiency_pct"), inv["efficiency_pct"], "inverter_efficiency_pct")
+                    data["inverter_efficiency_pct"] = inv["efficiency_pct"]
                 if "inverter_type" in inv:
-                    data.setdefault("inverter_type", inv["inverter_type"])
+                    check_field_conflict(data.get("inverter_type"), inv["inverter_type"], "inverter_type")
+                    data["inverter_type"] = inv["inverter_type"]
 
-            # Generator normalization
+            # 4. Generator normalization & conflict checks
             gen = data.get("generator")
             if isinstance(gen, dict):
-                if "enabled" in gen:
-                    data.setdefault("has_generator", gen["enabled"])
-                elif "has_generator" in gen:
-                    data.setdefault("has_generator", gen["has_generator"])
+                has_g = gen.get("enabled", gen.get("has_generator"))
+                if has_g is not None:
+                    check_field_conflict(data.get("has_generator"), has_g, "has_generator")
+                    data["has_generator"] = has_g
                 if "rating_kw" in gen:
-                    data.setdefault("generator_rating_kw", gen["rating_kw"])
+                    check_field_conflict(data.get("generator_rating_kw"), gen["rating_kw"], "generator_rating_kw")
+                    data["generator_rating_kw"] = gen["rating_kw"]
                 if "fuel_type" in gen:
-                    data.setdefault("generator_fuel_type", gen["fuel_type"])
+                    check_field_conflict(data.get("generator_fuel_type"), gen["fuel_type"], "generator_fuel_type")
+                    data["generator_fuel_type"] = gen["fuel_type"]
                 if "fuel_consumption_l_per_kwh" in gen:
-                    data.setdefault("generator_fuel_consumption_l_per_kwh", gen["fuel_consumption_l_per_kwh"])
+                    check_field_conflict(data.get("generator_fuel_consumption_l_per_kwh"), gen["fuel_consumption_l_per_kwh"], "generator_fuel_consumption_l_per_kwh")
+                    data["generator_fuel_consumption_l_per_kwh"] = gen["fuel_consumption_l_per_kwh"]
                 if "min_runtime_min" in gen:
-                    data.setdefault("generator_min_runtime_min", gen["min_runtime_min"])
+                    check_field_conflict(data.get("generator_min_runtime_min"), gen["min_runtime_min"], "generator_min_runtime_min")
+                    data["generator_min_runtime_min"] = gen["min_runtime_min"]
 
-            # Grid normalization
+            # 5. Grid normalization & conflict checks
             grd = data.get("grid")
             if isinstance(grd, dict):
                 if "connection_type" in grd:
-                    data.setdefault("grid_connection_type", grd["connection_type"])
+                    check_field_conflict(data.get("grid_connection_type"), grd["connection_type"], "grid_connection_type")
+                    data["grid_connection_type"] = grd["connection_type"]
                 if "import_limit_kw" in grd:
-                    data.setdefault("grid_import_limit_kw", grd["import_limit_kw"])
+                    check_field_conflict(data.get("grid_import_limit_kw"), grd["import_limit_kw"], "grid_import_limit_kw")
+                    data["grid_import_limit_kw"] = grd["import_limit_kw"]
                 if "export_limit_kw" in grd:
-                    data.setdefault("grid_export_limit_kw", grd["export_limit_kw"])
+                    check_field_conflict(data.get("grid_export_limit_kw"), grd["export_limit_kw"], "grid_export_limit_kw")
+                    data["grid_export_limit_kw"] = grd["export_limit_kw"]
                 if "has_net_metering" in grd:
-                    data.setdefault("has_net_metering", grd["has_net_metering"])
+                    check_field_conflict(data.get("has_net_metering"), grd["has_net_metering"], "has_net_metering")
+                    data["has_net_metering"] = grd["has_net_metering"]
 
         return data
 
@@ -389,6 +627,21 @@ class BuildingUpdate(BaseModel):
             and self.battery_initial_soc_pct < self.battery_min_soc_pct
         ):
             raise ValueError("Battery initial SoC cannot be lower than minimum SoC limit")
+        if self.has_generator is True and self.generator_rating_kw is not None and self.generator_rating_kw <= 0.0:
+            raise ValueError("Enabled generator must have a rating greater than 0 kW (generator_rating_kw > 0)")
+        if (
+            self.pv_capacity_kwp is not None
+            and self.pv_module_count is not None
+            and self.pv_module_wattage_w is not None
+            and self.pv_module_count > 0
+            and self.pv_module_wattage_w > 0
+        ):
+            calc_kwp = round((self.pv_module_count * self.pv_module_wattage_w) / 1000.0, 3)
+            tolerance = max(0.5, 0.05 * self.pv_capacity_kwp)
+            if abs(self.pv_capacity_kwp - calc_kwp) > tolerance:
+                raise ValueError(
+                    f"PV capacity mismatch: declared pv_capacity_kwp ({self.pv_capacity_kwp} kWp) is inconsistent with module count {self.pv_module_count} × {self.pv_module_wattage_w}W = {calc_kwp} kWp (exceeds allowable tolerance of ±5% or ±0.5 kWp)"
+                )
         return self
 
 

@@ -16,7 +16,7 @@
 | **00** | **Repo Audit & Contracts** | Antigravity / Team | **COMPLETED & APPROVED** | PASS (Toolchain & files verified) | None | 28 Oct 2026 |
 | **01** | **Mobile UI Foundation & Shells** | Antigravity / Team | **COMPLETED & APPROVED** | PASS (10 tests; tsc clean; live ADB & web evidence) | None | 28 Oct 2026 |
 | **02** | **Backend, PostgreSQL & Local Runtime** | Antigravity / Team | **COMPLETED & APPROVED** | PASS (15 backend tests, 16 mobile tests, live API verified; merged PR #5) | None | 29 Oct 2026 |
-| **03** | **Building & Equipment Configuration** | Antigravity / Team | **AWAITING USER APPROVAL** | PASS (18 backend tests, 18 mobile tests, clean tsc) | None | 29 Oct 2026 |
+| **03** | **Building & Equipment Configuration** | Antigravity / Team | **AWAITING USER APPROVAL** | PASS (21 backend tests, 23 mobile tests, clean tsc, live native Android evidence) | None | 29 Oct 2026 |
 | 04 | Rooftop CV & Geometry Editor | Antigravity / Team | NOT STARTED | - | Requires Phase 3 Approval | 30 Oct 2026 |
 | 05 | PV Sizing & Generation Engine | Antigravity / Team | NOT STARTED | - | Requires Phase 4 Approval | 30 Oct 2026 |
 | 06 | Appliance Digital Twin | Antigravity / Team | NOT STARTED | - | Requires Phase 5 Approval | 31 Oct 2026 |

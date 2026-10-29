@@ -66,3 +66,30 @@ This document records chronological handoffs between engineering agents, autonom
      - Mobile Typecheck: `npx tsc --noEmit` clean with 0 errors.
 - **User Approval Status:** **PHASE 3 COMPLETE — AWAITING USER APPROVAL**
 - **Next Phase:** Phase 04 — Rooftop Computer Vision & Geometry Editor (LOCKED until user approval).
+
+---
+
+### Phase 03 Independent Review Corrections — 29 October 2026
+- **Owner:** Google Antigravity
+- **Repo Remote:** https://github.com/ushalabs/Solvanta-EnergyOS
+- **Active Branch:** `phase/03-building-models`
+- **Review Corrections Completed:**
+  1. **Mobile Authentication & Server Persistence:**
+     - Added minimal, reliable FastAPI JWT authentication card in `mobile/src/components/BuildingEquipmentEditor.tsx` (Sign In / Sign Out, token persistence via `apiClient.setToken`, demo credentials auto-fill with `Solvanta2026!`).
+     - Scoped local storage keys by authenticated user and building ID: `@solvanta_equipment_${userId}_${buildingId}` to avoid unintended cross-user or first-building overwrites.
+     - Strict status segregation: `synced` (green banner confirmed against PostgreSQL record), `local_draft` (amber banner for offline edits), and `error` (red banner displaying HTTP 401/403/422 status and detail message). Failed saves never display success.
+     - Authoritative server reload updates UI state directly from PostgreSQL response.
+  2. **Physical Consistency & Conflict Detection:**
+     - Added `check_field_conflict(flat_val, nested_val, field_name)` across `SolarConfig`, `InverterConfig`, `BatteryConfig`, `GeneratorConfig`, and `GridConfig` to reject conflicting nested vs flat inputs with HTTP 422 instead of silently choosing one.
+     - Implemented **Derived-Capacity Rule** for PV: when module count/wattage are omitted, dynamically derives `module_count` and `module_wattage_w` from `pv_capacity_kwp` based on standard 550W baseline. When both are explicitly declared, validates that $|pv\_capacity\_kwp - (count \times wattage / 1000)| \le \max(0.5, 0.05 \times pv\_capacity\_kwp)$.
+     - Added strict generator validation rejecting `enabled=True` when `rating_kw <= 0`.
+     - Preserved battery constraints (usable <= nominal, initial SoC >= reserve limit) and multi-tenant organization isolation.
+  3. **Complete Phase 3 Mobile Editor:**
+     - Added interactive inputs for all decomposed equipment parameters: PV module count, wattage, tilt, azimuth, system losses; Inverter AC rating, efficiency, topology picker (`hybrid`, `string`, `microinverter`, `central`); Battery nominal, usable, initial SoC, reserve limit, charge/discharge rates, round-trip efficiency, chemistry picker (`LFP`, `NMC`, `lead_acid`); Generator rating, fuel consumption, minimum runtime, fuel type picker; Grid sanctioned import, export limit, phase type picker (`3-Phase`, `1-Phase`), net-metering switch.
+     - Form-level physical validation before submission.
+     - Preserved dark/light theme switching.
+  4. **Verification & Test Coverage:**
+     - Backend Tests: **21 / 21 passed** via `pytest -v` (+3 new suites in `test_phase3_equipment.py` covering nested vs flat conflicts, PV capacity physical consistency, and generator validation).
+     - Mobile Tests: **23 / 23 passed** via `npm test` (+5 new real form interaction tests in `equipment_form.test.tsx` testing render, pre-submit validation, HTTP 422/401 error handling without false success, and authenticated save flow).
+     - Mobile Typecheck: `npx tsc --noEmit` exited cleanly with **0 errors**.
+     - Live Android Evidence: Captured 6 live screenshots from `emulator-5554` (`Downshift_Phase1`) into `docs/ui-evidence/phase3/`.
