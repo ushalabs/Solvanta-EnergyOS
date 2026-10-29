@@ -128,3 +128,6 @@ Critical-reserve dispatch with identical-baseline comparison, immutable saved in
 
 ### Phase 11 — Codex
 Three immutable configuration alternatives, expiring revision-controlled plan approval, idempotency, concurrent action serialization, audit, linked simulation and verified/failed results. 64 backend tests / 29 mobile tests, TypeScript and web export pass. See PHASE_11_REVIEW.md.
+
+### Phase 12 — Codex
+Saved-trace digital twin playback, speed, seek, source flow, requested appliance activity and measured roof fallback implemented. 31 mobile tests, TypeScript and web export pass. Native AR remains blocked: Viro 3.0.3 peer metadata excludes Expo 58; ADB reported no devices. Exact evidence and unblock steps are in AR_COMPATIBILITY.md and PHASE_12_REVIEW.md. No native AR completion is claimed.
