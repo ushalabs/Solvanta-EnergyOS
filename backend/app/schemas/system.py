@@ -10,5 +10,5 @@ class HealthResponse(BaseModel):
 class ReadyResponse(BaseModel):
     ready: bool = True
     database: str = "connected"
-    engines: str = "PV estimate available; energy and outage simulation scheduled Phase 7"
+    engines: str = "PV estimate available; energy and outage simulation available"
     timestamp: datetime

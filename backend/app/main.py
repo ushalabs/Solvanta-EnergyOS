@@ -46,7 +46,7 @@ async def root_ready(db: AsyncSession = Depends(get_db)):
         return ReadyResponse(
             ready=True,
             database="connected",
-            engines="PV estimate available; energy and outage simulation scheduled Phase 7",
+            engines="PV estimate available; energy and outage simulation available",
             timestamp=datetime.now(timezone.utc),
         )
     except Exception as e:
