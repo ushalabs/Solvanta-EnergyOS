@@ -40,5 +40,29 @@ This document records chronological handoffs between engineering agents, autonom
      - Mobile Tests: 16/16 passed via npm test.
      - Mobile Typecheck: npx tsc --noEmit clean with 0 errors.
      - Database Separation: solvanta_db (users=3, buildings=1, orgs=1) untouched; solvanta_test_db used for disposable test suite.
-- **User Approval Status:** **FINAL SAFETY CORRECTIONS COMPLETE — AWAITING REVIEW & APPROVAL**
-- **Next Phase:** Phase 03 — Building & Equipment Configuration Models (LOCKED until user approval).
+- **User Approval Status:** **APPROVED BY USER** (PR #5 merged to main `472fc4c`)
+---
+
+### Phase 03 — Building & Equipment Configuration Models — 29 October 2026
+- **Owner:** Google Antigravity
+- **Repo Remote:** https://github.com/ushalabs/Solvanta-EnergyOS
+- **Active Branch:** phase/03-building-models
+- **Deliverables Implemented:**
+  1. **Comprehensive Equipment Database Models:**
+     - Extended `buildings` table with decomposed equipment entities: Solar PV (`pv_panel_tilt_deg`, `pv_panel_azimuth_deg`, `pv_system_losses_pct`, `pv_module_count`, `pv_module_wattage_w`), Inverter (`inverter_efficiency_pct`, `inverter_type`), Battery (`battery_chemistry`), Backup Generator (`has_generator`, `generator_rating_kw`, `generator_fuel_type`, `generator_fuel_consumption_l_per_kwh`, `generator_min_runtime_min`), and Grid Interconnection (`grid_connection_type`, `grid_import_limit_kw`, `grid_export_limit_kw`, `has_net_metering`).
+     - Added physical CheckConstraints for tilt (0-90°), azimuth (0-360°), losses (0-50%), inverter efficiency (50-100%), and non-negative ratings.
+  2. **Alembic Migration & Seeding:**
+     - Created migration `3a4b5c6d7e8f_phase3_equipment_models.py` with reversible `upgrade()` and `downgrade()`.
+     - Seeded realistic equipment parameters for the demo twin (`Demo Residential Hybrid Solar`: 10.0 kWp PV, 25° tilt, 180° azimuth, 8.0 kW hybrid inverter, 10.0 kWh LFP battery, 5.0 kW diesel generator, three-phase grid).
+  3. **Pydantic Schemas & API Endpoints:**
+     - Added `SolarConfig`, `InverterConfig`, `BatteryConfig`, `GeneratorConfig`, `GridConfig`, `EquipmentSummary` schemas with field-level physical validators.
+     - Added decomposed equipment inspection endpoint `GET /api/v1/buildings/{building_id}/equipment`.
+     - Preserved backward compatibility with Phase 2 flat schemas and routes.
+  4. **Mobile Equipment Editor UI:**
+     - Built `mobile/src/components/BuildingEquipmentEditor.tsx` in `settings.tsx` with high-contrast neon theme, unit badges, numeric inputs, live physical validation, and dual-mode persistence (`api` + `AsyncStorage`).
+  5. **Verification & Test Coverage:**
+     - Backend Tests: 18/18 passed via `pytest -v` (including CRUD, physical constraints, cross-tenant isolation, Alembic downgrade to base & upgrade to head).
+     - Mobile Tests: 18/18 passed via `npm test`.
+     - Mobile Typecheck: `npx tsc --noEmit` clean with 0 errors.
+- **User Approval Status:** **PHASE 3 COMPLETE — AWAITING USER APPROVAL**
+- **Next Phase:** Phase 04 — Rooftop Computer Vision & Geometry Editor (LOCKED until user approval).

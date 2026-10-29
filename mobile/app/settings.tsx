@@ -5,6 +5,7 @@ import { ArrowLeft, Moon, Sun, CheckCircle, Database, ShieldAlert, Cpu } from 'l
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../src/theme/ThemeContext';
 import { SPACING, RADIUS } from '../src/theme/tokens';
+import { BuildingEquipmentEditor } from '../src/components/BuildingEquipmentEditor';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -26,7 +27,13 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={{ color: tokens.amber, fontSize: 11, marginBottom: 12 }}>DEMO • Phase 1 UI preview • Fixture data only</Text>
+        <Text style={{ color: tokens.lime, fontSize: 11, marginBottom: 12 }}>LIVE TWIN • Phase 3 Building & Equipment Configuration Active</Text>
+
+        {/* Building & Equipment Profile Section */}
+        <Text style={[styles.sectionHeader, { color: tokens.textMuted }]}>
+          BUILDING & EQUIPMENT TWIN CONFIGURATION
+        </Text>
+        <BuildingEquipmentEditor />
         {/* Appearance Section */}
         <Text style={[styles.sectionHeader, { color: tokens.textMuted }]}>
           APPEARANCE (THEME PERSISTENCE)

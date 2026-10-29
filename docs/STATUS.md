@@ -1,10 +1,10 @@
 # Solvanta — Current Project Status
 
-**Last Updated:** 29 October 2026 (Phase 2 Final Safety Correction)  
-**Active Phase:** Phase 2 — Local infrastructure, FastAPI/Postgres, auth and API contracts (Awaiting User Approval)  
+**Last Updated:** 29 October 2026 (Phase 3 Building & Equipment Configuration)  
+**Active Phase:** Phase 3 — Building & Equipment Configuration Models (Awaiting User Approval)  
 **Overall FYP-I Target:** Complete local working prototype through MCP by 10 November 2026  
 **Current Git Remote:** `https://github.com/ushalabs/Solvanta-EnergyOS`  
-**Current Branch:** `fix/phase-02-final-corrections`  
+**Current Branch:** `phase/03-building-models`  
 **Approval Protocol:** STRICT — Work 1 phase → test → commit → push → provide evidence → ask user approval → STOP.
 
 ---
@@ -15,8 +15,8 @@
 |---|---|---|---|---|---|---|
 | **00** | **Repo Audit & Contracts** | Antigravity / Team | **COMPLETED & APPROVED** | PASS (Toolchain & files verified) | None | 28 Oct 2026 |
 | **01** | **Mobile UI Foundation & Shells** | Antigravity / Team | **COMPLETED & APPROVED** | PASS (10 tests; tsc clean; live ADB & web evidence) | None | 28 Oct 2026 |
-| **02** | **Backend, PostgreSQL & Local Runtime** | Antigravity / Team | **AWAITING USER APPROVAL** | PASS (15 backend tests, 16 mobile tests, live API verified) | None | 29 Oct 2026 |
-| 03 | Building & Equipment Configuration | Antigravity / Team | NOT STARTED | - | Requires Phase 2 Approval | 29 Oct 2026 |
+| **02** | **Backend, PostgreSQL & Local Runtime** | Antigravity / Team | **COMPLETED & APPROVED** | PASS (15 backend tests, 16 mobile tests, live API verified; merged PR #5) | None | 29 Oct 2026 |
+| **03** | **Building & Equipment Configuration** | Antigravity / Team | **AWAITING USER APPROVAL** | PASS (18 backend tests, 18 mobile tests, clean tsc) | None | 29 Oct 2026 |
 | 04 | Rooftop CV & Geometry Editor | Antigravity / Team | NOT STARTED | - | Requires Phase 3 Approval | 30 Oct 2026 |
 | 05 | PV Sizing & Generation Engine | Antigravity / Team | NOT STARTED | - | Requires Phase 4 Approval | 30 Oct 2026 |
 | 06 | Appliance Digital Twin | Antigravity / Team | NOT STARTED | - | Requires Phase 5 Approval | 31 Oct 2026 |

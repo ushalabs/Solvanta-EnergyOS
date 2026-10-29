@@ -106,7 +106,14 @@ async def seed():
                 address="Lahore, Pakistan",
                 timezone="Asia/Karachi",
                 pv_capacity_kwp=10.0,
+                pv_panel_tilt_deg=25.0,
+                pv_panel_azimuth_deg=180.0,
+                pv_system_losses_pct=14.0,
+                pv_module_count=18,
+                pv_module_wattage_w=550.0,
                 inverter_rating_kw=8.0,
+                inverter_efficiency_pct=96.0,
+                inverter_type="hybrid",
                 battery_nominal_kwh=10.0,
                 battery_usable_kwh=9.0,
                 battery_initial_soc_pct=70.0,
@@ -114,6 +121,16 @@ async def seed():
                 battery_max_charge_kw=4.0,
                 battery_max_discharge_kw=4.0,
                 battery_round_trip_efficiency=0.90,
+                battery_chemistry="LFP",
+                has_generator=True,
+                generator_rating_kw=5.0,
+                generator_fuel_type="diesel",
+                generator_fuel_consumption_l_per_kwh=0.35,
+                generator_min_runtime_min=15,
+                grid_connection_type="three_phase",
+                grid_import_limit_kw=15.0,
+                grid_export_limit_kw=10.0,
+                has_net_metering=True,
                 owner_id=customer.id,
                 organization_id=org.id,
             )
@@ -121,7 +138,24 @@ async def seed():
             await session.flush()
             print(f"  [+] Created Building: Demo Residential Hybrid Solar (ID: {building.id})")
         else:
-            print(f"  [=] Building Demo Residential Hybrid Solar already exists (ID: {building.id}).")
+            building.pv_panel_tilt_deg = 25.0
+            building.pv_panel_azimuth_deg = 180.0
+            building.pv_system_losses_pct = 14.0
+            building.pv_module_count = 18
+            building.pv_module_wattage_w = 550.0
+            building.inverter_efficiency_pct = 96.0
+            building.inverter_type = "hybrid"
+            building.battery_chemistry = "LFP"
+            building.has_generator = True
+            building.generator_rating_kw = 5.0
+            building.generator_fuel_type = "diesel"
+            building.generator_fuel_consumption_l_per_kwh = 0.35
+            building.generator_min_runtime_min = 15
+            building.grid_connection_type = "three_phase"
+            building.grid_import_limit_kw = 15.0
+            building.grid_export_limit_kw = 10.0
+            building.has_net_metering = True
+            print(f"  [=] Building Demo Residential Hybrid Solar updated with Phase 3 equipment (ID: {building.id}).")
 
         await session.commit()
         print("[SUCCESS] Demo seeding completed successfully!")

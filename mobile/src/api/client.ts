@@ -44,21 +44,70 @@ export class SolvantaApiError extends Error {
   }
 }
 
+export interface SolarConfig {
+  pv_capacity_kwp: number;
+  panel_tilt_deg?: number;
+  panel_azimuth_deg?: number;
+  system_losses_pct?: number;
+  module_count?: number;
+  module_wattage_w?: number;
+}
+
+export interface InverterConfig {
+  rating_kw: number;
+  efficiency_pct?: number;
+  inverter_type?: string;
+}
+
+export interface BatteryConfig {
+  nominal_capacity_kwh: number;
+  usable_capacity_kwh: number;
+  initial_soc_pct: number;
+  minimum_soc_pct: number;
+  max_charge_kw: number;
+  max_discharge_kw: number;
+  round_trip_efficiency: number;
+  chemistry?: string;
+}
+
+export interface GeneratorConfig {
+  enabled: boolean;
+  rating_kw: number;
+  fuel_type?: string | null;
+  fuel_consumption_l_per_kwh?: number;
+  min_runtime_min?: number;
+}
+
+export interface GridConfig {
+  connection_type: string;
+  import_limit_kw: number;
+  export_limit_kw: number;
+  has_net_metering: boolean;
+}
+
 export interface BuildingPayload {
   name: string;
   address?: string;
   timezone?: string;
   pv_capacity_kwp: number;
   inverter_rating_kw: number;
-  battery: {
-    nominal_capacity_kwh: number;
-    usable_capacity_kwh: number;
-    initial_soc_pct: number;
-    minimum_soc_pct: number;
-    max_charge_kw: number;
-    max_discharge_kw: number;
-    round_trip_efficiency: number;
-  };
+  battery: BatteryConfig;
+  solar?: SolarConfig;
+  inverter?: InverterConfig;
+  generator?: GeneratorConfig;
+  grid?: GridConfig;
+}
+
+export interface EquipmentSummary {
+  building_id: string;
+  building_name: string;
+  solar: SolarConfig;
+  inverter: InverterConfig;
+  battery: BatteryConfig;
+  generator: GeneratorConfig;
+  grid: GridConfig;
+  is_valid: boolean;
+  validation_messages: string[];
 }
 
 export class SolvantaApiClient {
@@ -221,6 +270,14 @@ export class SolvantaApiClient {
 
   async createBuilding(payload: BuildingPayload) {
     return this.post<BuildingPayload & { id: string; owner_id: string; organization_id?: string }>('/buildings', payload);
+  }
+
+  async updateBuilding(buildingId: string, payload: Partial<BuildingPayload>) {
+    return this.patch<BuildingPayload & { id: string; owner_id: string; organization_id?: string }>(`/buildings/${buildingId}`, payload);
+  }
+
+  async getBuildingEquipment(buildingId: string) {
+    return this.get<EquipmentSummary>(`/buildings/${buildingId}/equipment`);
   }
 }
 
