@@ -21,3 +21,6 @@ api_router.include_router(forecast.router,prefix="/buildings",tags=["Forecast"])
 
 from .endpoints import scheduling
 api_router.include_router(scheduling.router,prefix="/buildings",tags=["Scheduling"])
+
+from .endpoints import resilience
+api_router.include_router(resilience.router,prefix="/buildings",tags=["Resilience"])
