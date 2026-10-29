@@ -194,7 +194,7 @@ npm install --legacy-peer-deps
 ```
 
 #### Physical Device Configuration (Local Wi-Fi LAN)
-Start the backend from the repository root with `./scripts/start-backend.ps1`, then run `npx expo start --lan` in `mobile`. Leave `EXPO_PUBLIC_API_BASE_URL` blank. The app follows Expo's current host automatically: no IP edits when changing Wi-Fi or hotspots. Restart Expo and reopen its current QR code after changing networks.
+Start the backend and Expo LAN server from the repository root with `./scripts/start-phone-preview.ps1`. Leave `EXPO_PUBLIC_API_BASE_URL` blank. The app follows Expo's current host automatically: no IP edits when changing Wi-Fi or hotspots. Restart Expo and reopen its current QR code after changing networks.
 
 The backend binds `0.0.0.0:8000` (all IPv4 interfaces). Bare `uvicorn app.main:app` defaults to loopback only; the launcher rejects such an existing listener. The Android preview script reverses both ports 8081 and 8000.
 

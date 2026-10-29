@@ -1,7 +1,7 @@
 # Solvanta — Current Project Status
 
-**Last Updated:** 29 October 2026 (Phase 5 PV Engineering)  
-**Active Phase:** Phase 5 complete; Phase 6 appliance twin next  
+**Last Updated:** 29 October 2026 (Phase 6 Appliance Digital Twin)
+**Active Phase:** Phase 6 complete; awaiting review for Phase 7
 **Overall FYP-I Target:** Complete local working prototype through MCP by 10 November 2026  
 **Current Git Remote:** `https://github.com/ushalabs/Solvanta-EnergyOS`  
 **Current Branch:** `phase/03-building-models`  
@@ -19,7 +19,7 @@
 | **03** | **Building & Equipment Configuration** | Antigravity / Team | **COMPLETED** | PASS (21 backend tests, 23 mobile tests, clean tsc, prior native Android evidence) | None | 29 Oct 2026 |
 | 04 | Rooftop Geometry Editor | Codex | COMPLETED | 28 backend, 26 mobile, live authenticated save, web export | Native emulator boot ANR | 30 Oct 2026 |
 | 05 | PV Sizing & Generation Engine | Codex | COMPLETED | 33 backend, 27 mobile, TypeScript; web export 14 routes | None | 30 Oct 2026 |
-| 06 | Appliance Digital Twin | Codex | IN PROGRESS | - | None | 31 Oct 2026 |
+| 06 | Appliance Digital Twin | Codex | COMPLETED | 41 backend, 28 mobile, TypeScript, web export | Native device test pending | 31 Oct 2026 |
 | 07 | Energy & Outage Simulator | Antigravity / Team | NOT STARTED | - | Requires Phase 6 Approval | 01 Nov 2026 |
 | 08 | Forecasting & Shortage Risk | Antigravity / Team | NOT STARTED | - | Requires Phase 7 Approval | 02 Nov 2026 |
 | 09 | Appliance Scheduling (OR-Tools) | Antigravity / Team | NOT STARTED | - | Requires Phase 8 Approval | 03 Nov 2026 |
