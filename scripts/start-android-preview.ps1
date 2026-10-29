@@ -17,5 +17,6 @@ if (-not (Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction Silent
     Start-Process -FilePath (Get-Command python).Source -ArgumentList @('scripts/android-preview.py') -WorkingDirectory $solvantaRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $solvantaMobile '.expo\adb-viewer.log') -RedirectStandardError (Join-Path $solvantaMobile '.expo\adb-viewer-errors.log')
 }
 & $solvantaAdb -s emulator-5554 reverse tcp:8081 tcp:8081
+& $solvantaAdb -s emulator-5554 reverse tcp:8000 tcp:8000
 & $solvantaAdb -s emulator-5554 shell am start -a android.intent.action.VIEW -d exp://127.0.0.1:8081 host.exp.exponent
 Write-Output 'Live Android viewer: http://localhost:8765'

@@ -1,3 +1,4 @@
+jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: {} } }));
 import React from 'react';
 
 const MockText = (props: any) => React.createElement('Text', props, props.children);

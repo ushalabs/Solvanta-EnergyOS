@@ -93,3 +93,11 @@ This document records chronological handoffs between engineering agents, autonom
      - Mobile Tests: **23 / 23 passed** via `npm test` (+5 new real form interaction tests in `equipment_form.test.tsx` testing render, pre-submit validation, HTTP 422/401 error handling without false success, and authenticated save flow).
      - Mobile Typecheck: `npx tsc --noEmit` exited cleanly with **0 errors**.
      - Live Android Evidence: Captured 6 live screenshots from `emulator-5554` (`Downshift_Phase1`) into `docs/ui-evidence/phase3/`.
+
+
+### Phase 3 LAN fix — Codex, 29 October 2026
+- Root cause: actual process command was `uvicorn app.main:app --reload`, listening on 127.0.0.1:8000. The screenshot IP was correctly assigned to Wi-Fi; the backend was inaccessible there.
+- Restarted via the repo launcher on 0.0.0.0; readiness and demo authentication succeeded using the Wi-Fi address.
+- Removed the local pinned API IP. Client now follows Expo hostUri on each request, with explicit URL override retained for hosted APIs. Added changing-network and React Native cancellation regressions; emulator preview reverses API and Metro ports.
+- Validation: 21 backend tests, 25 mobile tests, TypeScript clean. Physical phone follow-up remains user validation; no claim that Wi-Fi isolation was tested remotely.
+- User explicitly authorized continuation through Phase 6, end-of-phase validation and commit/push after each phase. This supersedes earlier per-phase approval gates through 6.

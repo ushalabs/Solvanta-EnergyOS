@@ -1,3 +1,5 @@
+jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: {} } }));
+import Constants from 'expo-constants';
 let mockStorage: Record<string, string> = {};
 
 jest.mock('react-native', () => ({
@@ -22,6 +24,7 @@ describe('Solvanta Mobile API Client', () => {
 
   beforeEach(async () => {
     mockStorage = {};
+    (Constants.expoConfig as any).hostUri = undefined;
     (globalThis as any).fetch = jest.fn();
     delete process.env.EXPO_PUBLIC_API_BASE_URL;
   });
@@ -100,4 +103,23 @@ describe('Solvanta Mobile API Client', () => {
       expect(e.data.error.code).toBe('NETWORK_ERROR');
     }
   });
+
+  test('recognizes React Native cancellation errors as deadline expiry', async () => {
+    const client = new SolvantaApiClient('http://test-server/api/v1');
+    (globalThis as any).fetch = jest.fn((_url, options) => new Promise((_resolve, reject) => {
+      options.signal.addEventListener('abort', () => reject(new TypeError('Fetch request has been canceled')));
+    }));
+    await expect(client.get('/system/health', 5)).rejects.toMatchObject({ status: 408 });
+  });
 });
+
+ test('follows changing LAN hosts without pinning an IP', () => {
+   delete process.env.EXPO_PUBLIC_API_BASE_URL;
+   const client = new SolvantaApiClient();
+   for (const host of ['192.168.1.7', '172.17.247.130', '192.168.43.25', '127.0.0.1']) {
+     (Constants.expoConfig as any).hostUri = `${host}:8081`;
+     expect(client.getBaseUrl()).toBe(`http://${host}:8000/api/v1`);
+   }
+   process.env.EXPO_PUBLIC_API_BASE_URL = 'https://api.example.com';
+   expect(client.getBaseUrl()).toBe('https://api.example.com/api/v1');
+ });
