@@ -1,0 +1,7 @@
+# README media
+
+`solvanta-banner.png` was created with the built-in image-generation tool on 29 October 2026. It is brand artwork, not an app screenshot. The original generated file is preserved outside the repository. The README gallery uses unmodified, existing Android screenshots from `docs/ui-evidence/android/` and explicitly identifies their earlier prototype/fixture provenance.
+
+## Generation prompt
+
+Create a polished GitHub README brand banner for SOLVANTA, a building energy resilience software prototype. Wide panoramic landscape composition, approximately 3:1. Brand palette: near-black #090B0A, matte graphite #1B1D1B, neon-lime #C6F43D, ivory #F5F7F1. Premium restrained engineering/product design, very crisp typography, fine geometric grid and circuit traces with lots of negative space. Left two-thirds: large exact wordmark 'SOLVANTA', small exact subtitle 'Building Energy Intelligence', and a clearly visible compact pill 'PROTOTYPE → MVP'. Right third: elegant isometric schematic of a building with rooftop solar panels and a battery energy loop, subtle lime illumination, refined thin lines, no busy realism and no app screenshots or phones. Bottom strip, beautifully spaced and readable, exact text in three groups: 'React Native · Expo · TypeScript' / 'FastAPI · PostgreSQL · OR-Tools' / 'Docker · n8n · MCP'. All text must be correctly spelled. Cohesive native-looking designed artwork with clean edges, high contrast, no watermarks, no extra text, no fake software screens, no exaggerated glow.
