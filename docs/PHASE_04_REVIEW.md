@@ -13,3 +13,6 @@ References: [Shapely polygon operations](https://shapely.readthedocs.io/en/stabl
 Live HTTP verification also passed: authenticated create temporary building, save calibrated roof, reload identical geometry and layout, delete temporary building. The native emulator hit a System UI ANR at boot; native camera/gallery interactions have not been verified on physical hardware.
 
 Metro Android bundle completed successfully (3,495 modules). Web export required a low-concurrency retry and is tracked separately from the successful Android bundle.
+
+Git handoff: Phase 4 originally reached main via PR #7 from the Phase 3 branch. This dedicated phase/04-roof-geometry branch records its own handoff without rewriting published history.
+
