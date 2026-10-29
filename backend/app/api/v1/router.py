@@ -27,3 +27,6 @@ api_router.include_router(resilience.router,prefix="/buildings",tags=["Resilienc
 
 from .endpoints import plans
 api_router.include_router(plans.router,prefix="/buildings",tags=["Plans"])
+
+from .endpoints import automation
+api_router.include_router(automation.router,prefix="/buildings",tags=["Automation"])

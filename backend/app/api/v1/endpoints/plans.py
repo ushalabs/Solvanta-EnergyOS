@@ -34,12 +34,18 @@ def serialize(plan):
 def audit(db,user,plan,action,details):
  db.add(AuditLog(user_id=user.id,action=action,target_type='energy_plan',target_id=plan.id,details=json.dumps(details)))
 
-@router.post('/{building_id}/plans',status_code=201)
-async def create(building_id:str,data:PlanInput,user:User=Depends(get_current_user),db:AsyncSession=Depends(get_db)):
+async def build_plan(building_id,data,user,db):
  options=SimulationInput(outages=data.outages,use_generator=data.use_generator)
  snapshot,_=await calculate(building_id,options,user,db)
  plan=EnergyPlan(building_id=building_id,snapshot=dict(state='DRAFT',revision=1,selected_variant=0,expires_at=(datetime.now(timezone.utc)+timedelta(minutes=data.expiry_minutes)).isoformat(),variants=variants(snapshot),run_id=None,receipts={},verification_errors=[]))
- db.add(plan);await db.flush();audit(db,user,plan,'create',{'revision':1});await db.commit();await db.refresh(plan)
+ db.add(plan);await db.flush();audit(db,user,plan,'create',{'revision':1})
+ return plan
+
+
+@router.post('/{building_id}/plans',status_code=201)
+async def create(building_id:str,data:PlanInput,user:User=Depends(get_current_user),db:AsyncSession=Depends(get_db)):
+ plan=await build_plan(building_id,data,user,db)
+ await db.commit();await db.refresh(plan)
  return serialize(plan)
 
 @router.get('/{building_id}/plans')

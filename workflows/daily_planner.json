@@ -1,0 +1,486 @@
+{
+  "id": "solvanta-daily_planner",
+  "name": "Solvanta Daily Planner",
+  "active": false,
+  "versionId": "e66bb3ca-1daf-4d20-80e0-b14071d94102",
+  "nodes": [
+    {
+      "id": "3aeaeb84-a4a7-4553-adab-8104448439e3",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "solvanta-daily_planner",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "solvanta-backend-auth",
+          "name": "Solvanta Backend Auth"
+        }
+      },
+      "webhookId": "5dcd5599-d179-41a5-8a55-d961a10e7e29"
+    },
+    {
+      "id": "c43edcdc-bb02-4020-a6ac-879362b165aa",
+      "name": "Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        210,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "b0cd913e-93ee-4a9d-925a-17b4a35a425b",
+      "name": "Daily 07:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        420,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "cc027f6e-2af6-4e52-a842-f356d3c6d22e",
+      "name": "Prepare Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        630,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const input=$json.body || $json; return [{json:{building_id:input.building_id || 'CONFIGURE_BUILDING_ID',event_id:input.event_id || 'n8n-'+$execution.id+'-daily_planner',correlation_id:input.correlation_id || 'n8n-'+$execution.id,kind:'daily_planner',outages:input.outages || [{start_min:480,end_min:600}],use_generator:input.use_generator || false,expiry_minutes:input.expiry_minutes || 60}}];"
+      }
+    },
+    {
+      "id": "99e67d37-f45e-4a67-9fbe-c24ff1fb54c2",
+      "name": "Start Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        840,
+        300
+      ],
+      "parameters": {
+        "url": "=http://host.docker.internal:8000/api/v1/buildings/{{$json.building_id}}/events",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({event_id:$json.event_id,correlation_id:$json.correlation_id,kind:$json.kind,outages:$json.outages,use_generator:$json.use_generator,expiry_minutes:$json.expiry_minutes}) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "solvanta-backend-auth",
+          "name": "Solvanta Backend Auth"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "id": "c6e00c84-f30f-4ff7-ae17-59bfc957defa",
+      "name": "Terminal?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1050,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "36bea928-3ea4-46c5-9478-b21e1c39da1c",
+              "leftValue": "={{ $json.terminal }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "e7e9c1ee-5bcf-4dac-8466-fd9d2675f6ce",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1260,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d6d4220b-ac7f-4f23-8459-90b47842508e",
+              "leftValue": "={{ $json.state === 'APPROVED' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d872c372-b537-4bb7-aeed-899457c4e10f",
+      "name": "Simulated?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1470,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ef1212d6-68db-44bf-a93b-8d92cb00af15",
+              "leftValue": "={{ $json.state === 'SIMULATED' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "1dc1a266-c338-4c3b-b637-82186bb28c37",
+      "name": "Durable Approval Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1680,
+        300
+      ],
+      "parameters": {
+        "amount": 70,
+        "unit": "seconds"
+      },
+      "webhookId": "d545c7c8-ab26-408b-9ad7-f8cf9db69928"
+    },
+    {
+      "id": "7b3cad38-906f-4848-956d-c5c98fe43fe4",
+      "name": "Poll Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1890,
+        300
+      ],
+      "parameters": {
+        "url": "=http://host.docker.internal:8000/api/v1/buildings/{{ $('Start Event').first().json.building_id }}/events/{{ $('Start Event').first().json.id }}",
+        "method": "GET",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "solvanta-backend-auth",
+          "name": "Solvanta Backend Auth"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "id": "dacca8cc-4cbb-463a-aa78-973d03817456",
+      "name": "Simulate Approved Plan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2100,
+        300
+      ],
+      "parameters": {
+        "url": "=http://host.docker.internal:8000/api/v1/buildings/{{ $('Start Event').first().json.building_id }}/plans/{{ $('Start Event').first().json.plan_id }}/actions",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({action:'simulate',expected_revision:$json.plan_revision ?? $json.revision,idempotency_key:$('Start Event').first().json.id+'-simulate-r'+($json.plan_revision ?? $json.revision),comment:'n8n correlation '+$('Start Event').first().json.correlation_id}) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "solvanta-backend-auth",
+          "name": "Solvanta Backend Auth"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "id": "3c89852b-d6a3-4672-94d6-f1e6efe97fc8",
+      "name": "Verify Simulation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2310,
+        300
+      ],
+      "parameters": {
+        "url": "=http://host.docker.internal:8000/api/v1/buildings/{{ $('Start Event').first().json.building_id }}/plans/{{ $('Start Event').first().json.plan_id }}/actions",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({action:'verify',expected_revision:$json.plan_revision ?? $json.revision,idempotency_key:$('Start Event').first().json.id+'-verify-r'+($json.plan_revision ?? $json.revision),comment:'n8n correlation '+$('Start Event').first().json.correlation_id}) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "solvanta-backend-auth",
+          "name": "Solvanta Backend Auth"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "id": "e32f96a4-a7a4-4ff7-bc0a-01eb09d07cfd",
+      "name": "Complete",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2520,
+        300
+      ],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual": {
+      "main": [
+        [
+          {
+            "node": "Prepare Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily 07:00": {
+      "main": [
+        [
+          {
+            "node": "Prepare Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Event": {
+      "main": [
+        [
+          {
+            "node": "Start Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Event": {
+      "main": [
+        [
+          {
+            "node": "Terminal?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Poll Event": {
+      "main": [
+        [
+          {
+            "node": "Terminal?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Durable Approval Wait": {
+      "main": [
+        [
+          {
+            "node": "Poll Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simulate Approved Plan": {
+      "main": [
+        [
+          {
+            "node": "Verify Simulation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Simulation": {
+      "main": [
+        [
+          {
+            "node": "Poll Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Terminal?": {
+      "main": [
+        [
+          {
+            "node": "Complete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Simulate Approved Plan",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Simulated?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simulated?": {
+      "main": [
+        [
+          {
+            "node": "Verify Simulation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Durable Approval Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Karachi",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all"
+  },
+  "pinData": {}
+}
