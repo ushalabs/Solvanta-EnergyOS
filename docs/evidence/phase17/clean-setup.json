@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-29",
+  "source_commit": "a7c752ef9555170d10d3db5cfebdff00a1fdf5c5",
+  "upstream_main_at_clone": "314f8c83c6030060c814d7f7157e33d3688e67bc",
+  "clone": "Fresh local clone --no-hardlinks; direct network clone failed with connection reset; initial source SHA matched git ls-remote origin main",
+  "python": "3.13.7",
+  "node": "24.12.0",
+  "npm": "11.6.2",
+  "constraints_sha256": "8f3e0f0226590b7bfef5b4225351eab0e58793296937e0a1acd3fce87cf61aef",
+  "database": "Separate ephemeral PostgreSQL 16 on loopback port 5434",
+  "checks": {
+    "fresh_venv_install": "PASS with constraints",
+    "fresh_npm_ci": "PASS; 916 packages",
+    "empty_migration": "PASS to 14_telemetry",
+    "repeat_seed": "PASS",
+    "pip_check": "PASS",
+    "pytest": "77 passed in 25.29s",
+    "jest": "34 passed; 12 suites",
+    "typescript": "PASS",
+    "web_export": "PASS; 14 static routes",
+    "integrated_demo": "PASS; isolated API 8004",
+    "mcp_client": "PASS; 9 actual tools; baseline matches REST; proposal pending"
+  },
+  "initial_failure": "TEST_DATABASE_URL affected a deliberate mismatch unit fixture; explicit unit settings fixed in a7c752e; full suite rerun passed",
+  "visual": "Authenticated web tools and light/dark theme at 390px; no native device claim",
+  "npm_audit": {
+    "full": {
+      "low": 9,
+      "high": 3
+    },
+    "production": {
+      "low": 5,
+      "high": 3
+    },
+    "high_advisory": "GHSA-mrhx-c7xc-m3w5 via Expo CLI Zod; unresolved"
+  },
+  "github_ci": "No status entries returned; unconfirmed",
+  "deferred": [
+    "AR/VR",
+    "Final GUI overhaul",
+    "APK/dev-client"
+  ],
+  "unperformed": [
+    "Stakeholder interviews/usability acceptance",
+    "Observed PV/forecast/hardware validation",
+    "Production certification"
+  ],
+  "cleanup": "Temporary API stopped, isolated PostgreSQL container removed on stop, fresh checkout preserved outside repository in OS Temp",
+  "publication_scan": "No private-key blocks or complete JWTs in tracked/intended source/evidence; documented development fixtures remain"
+}

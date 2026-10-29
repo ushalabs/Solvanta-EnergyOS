@@ -8,6 +8,7 @@ def test_database_isolation_guardrail():
     """Validates that accidental attempts to run tests against development or production DBs are rejected."""
     # 1. Non-test environment should trigger RuntimeError
     dev_settings = Settings(
+        TEST_DATABASE_URL=None,  # Unit configuration must not inherit the runner database override.
         BACKEND_ENV="development",
         POSTGRES_DB="solvanta_db",
         DATABASE_URL="postgresql+asyncpg://solvanta_user:pass@localhost:5432/solvanta_db",
@@ -19,6 +20,7 @@ def test_database_isolation_guardrail():
 
     # 2. Database URL with 'test' in username/host but targeting production DB must be rejected
     trick_settings = Settings(
+        TEST_DATABASE_URL=None,  # Unit configuration must not inherit the runner database override.
         BACKEND_ENV="test",
         POSTGRES_DB="solvanta_production",
         DATABASE_URL="postgresql+asyncpg://test_user:test_pass@test-cluster.internal:5432/solvanta_production",
@@ -30,6 +32,7 @@ def test_database_isolation_guardrail():
 
     # 3. Dedicated test DB should pass cleanly
     test_settings = Settings(
+        TEST_DATABASE_URL=None,  # Unit configuration must not inherit the runner database override.
         BACKEND_ENV="test",
         POSTGRES_DB="solvanta_test_db",
         DATABASE_URL="postgresql+asyncpg://solvanta_user:pass@localhost:5432/solvanta_test_db",
@@ -39,6 +42,7 @@ def test_database_isolation_guardrail():
 def test_mismatched_postgres_db_and_database_url_rejected():
     """Validates that mismatched POSTGRES_DB and DATABASE_URL settings are rejected before migrations."""
     mismatched = Settings(
+        TEST_DATABASE_URL=None,  # Unit configuration must not inherit the runner database override.
         BACKEND_ENV="test",
         POSTGRES_DB="solvanta_test_db",
         DATABASE_URL="postgresql+asyncpg://solvanta_user:pass@localhost:5432/another_test_db",

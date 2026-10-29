@@ -70,21 +70,10 @@ Every simulation and optimization run must pass these invariant checks in automa
 
 ---
 
-## 4. End-to-End Seeded Acceptance Scenario
+## 4. Reproduced integrated acceptance fixture
 
-1. **Building Baseline:**
-   - Name: `Demo Residential Hybrid Solar` (Lahore, PK).
-   - Solar: $10\text{ kWp}$ PV array, $8\text{ kW}$ hybrid inverter.
-   - Battery: $10\text{ kWh}$ nominal ($9\text{ kWh}$ usable), initial $SoC = 70\%$, reserve minimum $SoC = 20\%$.
-2. **Appliance Profile:**
-   - Fridge: $250\text{ W}$, Critical, non-flexible, continuous.
-   - Lights: $300\text{ W}$, Medium, non-flexible, continuous.
-   - Computer: $400\text{ W}$, High, non-flexible, continuous.
-   - AC: $1500\text{ W}$, Low, flexible, initial ON.
-   - Water Pump: $1000\text{ W}$, Medium, flexible, runtime 30 min, initial OFF.
-3. **Outage Scenario:**
-   - Duration: 6 hours (18:00 to 24:00). Zero solar ($P_{\text{pv}} = 0$). Grid unavailable ($P_{\text{grid}} = 0$).
-4. **Execution Acceptance Check:**
-   - Baseline Run: AC drains battery to $20\%$ reserve by 21:00; critical fridge unserved from 21:00 to 24:00 (critical coverage $\approx 86\%$).
-   - Resilience Optimization: Sheds AC at 18:00; preserves battery for fridge, computer, and lights throughout all 6 hours ($100\%$ critical coverage).
-   - Human Approval: User approves plan; simulation verifies revised trajectory; result auditable in PostgreSQL.
+The executable fixture is `backend/scripts/verify_integrated_demo.py`; measured outputs are in `docs/evidence/phase15/integrated-demo.json`. It creates a fresh labelled site, ideal-efficiency 10 kWh battery with 8 kWh usable energy, 40% initial/20% reserve, zero irradiance and two 1 kW loads each requiring two hours. Baseline has 4 kWh requested and 2 kWh critical unmet demand. Critical protection preserves 2 kWh for the later critical load and produces zero critical unmet demand, while total unmet remains 2 kWh. The trace is simulated, not observed telemetry.
+
+The script also checks a provably infeasible full-day-outage PV/grid schedule, a validated grid-available schedule, the approval/simulate/verify sequence, audit events and synthetic anomaly evidence. The earlier evening fixture percentages were target assertions without recorded execution and are superseded by these reproducible measurements.
+
+Phase 16 adds actual SDK stdio client execution, all nine typed tools, saved-snapshot numerical consistency, invalid inputs, authentication/tenant isolation and pending-only proposals. Phase 17 repeats the full suites in a fresh checkout with new dependency environments and an isolated PostgreSQL container. See the release report for actual outputs and limits; native builds and stakeholder acceptance remain deferred/unperformed.

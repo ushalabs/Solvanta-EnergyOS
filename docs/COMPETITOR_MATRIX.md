@@ -1,51 +1,25 @@
-# Solvanta — Comparative Market & Literature Study (15 Systems)
+# Comparative study — 15 systems
 
-This document provides a comprehensive comparative analysis of **15 relevant commercial, open-source, and academic energy systems** to position Solvanta's technical contribution and defend its academic novelty.
+Reviewed 29 October 2026 from the primary sources linked below. This is a scoped document review, not hands-on benchmarking, a complete feature inventory or proof of novelty. A feature absent from a cited page is **unverified**, not evidence that the product cannot do it. Product editions, regions and integrations vary.
 
----
+| System | Documented capability and primary evidence | Comparison with the implemented prototype |
+|---|---|---|
+| Tesla Powerwall | [Tesla app](https://www.tesla.com/support/energy/powerwall/mobile-app/tesla-app-for-energy) documents energy flows, backup reserve and optimization modes. | Solvanta evaluates configured scenarios without a Powerwall; physical performance superiority is untested. |
+| Enphase | [App guide](https://enphase.com/en-gb/download/enphase-app-quick-start-guide) documents production, consumption and storage views. | Solvanta currently has synthetic evidence, not measured installation monitoring. |
+| SolarEdge ONE | [ONE overview](https://www.solaredge.com/en/solaredge-one) describes device integration and personalized daily energy optimization. | Solvanta's deterministic persistence forecast is less ambitious and has no measured forecast accuracy. |
+| Schneider Home | [Official app description](https://www.se.com/us/en/mobile-apps/details/?app=com.schneiderelectric.SchneiderHome) documents plug/switch control, backup choices and runtime effects. | Solvanta's approval workflow changes simulations only. It does not control installed devices. |
+| Huawei FusionSolar | [Residential solution](https://solar.huawei.com/en/residential/) covers generation, storage, charging and home management. | Solvanta is a software scenario prototype; compatibility with Huawei hardware is untested. |
+| GivEnergy | [App user guide](https://givenergy.co.uk/wp-content/uploads/GivEnergy-App-User-Guide-FULL.pdf) documents battery state and history graphs. | Solvanta replays simulated battery traces rather than observed battery operation. |
+| Victron VRM / Dynamic ESS | [Official manual](https://www.victronenergy.com/live/drafts%3Adynamic_ess) describes price-aware battery schedules and configuration. | Solvanta's scheduler uses a conservative PV/grid budget and does not optimize tariffs. |
+| Sunrun Shift | [Launch description](https://investors.sunrun.com/news-events/press-releases/detail/282/sunrun-launches-shift-a-new-home-solar-offering) explicitly describes self-consumption storage without backup. This is the 2023 Shift offering, not every Sunrun product. | Solvanta models outage scenarios; the products have different purposes. |
+| SPAN | [Backup priorities](https://support.span.io/hc/en-us/articles/4411661794839-How-to-assign-your-Backup-Priorities) documents circuit priorities and battery estimates with compatible storage. | Solvanta supports hypothetical named loads and has no electrical panel integration. |
+| Home Assistant | [MCP server integration](https://www.home-assistant.io/integrations/mcp_server/) exposes home state/control to authorized clients. | MCP itself is not a novel Solvanta feature. Its specific contribution is the integration with saved energy scenarios and approval-bound proposals. |
+| Aurora Solar | [Simulation engine](https://help.aurorasolar.com/hc/en-us/articles/220132468-Aurora-Simulation-Engine) describes detailed electrical and shading calculations. | Solvanta's manually calibrated roof geometry and simple PV model do not establish equivalent fidelity. |
+| HelioScope | [Design guide](https://help-center.helioscope.com/hc/en-us/articles/4419950262419-2-Create-a-Design) and [report workflow](https://help-center.helioscope.com/hc/en-us/articles/4419967126931-5-Simulation-and-Report) cover layout/electrical design and generation reports. | Solvanta integrates a simpler roof/PV workflow with load/outage scenarios. No comparative yield validation has been performed. |
+| SAM | [Battery model](https://sam.nrel.gov/index.php?Itemid=360&id=94&option=com_content&view=article) documents dispatch and detailed battery behavior. | Solvanta does not model battery aging, voltage or temperature degradation. |
+| pvlib-python | [PV modeling reference](https://pvlib-python.readthedocs.io/en/latest/reference/pv_modeling/index.html) documents irradiance, temperature, module and inverter models. | Solvanta currently implements a smaller deterministic PV estimate, not the breadth of pvlib. The earlier combined pvlib/OpenEMPS row was unsupported and is removed. |
+| openHAB | [Rules documentation](https://www.openhab.org/docs/concepts/rules) documents triggers, conditions and actions. | Solvanta supplies domain-specific saved scenarios and energy tools. Unreviewed openHAB integrations remain unverified. |
 
-## 1. Evaluation Dimensions
+The defensible project contribution is an implemented integration: calibrated manual roof inputs → PV estimate → appliance constraints → outage simulation → schedule/resilience comparison → auditable approval → simulation replay → synthetic evidence → n8n/MCP access. This is not proof that no other system integrates those functions, nor that the prototype is better or commercially validated.
 
-1. **Category:** Primary nature of the system (Hardware Ecosystem, PV CAD, Smart Panel, HEMS, Simulation Engine).
-2. **Rooftop & PV Modeling:** Ability to calculate roof area, obstacle setbacks, panel placement, and generation profiles.
-3. **Appliance Digital Twin:** Modeling individual appliance power, priority tiers, runtime requirements, and flexibility.
-4. **Outage Simulation:** Modeling discrete-time battery depletion and critical coverage during grid loss.
-5. **Constrained Scheduling:** Automated optimization of flexible loads against solar surplus and battery reserve limits.
-6. **Explainable Approval:** Presenting human-readable tradeoffs and requiring explicit human authorization before execution.
-7. **AI & MCP Protocols:** Native support for Model Context Protocol (MCP) or LLM tool-calling architectures.
-8. **Primary Limitation Relative to Solvanta:** Where the existing system does not address Solvanta's unified resilience decision loop.
-
----
-
-## 2. 15-System Comparative Matrix
-
-| # | System / Product | Primary Category | Roof / PV Modeling | Appliance Twin | Outage Sim | Constrained Scheduling | Explainable Approval | AI / MCP Native | Key Limitation vs Solvanta |
-|:---:|---|---|:---:|:---:|:---:|:---:|:---:|:---:|---|
-| **01** | **Tesla Powerwall / Energy App** | Hardware HEMS | ❌ No | ❌ (Aggregate only) | ⚠️ Basic (Storm Watch reserve) | ⚠️ (Time-of-Use rate optimization) | ❌ Auto only | ❌ No | Proprietary hardware lock-in; no individual appliance modeling; no what-if outage simulation. |
-| **02** | **Enphase Enlighten / IQ** | Hardware Microinverter Ecosystem | ❌ No (Installer CAD separate) | ⚠️ Basic (Circuit level with Load Controller) | ⚠️ Basic (Sunlight Jump) | ⚠️ Rule-based shedding | ❌ No | ❌ No | Focuses on microinverter telemetry; lacks load-level constraint optimization and interactive pre-design twin. |
-| **03** | **SolarEdge ONE** | Inverter & Battery Ecosystem | ❌ No | ⚠️ (Smart switches only) | ⚠️ Basic | ⚠️ Heuristic TOU shifting | ❌ No | ❌ No | Requires SolarEdge ecosystem hardware; does not simulate what-if building configurations. |
-| **04** | **Schneider Electric Home / Insight** | Commercial / Resi Electrical Infrastructure | ❌ No | ⚠️ (Requires Square D Smart Breaker Panel) | ⚠️ Basic | ⚠️ Threshold-based shedding | ❌ No | ❌ No | Heavy hardware investment (smart breakers); no CV rooftop design or MCP tools. |
-| **05** | **Huawei FusionSolar** | Commercial / Resi Solar Hardware | ❌ No | ❌ Aggregate only | ⚠️ Basic backup reserve | ⚠️ Battery charge/discharge rule | ❌ No | ❌ No | Cloud inverter portal; no appliance flexibility models or outage resilience optimization. |
-| **06** | **GivEnergy / Giv-Back** | Battery Storage Ecosystem | ❌ No | ❌ Aggregate only | ⚠️ Static reserve | ⚠️ Time-of-use discharge | ❌ No | ❌ No | Focused on battery arbitrage; no appliance scheduling or decision explainability. |
-| **07** | **Victron Energy VRM / Cerbo GX** | Off-Grid / Hybrid Marine & Solar OS | ❌ No | ❌ (Sensor inputs only) | ⚠️ Rule-based generator start | ⚠️ Dynamic ESS (Price based) | ❌ No | ❌ No | Highly technical industrial UI; requires Cerbo hardware; lacks mobile-first digital twin and rooftop CV. |
-| **08** | **Sunrun Shift** | Solar & Battery Lease Service | ❌ No | ❌ Aggregate only | ⚠️ Basic backup | ⚠️ Fixed profile | ❌ No | ❌ No | Closed utility/lease service; no engineering transparency or user-configurable digital twin. |
-| **09** | **SPAN.io Smart Panel** | Smart Hardware Electrical Panel | ❌ No | ✅ Yes (Sub-circuit level) | ✅ Yes (90-day battery estimator) | ⚠️ Circuit priority shedding | ⚠️ Push alert | ❌ No | Requires \$3,500+ physical hardware panel installation; cannot be used as pre-installation software digital twin. |
-| **10** | **Home Assistant Energy** | Open-Source Home Automation | ❌ No | ⚠️ Sensor monitoring (if smart plugs exist) | ❌ No outage simulator | ⚠️ User-scripted automations | ❌ Custom dashboards | ⚠️ Basic LLM bridge (Not MCP) | Requires manual YAML scripting and smart plug hardware; lacks engineering physics and optimization solvers. |
-| **11** | **Aurora Solar** | Commercial Solar EPC CAD | ✅ Advanced 3D CAD | ❌ No appliance twin | ❌ No operational outage sim | ❌ No | ❌ No | ❌ No | EPC sales/proposal tool only; ceases relevance once system is installed; no operational decision support. |
-| **12** | **HelioScope** | Commercial PV Design Software | ✅ Advanced 2D CAD & Shade | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No | PV yield CAD tool for engineers; zero load-level appliance modeling or backup resilience workflows. |
-| **13** | **SAM (NREL System Advisor Model)** | Government Research Engine | ⚠️ Complex tabular input | ⚠️ Hourly building load file | ⚠️ Batch simulation | ⚠️ Linear program dispatch | ❌ Research report only | ❌ No | Desktop scientific calculator; not accessible for homeowners/installers; no mobile interface or live workflows. |
-| **14** | **pvlib-python / OpenEMPS** | Academic Python Library | ⚠️ Math functions only | ❌ No | ⚠️ Raw math equations | ❌ No solver | ❌ No | ❌ No | Headless Python code libraries; requires engineering developers to build user-facing software. |
-| **15** | **OpenHAB Smart Home** | Open-Source Smart Home OS | ❌ No | ⚠️ Device bindings | ❌ No energy balance model | ⚠️ Rule DSL | ❌ No | ❌ No | Generic IoT device controller; lacks PV physics, battery degradation, and constraint satisfaction solvers. |
-| **--** | **SOLVANTA (This Project)** | **Mobile Building Energy Resilience Digital Twin** | **✅ CV Aerial Polygon & Panel Sizing** | **✅ Appliance Digital Twin with Priority & Flexibility** | **✅ 15-min Deterministic Outage Sim** | **✅ OR-Tools CP-SAT Constrained Scheduler** | **✅ Explicit Plan State Machine (Approve/Reject)** | **✅ Official Python MCP SDK (9 Tools)** | **Software-first, hardware-agnostic decision twin spanning pre-installation design through operational resilience.** |
-
----
-
-## 3. Academic Defense Synthesis
-
-Solvanta's distinction does not rely on claiming that other systems have zero battery monitoring or CAD features. Rather, its unique contribution lies in the **unbroken, software-first resilience decision loop**:
-
-1. **Pre-Hardware Accessibility:** Systems like SPAN and Schneider require expensive physical hardware before providing load-level insight. Solvanta provides a software digital twin *before* installation.
-2. **Unified Lifecycle Bridge:** Aurora/HelioScope stop at PV design; Tesla/Enphase start after hardware installation. Solvanta unifies rooftop design with operational outage simulation.
-3. **Rigorous Constraint Optimization vs Heuristic Shedding:** While existing HEMS use naive threshold triggers, Solvanta formulates appliance scheduling using discrete constraint satisfaction (OR-Tools CP-SAT).
-4. **Explainable Human-in-the-Loop Governance:** Autonomous circuit switching is dangerous. Solvanta enforces an auditable human approval state machine (`DRAFT` $\to$ `PENDING` $\to$ `APPROVED` $\to$ `SIMULATED`).
-5. **Modern AI Interoperability:** Solvanta is designed from the ground up with the official **Model Context Protocol (MCP)**, allowing external AI assistants to safely query verified engineering engines.
+Remaining evaluation work: hands-on comparisons using common datasets, PV-yield validation, observed forecast holdouts, real stakeholder interviews, native usability studies and hardware integration. No customer quotes, interview counts, cost savings or performance superiority are claimed.

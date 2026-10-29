@@ -1,13 +1,15 @@
 # Solvanta — Intelligent Solar and Backup Energy Management Platform
 
-[![FYP-I Milestone](https://img.shields.io/badge/FYP--I-Phase%2002%20Backend-lime?style=flat-square)](#phase-gates)
+[![FYP-I Milestone](https://img.shields.io/badge/FYP--I-Phase%2017%20Source%20RC-lime?style=flat-square)](#phase-gates)
 [![Tech Stack](https://img.shields.io/badge/Stack-React%20Native%20%7C%20FastAPI%20%7C%20PostgreSQL%20%7C%20n8n%20%7C%20MCP-black?style=flat-square)](#architecture)
-[![CI Status](https://img.shields.io/badge/CI-GitHub%20Actions-green?style=flat-square)](#)
+[![CI](https://github.com/ushalabs/Solvanta-EnergyOS/actions/workflows/ci.yml/badge.svg)](https://github.com/ushalabs/Solvanta-EnergyOS/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Proprietary%20%2F%20Academic-blue?style=flat-square)](#)
 
 > **Solvanta** is an Android-first, software-engineered building energy resilience digital twin. It models solar photovoltaic (PV) generation, battery storage dynamics, and building appliance constraints to simulate shortages and grid outages, optimize flexible appliance schedules, explain resilience decisions, and solicit human approval before executing simulated outcomes.
 
 ---
+
+Current source/API/Expo candidate: [release runbook and limitations](docs/RELEASE_HANDOFF.md), [MCP setup](docs/MCP.md), [phase evidence ledger](docs/DELIVERY_LEDGER.md). This is a simulation prototype, not a production deployment or native AR release.
 
 ## 1. Unified Problem Statement & Mission
 
@@ -27,8 +29,8 @@ $$\text{OBSERVE} \longrightarrow \text{PREDICT} \longrightarrow \text{SIMULATE} 
 
 | Subsystem | Functional Scope |
 |---|---|
-| **Solar Site Intelligence & AR** | Solar site intelligence, rooftop CV geometry, panel placement, PV design engine, AR visualization, and architecture |
-| **Energy Simulation & Forecast** | Building load digital twin, discrete-time energy balance & battery degradation engine, PV and load forecasting |
+| **Solar Site Intelligence & AR** | Solar site intelligence, manually calibrated rooftop geometry, panel placement, PV design engine, AR visualization, and architecture |
+| **Energy Simulation & Forecast** | Building load digital twin, discrete-time energy balance & battery state engine, PV and load forecasting |
 | **Optimization & Resilience** | Appliance scheduling, outage resilience optimization, what-if configuration engine, recommendations, and human approval state machine |
 | **Operations & Orchestration** | Telemetry provider abstraction, simulated telemetry provider, n8n workflow orchestration, anomaly detection, incident diagnosis, and post-plan verification |
 
@@ -41,7 +43,7 @@ $$\text{OBSERVE} \longrightarrow \text{PREDICT} \longrightarrow \text{SIMULATE} 
         Overview (Home) • Appliances • Simulation • Rooftop AR • AI Operations
               [Floating 5-Tab Navigation Dock | Dark Default / Light Theme]
                                        │
-                           REST / WebSocket (FastAPI)
+                           Authenticated REST (FastAPI)
                                        │
                                FASTAPI BACKEND
                      Auth / Tenancy / Projects / Approvals
@@ -49,9 +51,9 @@ $$\text{OBSERVE} \longrightarrow \text{PREDICT} \longrightarrow \text{SIMULATE} 
      ┌─────────────────────────────────┼─────────────────────────────────┐
      │                                 │                                 │
 SOLAR & ROOF ENGINES          ENERGY DOMAIN ENGINES            OPERATIONS SERVICES
-CV + Roof Polygon Geometry    Deterministic 15m Simulation     Telemetry Provider Abstraction
+Manual Roof Polygon Geometry    Deterministic 15m Simulation     Telemetry Provider Abstraction
 Solar PV Sizing & Yield       PV & Load Forecasting            Anomaly Detection & Incidents
-AR 2D/3D Model Fallback       OR-Tools CP-SAT Scheduling       Plan Approval & Verification
+2D Saved-Run Replay; AR Deferred       OR-Tools CP-SAT Scheduling       Plan Approval & Verification
                                Resilience Source Optimizer      Audit Logging
      │                                 │                                 │
      └─────────────────────────────────┼─────────────────────────────────┘
@@ -61,17 +63,17 @@ AR 2D/3D Model Fallback       OR-Tools CP-SAT Scheduling       Plan Approval & V
                    ┌───────────────────┴───────────────────┐
                    │                                       │
              n8n WORKFLOWS                               MCP SERVER
-     Docker-based automation engine           Official Python MCP SDK (v2 pinned)
+     Docker-based automation engine           Official Python MCP SDK (1.28.0 pinned)
      Shortage response, daily planner,        Exposing typed simulation/forecast/
      incident notifications & audit           scheduler tools to authorized AI
 ```
 
 ### Stack Components
-- **Mobile Client:** React Native, Expo SDK 57, Expo Router, TypeScript, SVG charts, persistent Dark/Light appearance.
-- **Backend API:** Python 3.11+, FastAPI, Pydantic v2, SQLAlchemy, Alembic.
+- **Mobile Client:** React Native, Expo SDK 58, Expo Router, TypeScript, SVG charts, persistent Dark/Light appearance.
+- **Backend API:** Python 3.13 verified, FastAPI, Pydantic v2, SQLAlchemy, Alembic.
 - **Database:** PostgreSQL 16 Alpine running in Docker Compose with relational integrity and time-series indexes.
 - **Simulation Engine:** Deterministic, pure-Python energy-balance engine operating on parameterized 15-minute intervals. Zero LLM math.
-- **Optimization:** Google OR-Tools (CP-SAT) for constrained load scheduling and resilience source allocation.
+- **Optimization:** Google OR-Tools (CP-SAT) for constrained load scheduling; resilience uses a conservative deterministic heuristic.
 - **Orchestration:** n8n workflow engine in Docker Compose for asynchronous events, retries, and notification dispatch.
 - **Model Context Protocol (MCP):** Official Python MCP SDK exposing typed, secure engineering tools to AI clients.
 
@@ -90,7 +92,7 @@ The visual identity strictly adheres to the approved reference design ([`design/
 
 ## 5. FYP-I Phase Gates & Approval Protocol
 
-All development is divided into 18 strict phases (0–17). **The system contract mandates that Antigravity implements one phase, executes tests, pushes commits to GitHub, produces evidence, and STOPS until explicit user approval is granted.**
+Development is tracked through phases 0–17. The user authorized sequential delivery through Phase 17, validation at phase boundaries, a separate pushed branch for each phase and merge to main. AR/VR, the final GUI overhaul and native packaging remain explicitly deferred. See [release handoff](docs/RELEASE_HANDOFF.md) for verified scope and remaining acceptance items.
 
 | Phase | Milestone | Focus |
 |---|---|---|
@@ -98,7 +100,7 @@ All development is divided into 18 strict phases (0–17). **The system contract
 | **Phase 1** | **Mobile UI Foundation** | Expo setup, tokens, floating dock, 7 screen shells matching neon theme |
 | **Phase 2** | **Backend & Local Runtime** | FastAPI, PostgreSQL, Docker Compose, Alembic, health checks |
 | **Phase 3** | **Building & Equipment** | Building, PV, battery, inverter, generator configuration models |
-| **Phase 4** | **Rooftop CV & Geometry** | Roof polygon editor, obstacle masking, scale calibration, panel placement |
+| **Phase 4** | **Rooftop Geometry** | Roof polygon editor, obstacle masking, scale calibration, panel placement |
 | **Phase 5** | **PV Sizing & Yield Engine** | Panel kWp sizing, DC/AC ratio, irradiance-to-yield calculation |
 | **Phase 6** | **Appliance Digital Twin** | Rated loads, criticality, flexibility, scenario toggle states |
 | **Phase 7** | **Energy Simulator** | Deterministic 15-min energy balance, battery SoC bounds, outage tracking |
@@ -110,7 +112,7 @@ All development is divided into 18 strict phases (0–17). **The system contract
 | **Phase 13** | **n8n Automation** | 3 automated workflows: Shortage Response, Daily Planner, Anomaly Incident |
 | **Phase 14** | **Simulated Telemetry** | Telemetry provider abstraction, anomaly generator, incident verification |
 | **Phase 15** | **E2E Integration & Quality** | Full pipeline regression, security, authorization, end-to-end demo |
-| **Phase 16** | **MCP Server & AI Tools** | Official Python MCP SDK, 9 typed tools, stdio & HTTP smoke tests |
+| **Phase 16** | **MCP Server & AI Tools** | Official Python MCP SDK, 9 typed tools, stdio smoke and HTTP gateway |
 | **Phase 17** | **Release Candidate** | Reproducible deployment, documentation, research synthesis, handoff |
 
 ---
@@ -130,8 +132,8 @@ To ensure scientific integrity and academic rigor:
 
 ### Prerequisites
 - **Docker Desktop:** Active daemon with Compose v2.
-- **Python:** Version 3.11 to 3.13.
-- **Node.js:** Version 20+ with npm.
+- **Python:** 3.13 (validated dependency constraints).
+- **Node.js:** 24.3+ (24.12.0 verified), npm 11.
 - **Android SDK:** (Optional for native emulator preview) ADB on PATH.
 
 ### 1. Environment Configuration
@@ -158,7 +160,7 @@ Create the Python virtual environment and install dependencies:
 cd backend
 python -m venv .venv
 & .venv/Scripts/Activate.ps1   # On Linux/macOS: source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt -c constraints.txt
 ```
 Apply Alembic migrations to set up the relational database tables:
 ```powershell
@@ -168,7 +170,7 @@ Seed the development database with demo organization, users, and building twin:
 ```powershell
 python scripts/seed_demo_data.py
 ```
-Run backend tests to verify 100% green status:
+Run backend tests against the dedicated test database:
 ```powershell
 pytest -v
 ```
@@ -190,7 +192,7 @@ From a second terminal:
 ```powershell
 cd mobile
 cp .env.example .env
-npm install --legacy-peer-deps
+npm ci --legacy-peer-deps
 ```
 
 #### Physical Device Configuration (Local Wi-Fi LAN)
