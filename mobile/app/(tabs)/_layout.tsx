@@ -8,7 +8,7 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
       }}
-      tabBar={({ state, navigation }) => {
+      tabBar={({ state, navigation }: any) => {
         const currentRoute = state.routes[state.index].name as TabName;
         return (
           <FloatingTabDock

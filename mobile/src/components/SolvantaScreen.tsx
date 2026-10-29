@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
-import { View, Text, StyleSheet, ScrollView, StatusBar, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ViewStyle } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { SPACING } from '../theme/tokens';
@@ -30,10 +31,7 @@ export const SolvantaScreen: React.FC<SolvantaScreenProps> = ({
       ]}
       edges={['top', 'left', 'right']}
     >
-      <StatusBar
-        barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor={tokens.background}
-      />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       {scrollable ? (
         <ScrollView
           style={styles.container}
