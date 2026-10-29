@@ -1,0 +1,62 @@
+{
+  "source": "SIMULATED ideal-efficiency zero-irradiance hand-calculated fixture",
+  "building_id": "77b1d10f-06e1-48ef-ae41-f0b01809196a",
+  "layout_panel_count": 14,
+  "baseline_run_id": "f265e2a4-0538-498e-b7cd-ed01cbc7c1be",
+  "baseline": {
+    "load_kwh": 4.0,
+    "pv_kwh": 0.0,
+    "grid_import_kwh": 0.0,
+    "grid_export_kwh": 0.0,
+    "generator_kwh": 0.0,
+    "generator_fuel_l": 0.0,
+    "unmet_kwh": 2.0,
+    "unserved_critical_kwh": 2.0,
+    "curtailed_kwh": 0.0,
+    "final_soc_pct": 20.0,
+    "generator_remaining_minutes": 0
+  },
+  "resilience_id": "d13d2874-f0f9-4182-b0b1-7f28d9487d56",
+  "critical_energy_saved_kwh": 2.0,
+  "infeasible_schedule_status": "INFEASIBLE",
+  "saved_schedule_id": "2aa652dd-faf7-4658-a356-1b97605df911",
+  "plan_id": "72e28c1a-02af-4989-8dfe-e463f528ce65",
+  "plan_states": [
+    "DRAFT",
+    "PENDING_APPROVAL",
+    "APPROVED",
+    "SIMULATED",
+    "VERIFIED"
+  ],
+  "approved_run_id": "e8c27293-5f1c-46d1-a0f6-a4aae6510d30",
+  "approved_summary": {
+    "load_kwh": 4.0,
+    "pv_kwh": 0.0,
+    "grid_import_kwh": 0.0,
+    "grid_export_kwh": 0.0,
+    "generator_kwh": 0.0,
+    "generator_fuel_l": 0.0,
+    "unmet_kwh": 2.0,
+    "unserved_critical_kwh": 0.0,
+    "curtailed_kwh": 0.0,
+    "final_soc_pct": 20.0,
+    "generator_remaining_minutes": 0
+  },
+  "telemetry_id": "c67091ad-5ab5-4cde-8aa5-186ae4723f36",
+  "incident_ids": [
+    "a12a5fa7-583c-40dc-ad84-cc748dab537d"
+  ],
+  "forecast_source": {
+    "source": "Persistence of latest SIMULATED daily profiles; starts at that run final battery SoC",
+    "source_run_id": "e8c27293-5f1c-46d1-a0f6-a4aae6510d30",
+    "pv_source": "user supplied hourly plane-of-array irradiance",
+    "observed_samples": 0
+  },
+  "audit_actions": [
+    "create",
+    "submit",
+    "approve",
+    "simulate",
+    "verify"
+  ]
+}

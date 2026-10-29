@@ -1,0 +1,105 @@
+{
+  "restart_during_approval_wait": true,
+  "n8n_version": "2.45.6",
+  "events": [
+    {
+      "id": "ed9b320b-549f-45bd-a201-a9e7968f4dbf",
+      "event_id": "2ee968c8-2e1b-45f5-ac82-188fee2d993a",
+      "correlation_id": "d4410da8-1af3-47db-b1c4-446584566a4b",
+      "kind": "daily_planner",
+      "plan_id": "aa43791a-221c-4c0f-ac41-4a6c37232010",
+      "state": "REJECTED",
+      "run_id": null
+    },
+    {
+      "id": "f5e5dc9f-f528-4c65-a8fd-30cd8c046147",
+      "event_id": "390efa6f-ecbb-4b10-914b-7f061ccb168f",
+      "correlation_id": "b4d25cf5-0bde-4324-b737-e24ee484a08d",
+      "kind": "shortage",
+      "plan_id": "e48113ce-4b64-42b4-8822-7dd2b62ad0d1",
+      "state": "VERIFIED",
+      "run_id": "0555b9bf-ad53-4aaf-a56d-f77a65cbbbb1"
+    },
+    {
+      "id": "23dacd2d-20f2-4ea8-ad2c-53f6a7d203ad",
+      "event_id": "32f050d7-e12c-4dd5-990f-f64df56d25b4",
+      "correlation_id": "83a1fb6e-29a6-4dd9-a72c-e110e4ca86ac",
+      "kind": "anomaly_incident",
+      "plan_id": "e5cf0b12-4b48-4acb-ba12-2b8ae556de03",
+      "state": "VERIFIED",
+      "run_id": "abc1679c-191c-46e0-bbd9-324855e7be32"
+    }
+  ],
+  "executions": [
+    {
+      "id": 186,
+      "workflowId": "solvanta-anomaly_incident",
+      "status": "success",
+      "startedAt": "2026-10-29 15:21:00.062",
+      "stoppedAt": "2026-10-29 15:21:00.128"
+    },
+    {
+      "id": 185,
+      "workflowId": "solvanta-anomaly_incident",
+      "status": "success",
+      "startedAt": "2026-10-29 15:20:09.079",
+      "stoppedAt": "2026-10-29 15:20:09.120"
+    },
+    {
+      "id": 184,
+      "workflowId": "solvanta-anomaly_incident",
+      "status": "success",
+      "startedAt": "2026-10-29 15:20:02.608",
+      "stoppedAt": "2026-10-29 15:21:12.943"
+    },
+    {
+      "id": 183,
+      "workflowId": "solvanta-daily_planner",
+      "status": "success",
+      "startedAt": "2026-10-29 15:20:02.203",
+      "stoppedAt": "2026-10-29 15:21:12.449"
+    },
+    {
+      "id": 182,
+      "workflowId": "solvanta-shortage",
+      "status": "success",
+      "startedAt": "2026-10-29 15:20:01.607",
+      "stoppedAt": "2026-10-29 15:21:12.457"
+    },
+    {
+      "id": 181,
+      "workflowId": "solvanta-anomaly_incident",
+      "status": "success",
+      "startedAt": "2026-10-29 15:19:00.021",
+      "stoppedAt": "2026-10-29 15:19:00.066"
+    },
+    {
+      "id": 180,
+      "workflowId": "solvanta-anomaly_incident",
+      "status": "success",
+      "startedAt": "2026-10-29 15:18:00.023",
+      "stoppedAt": "2026-10-29 15:18:00.059"
+    },
+    {
+      "id": 179,
+      "workflowId": "solvanta-anomaly_incident",
+      "status": "success",
+      "startedAt": "2026-10-29 15:17:00.036",
+      "stoppedAt": "2026-10-29 15:17:00.102"
+    },
+    {
+      "id": 178,
+      "workflowId": "solvanta-anomaly_incident",
+      "status": "success",
+      "startedAt": "2026-10-29 15:16:00.037",
+      "stoppedAt": "2026-10-29 15:16:00.115"
+    },
+    {
+      "id": 177,
+      "workflowId": "solvanta-anomaly_incident",
+      "status": "success",
+      "startedAt": "2026-10-29 15:15:00.051",
+      "stoppedAt": "2026-10-29 15:15:00.170"
+    }
+  ]
+}

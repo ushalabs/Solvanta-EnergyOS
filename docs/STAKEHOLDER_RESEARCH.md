@@ -68,3 +68,7 @@ Earlier faculty evaluation highlighted four research requirements:
 | INT-01 | *Scheduled* | Solar EPC Installer | Lead Engineer, Lahore Solar EPC | Preliminary interest in aerial roof CV & panel kWp calculator |
 | INT-02 | *Scheduled* | Hybrid Homeowner | Residential User (10kWp + 15kWh) | Frustrated by inability of existing app to forecast backup hours |
 | INT-03 | *Scheduled* | Solar Technician | Field Service Tech, Hybrid Systems | Emphasized that breaker control must remain human-in-the-loop |
+
+## Phase 17 evidence status
+
+No interview transcripts, consent records, completed survey dataset or participant usability results were supplied or created during this delivery. The questionnaires remain a research plan. Technical fixture tests are not stakeholder validation. The project owner must arrange and document actual participants before claiming field acceptance.

@@ -1,3 +1,17 @@
+# Implemented contract status — 29 October 2026
+
+The running API's `/api/openapi.json` is authoritative for implemented request/response schemas. Earlier specification sections below contain design targets and must not be read as proof every proposed endpoint exists. There is no implemented WebSocket API or hardware control API.
+
+Current route groups under `/api/v1`: auth, system, buildings/equipment, roof/layout, PV, appliances, simulations, forecast, schedules, resilience, plans/actions/audit, events/notices, telemetry/incidents, and operations/tools. Liveness/readiness are also exposed at `/health` and `/ready`.
+
+Operations: `GET /operations/tools` lists the nine authenticated gateway tools and JSON argument schemas; `POST /operations/tools/{name}` executes a validated tool request. See [MCP contract](MCP.md). `scenario_id` means saved simulation UUID. Responses contain `tool`, `source`, `building_id`, `scenario_id`, `record_id`, `units`, `provenance`, `data`. The gateway is HTTP; actual MCP uses the separate stdio adapter. There is no approval tool. Approval is a version-checked authenticated plan action.
+
+Energy values are deterministic/simulated. HTTP validation errors may use FastAPI's `detail` array; the mobile client formats both arrays and string details. Authentication failures return 401, unauthorized building access 403, absent records 404, conflicting plan revisions/idempotency keys 409, invalid inputs 422. Mutating MCP tools create new records and must not be retried automatically after uncertain responses.
+
+---
+
+## Original design contract (historical targets)
+
 # Solvanta — REST API Contract (v1)
 
 **Base URL:** `/api/v1`  

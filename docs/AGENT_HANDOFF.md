@@ -145,3 +145,7 @@ The user explicitly authorized sequential implementation through Phase 17, separ
 Phase 15: integrated workflow audit delivered on `phase/15-integration-audit`; 74 backend and 34 mobile tests passed, TypeScript, dependency alignment and web export checked. See `PHASE_15_REVIEW.md` and `evidence/phase15/`. Exact delivery commits will be consolidated in the Phase 17 ledger.
 
 Phase 16: delivered on `phase/16-mcp-operations` under continued user authorization; 77 backend/34 mobile tests and actual nine-tool MCP stdio smoke passed. See `PHASE_16_REVIEW.md`. Phase 15 delivery `ea0344a`, main merge `1710053`. Manual acceptance and deferred native work are not implied.
+
+### Phase 17 — Source/API/Expo candidate handoff
+
+Fresh clone/new Python and npm environments, empty isolated PostgreSQL migration/repeat seed, 77 backend/34 mobile tests, TypeScript and web export passed. Isolated numerical demo and actual nine-tool MCP client passed. Final existing-n8n approval/rejection/restart verification passed. A runner-dependent isolation unit test was fixed in a7c752e. Evidence is in docs/evidence/phase17; exact limits and reproduction are in RELEASE_HANDOFF.md and PHASE_17_REVIEW.md. Phase 16 delivery 8cba51c, main merge 314f8c8. Native AR/VR, GUI overhaul and packaging are deferred by the user; no manual stakeholder acceptance is invented. Phase-by-phase commits are consolidated in DELIVERY_LEDGER.md.
