@@ -1,3 +1,4 @@
+jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: {} } }));
 let mockStorage: Record<string, string> = {};
 
 jest.mock('react-native', () => ({

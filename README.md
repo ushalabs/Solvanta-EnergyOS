@@ -194,13 +194,11 @@ npm install --legacy-peer-deps
 ```
 
 #### Physical Device Configuration (Local Wi-Fi LAN)
-To connect a physical smartphone running Expo Go:
-1. **Find host PC IP:** Run `ipconfig` on Windows (or `ifconfig` / `ip a` on Linux) and note your local IPv4 address (e.g., `192.168.1.50`).
-2. **Configure mobile environment:** In `mobile/.env`, set `EXPO_PUBLIC_API_BASE_URL`:
-   ```env
-   EXPO_PUBLIC_API_BASE_URL=http://192.168.1.50:8000/api/v1
-   ```
-3. **Test LAN resolution:** Open `http://<YOUR_LAN_IP>:8000/api/v1/system/health` in your mobile phone's browser while connected to the same Wi-Fi. It should return `{"status":"ok",...}`. *(Ensure Windows Defender Firewall allows incoming connections on port 8000)*.
+Start the backend from the repository root with `./scripts/start-backend.ps1`, then run `npx expo start --lan` in `mobile`. Leave `EXPO_PUBLIC_API_BASE_URL` blank. The app follows Expo's current host automatically: no IP edits when changing Wi-Fi or hotspots. Restart Expo and reopen its current QR code after changing networks.
+
+The backend binds `0.0.0.0:8000` (all IPv4 interfaces). Bare `uvicorn app.main:app` defaults to loopback only; the launcher rejects such an existing listener. The Android preview script reverses both ports 8081 and 8000.
+
+University Wi-Fi client isolation can still block peer access; use a shared hotspot then. Expo tunnel mode tunnels Metro only, not the API. Use an explicit hosted HTTPS API override for tunnel mode or deployed builds. Windows Firewall must allow Python on the active network profile.
 
 Run TypeScript typecheck and Jest tests:
 ```powershell

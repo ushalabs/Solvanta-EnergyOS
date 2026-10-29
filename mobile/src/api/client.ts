@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const AUTH_TOKEN_KEY = '@solvanta_auth_token';
@@ -11,7 +12,16 @@ export function getBaseApiUrl(): string {
     return trimmed.endsWith('/api/v1') ? trimmed : `${trimmed}/api/v1`;
   }
 
-  // 2. Android emulator host loopback address
+  // Follow the host used to open Expo Go on this network.
+  const hostUri = Constants.expoConfig?.hostUri;
+  if (hostUri) {
+    const host = new URL(hostUri.includes('://') ? hostUri : `http://${hostUri}`).hostname;
+    return `http://${host}:8000/api/v1`;
+  }
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    return `${window.location.protocol}//${window.location.hostname}:8000/api/v1`;
+  }
+  // No development manifest: emulator fallback. Deployed builds need an HTTPS override.
   if (Platform.OS === 'android') {
     return 'http://10.0.2.2:8000/api/v1';
   }
@@ -111,10 +121,10 @@ export interface EquipmentSummary {
 }
 
 export class SolvantaApiClient {
-  private baseUrl: string;
+  private baseUrl?: string;
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl || getBaseApiUrl();
+    this.baseUrl = baseUrl;
   }
 
   setBaseUrl(url: string) {
@@ -122,7 +132,7 @@ export class SolvantaApiClient {
   }
 
   getBaseUrl(): string {
-    return this.baseUrl;
+    return this.baseUrl || getBaseApiUrl();
   }
 
   async getToken(): Promise<string | null> {
@@ -142,7 +152,7 @@ export class SolvantaApiClient {
   }
 
   async request<T>(endpoint: string, options: RequestInit = {}, timeoutMs: number = 10000): Promise<T> {
-    const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+    const url = endpoint.startsWith('http') ? endpoint : `${this.getBaseUrl()}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
     
     const headers = new Headers(options.headers || {});
     if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
@@ -183,11 +193,11 @@ export class SolvantaApiClient {
       if (err instanceof SolvantaApiError) {
         throw err;
       }
-      if (err?.name === 'AbortError') {
+      if (controller.signal.aborted || err?.name === 'AbortError') {
         throw new SolvantaApiError(408, {
           error: {
             code: 'REQUEST_TIMEOUT',
-            message: `API request timed out after ${timeoutMs}ms: ${url}`,
+            message: `API request timed out after ${timeoutMs}ms: ${url}. Start the LAN backend and check that the phone and PC can reach each other.`,
             status: 408,
           },
           detail: `API request timed out after ${timeoutMs}ms`,
