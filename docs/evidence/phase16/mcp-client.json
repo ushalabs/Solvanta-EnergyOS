@@ -1,0 +1,116 @@
+{
+  "mcp_version": "1.28.0",
+  "transport": "stdio",
+  "command": "python -m app.mcp_server",
+  "building_id": "6df3816c-f91c-4f3e-89a8-40d3a66add79",
+  "source_scenario_id": "e0e833e7-435b-4c4c-9ae8-12c23194827b",
+  "tools": [
+    {
+      "name": "get_building_profile",
+      "source": "CONFIGURATION",
+      "scenario_id": null,
+      "record_id": null,
+      "summary": null,
+      "status": null,
+      "validated": null
+    },
+    {
+      "name": "get_energy_scenario",
+      "source": "SIMULATED",
+      "scenario_id": "e0e833e7-435b-4c4c-9ae8-12c23194827b",
+      "record_id": null,
+      "summary": {
+        "load_kwh": 4.0,
+        "pv_kwh": 0.0,
+        "grid_import_kwh": 0.0,
+        "grid_export_kwh": 0.0,
+        "generator_kwh": 0.0,
+        "generator_fuel_l": 0.0,
+        "unmet_kwh": 2.0,
+        "unserved_critical_kwh": 2.0,
+        "curtailed_kwh": 0.0,
+        "final_soc_pct": 20.0,
+        "generator_remaining_minutes": 0
+      },
+      "status": null,
+      "validated": null
+    },
+    {
+      "name": "run_outage_simulation",
+      "source": "SIMULATED",
+      "scenario_id": "e0e833e7-435b-4c4c-9ae8-12c23194827b",
+      "record_id": "008c53ec-f26a-4bcb-9b94-25023365bf2d",
+      "summary": {
+        "load_kwh": 4.0,
+        "pv_kwh": 0.0,
+        "grid_import_kwh": 0.0,
+        "grid_export_kwh": 0.0,
+        "generator_kwh": 0.0,
+        "generator_fuel_l": 0.0,
+        "unmet_kwh": 2.0,
+        "unserved_critical_kwh": 2.0,
+        "curtailed_kwh": 0.0,
+        "final_soc_pct": 20.0,
+        "generator_remaining_minutes": 0
+      },
+      "status": null,
+      "validated": null
+    },
+    {
+      "name": "forecast_energy",
+      "source": "SIMULATED",
+      "scenario_id": "e0e833e7-435b-4c4c-9ae8-12c23194827b",
+      "record_id": null,
+      "summary": null,
+      "status": null,
+      "validated": null
+    },
+    {
+      "name": "optimize_appliance_schedule",
+      "source": "SIMULATED",
+      "scenario_id": "e1aa26b3-a914-4626-bcd1-c55f92f5663c",
+      "record_id": "f401a2ad-592c-473c-881b-ddef8e474653",
+      "summary": null,
+      "status": "OPTIMAL",
+      "validated": true
+    },
+    {
+      "name": "optimize_resilience",
+      "source": "SIMULATED",
+      "scenario_id": "e0e833e7-435b-4c4c-9ae8-12c23194827b",
+      "record_id": "5ee6babd-5a62-4813-989d-c6d466dadb28",
+      "summary": null,
+      "status": "critical_demand_covered",
+      "validated": null
+    },
+    {
+      "name": "compare_energy_configurations",
+      "source": "SIMULATED",
+      "scenario_id": "e0e833e7-435b-4c4c-9ae8-12c23194827b",
+      "record_id": null,
+      "summary": null,
+      "status": null,
+      "validated": null
+    },
+    {
+      "name": "get_energy_anomalies",
+      "source": "SIMULATED",
+      "scenario_id": null,
+      "record_id": null,
+      "summary": null,
+      "status": null,
+      "validated": null
+    },
+    {
+      "name": "propose_energy_plan",
+      "source": "SIMULATED",
+      "scenario_id": "e0e833e7-435b-4c4c-9ae8-12c23194827b",
+      "record_id": "9465b399-329e-4f63-8b14-d6338f02bd7a",
+      "summary": null,
+      "status": "PENDING_APPROVAL",
+      "validated": null
+    }
+  ],
+  "invalid_uuid_is_error": true,
+  "approval_tool_is_error": true
+}

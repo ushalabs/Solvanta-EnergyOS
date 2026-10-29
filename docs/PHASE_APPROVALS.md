@@ -41,3 +41,5 @@ In accordance with Section K of `AntiGravity_prompt.md`, **no phase may begin un
 The user explicitly authorized sequential implementation through Phase 17, separate phase branch pushes and merges to main, with full validation at each phase boundary. This supersedes the earlier LOCKED planning rows and per-phase stop instructions. It is delivery authorization, not a claim of manual acceptance. AR/VR, final GUI overhaul and APK/dev-client packaging are explicitly deferred.
 
 Phase 15: integrated workflow audit delivered on `phase/15-integration-audit`; 74 backend and 34 mobile tests passed, TypeScript, dependency alignment and web export checked. See `PHASE_15_REVIEW.md` and `evidence/phase15/`. Exact delivery commits will be consolidated in the Phase 17 ledger.
+
+Phase 16: delivered on `phase/16-mcp-operations` under continued user authorization; 77 backend/34 mobile tests and actual nine-tool MCP stdio smoke passed. See `PHASE_16_REVIEW.md`. Phase 15 delivery `ea0344a`, main merge `1710053`. Manual acceptance and deferred native work are not implied.

@@ -1,10 +1,10 @@
 # Solvanta — Current Project Status
 
-**Last Updated:** 29 October 2026 (Phase 15 Integrated Audit)
-**Active Phase:** Phase 15 complete; AR/VR and GUI overhaul deferred by user until the end
+**Last Updated:** 29 October 2026 (Phase 16 MCP Operations)
+**Active Phase:** Phase 16 complete; AR/VR and GUI overhaul deferred by user until the end
 **Overall FYP-I Target:** Complete local working prototype through MCP by 10 November 2026  
 **Current Git Remote:** `https://github.com/ushalabs/Solvanta-EnergyOS`  
-**Current Branch:** `main` (Phase 4–15 branches merged)
+**Current Branch:** `main` (Phase 4–16 branches merged)
 **Approval Protocol:** User authorized continued sequential phases until session capacity, with complete phase validation, separate branch push, and merge to main after each phase.
 
 ---
@@ -29,7 +29,7 @@
 | 13 | n8n Workflow Automation | Codex | COMPLETED | 65 backend, 31 mobile, build, real n8n execution/restart evidence | AR/GUI deferred separately | 07 Nov 2026 |
 | 14 | Simulated Telemetry & Anomaly Ops | Codex | COMPLETED | 71 backend, 31 mobile, build, live detector/n8n evidence | Synthetic model consistency only | 08 Nov 2026 |
 | 15 | E2E Integration & Security Audit | Codex | COMPLETED | 74 backend, 34 mobile; authenticated web workflow and numerical report | Expo CLI Zod advisory; native packaging deferred | 09 Nov 2026 |
-| 16 | MCP Server & AI Operations Tools | Antigravity / Team | NOT STARTED | - | After Phase 15 validation | 09 Nov 2026 |
+| 16 | MCP Server & AI Operations Tools | Codex | COMPLETED | 77 backend, 34 mobile, build; real 9-tool stdio smoke | No LLM connected; native UI deferred | 09 Nov 2026 |
 | 17 | FYP-I Release Candidate & Handoff | Antigravity / Team | NOT STARTED | - | After Phase 16 validation | 10 Nov 2026 |
 
 ---
