@@ -1,11 +1,11 @@
 # Solvanta — Current Project Status
 
-**Last Updated:** 29 October 2026 (Phase 3 Building & Equipment Configuration)  
-**Active Phase:** Phase 3 — Building & Equipment Configuration Models (Awaiting User Approval)  
+**Last Updated:** 29 October 2026 (Phase 5 PV Engineering)  
+**Active Phase:** Phase 5 complete; Phase 6 appliance twin next  
 **Overall FYP-I Target:** Complete local working prototype through MCP by 10 November 2026  
 **Current Git Remote:** `https://github.com/ushalabs/Solvanta-EnergyOS`  
 **Current Branch:** `phase/03-building-models`  
-**Approval Protocol:** STRICT — Work 1 phase → test → commit → push → provide evidence → ask user approval → STOP.
+**Approval Protocol:** User authorized work through Phase 6, with phase-end validation and commit/push after each phase.
 
 ---
 
@@ -16,10 +16,10 @@
 | **00** | **Repo Audit & Contracts** | Antigravity / Team | **COMPLETED & APPROVED** | PASS (Toolchain & files verified) | None | 28 Oct 2026 |
 | **01** | **Mobile UI Foundation & Shells** | Antigravity / Team | **COMPLETED & APPROVED** | PASS (10 tests; tsc clean; live ADB & web evidence) | None | 28 Oct 2026 |
 | **02** | **Backend, PostgreSQL & Local Runtime** | Antigravity / Team | **COMPLETED & APPROVED** | PASS (15 backend tests, 16 mobile tests, live API verified; merged PR #5) | None | 29 Oct 2026 |
-| **03** | **Building & Equipment Configuration** | Antigravity / Team | **AWAITING USER APPROVAL** | PASS (21 backend tests, 23 mobile tests, clean tsc, live native Android evidence) | None | 29 Oct 2026 |
-| 04 | Rooftop CV & Geometry Editor | Antigravity / Team | NOT STARTED | - | Requires Phase 3 Approval | 30 Oct 2026 |
-| 05 | PV Sizing & Generation Engine | Antigravity / Team | NOT STARTED | - | Requires Phase 4 Approval | 30 Oct 2026 |
-| 06 | Appliance Digital Twin | Antigravity / Team | NOT STARTED | - | Requires Phase 5 Approval | 31 Oct 2026 |
+| **03** | **Building & Equipment Configuration** | Antigravity / Team | **COMPLETED** | PASS (21 backend tests, 23 mobile tests, clean tsc, prior native Android evidence) | None | 29 Oct 2026 |
+| 04 | Rooftop Geometry Editor | Codex | COMPLETED | 28 backend, 26 mobile, live authenticated save, web export | Native emulator boot ANR | 30 Oct 2026 |
+| 05 | PV Sizing & Generation Engine | Codex | COMPLETED | 33 backend, 27 mobile, TypeScript; web export 14 routes | None | 30 Oct 2026 |
+| 06 | Appliance Digital Twin | Codex | IN PROGRESS | - | None | 31 Oct 2026 |
 | 07 | Energy & Outage Simulator | Antigravity / Team | NOT STARTED | - | Requires Phase 6 Approval | 01 Nov 2026 |
 | 08 | Forecasting & Shortage Risk | Antigravity / Team | NOT STARTED | - | Requires Phase 7 Approval | 02 Nov 2026 |
 | 09 | Appliance Scheduling (OR-Tools) | Antigravity / Team | NOT STARTED | - | Requires Phase 8 Approval | 03 Nov 2026 |

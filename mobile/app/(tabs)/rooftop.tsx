@@ -7,6 +7,7 @@ import { Card, Label, Field, Action, BuildingPicker, useBuildings } from '../../
 import { api } from '../../src/api/client';
 import { emptyRoof, RoofInput, RoofRecord, Layout, Point, parsePoints, formatPoints } from '../../src/api/roof';
 import { useTheme } from '../../src/theme/ThemeContext';
+import { PVDesigner } from '../../src/components/PVDesigner';
 
 export default function RooftopScreen() {
   const { tokens: t } = useTheme();
@@ -88,5 +89,6 @@ export default function RooftopScreen() {
       {layout && <><Label>{layout.usable_area_m2.toFixed(2)} m² usable · {layout.panel_count} panels</Label><Label>{layout.method}</Label></>}
       <Label>2D geometry editor. Native AR is scheduled for Phase 12.</Label>
     </Card>
+    <PVDesigner buildingId={building.id} />
   </SolvantaScreen>;
 }

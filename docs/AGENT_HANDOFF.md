@@ -104,3 +104,6 @@ This document records chronological handoffs between engineering agents, autonom
 
 ### Phase 4 — Codex
 Implemented measured roof geometry and persisted placement. See PHASE_04_REVIEW.md for validation and limitations. Optional CV proposals remain omitted; manual geometry is functional.
+
+### Phase 5 — Codex
+PV design and 24-hour typed generation profile added. See PHASE_05_REVIEW.md. User authorized continuation through Phase 6.
