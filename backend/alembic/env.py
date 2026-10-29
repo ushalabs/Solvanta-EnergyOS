@@ -21,6 +21,7 @@ from app.models.audit import AuditLog
 from app.models.roof import Roof
 from app.models.pv import PVDesign
 from app.models.simulation import SimulationRun
+from app.models.schedule import Schedule
 from app.models.appliance import Appliance, ScenarioSelection
 
 # this is the Alembic Config object, which provides
