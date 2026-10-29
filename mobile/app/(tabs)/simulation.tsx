@@ -1,292 +1,40 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Play, Sparkles } from 'lucide-react-native';
-import { SolvantaScreen } from '../../src/components/SolvantaScreen';
-import { BatterySocRing } from '../../src/components/BatterySocRing';
-import { PillSegmentedControl } from '../../src/components/PillSegmentedControl';
-import { EnergyMetricCard } from '../../src/components/EnergyMetricCard';
-import { LimeCTA } from '../../src/components/LimeCTA';
-import { useTheme } from '../../src/theme/ThemeContext';
-import { DEMO_BUILDING, DEMO_SIMULATION_TRACE } from '../../src/fixtures/mockData';
-import { SPACING, RADIUS } from '../../src/theme/tokens';
-
-export default function SimulationScreen() {
-  const router = useRouter();
-  const { tokens } = useTheme();
-  const [simMode, setSimMode] = useState('outage');
-  const [isRunning, setIsRunning] = useState(false);
-  const [hasRun, setHasRun] = useState(true);
-
-  const handleRunSimulation = () => {
-    setIsRunning(true);
-    setTimeout(() => {
-      setIsRunning(false);
-      setHasRun(true);
-      Alert.alert(
-        'Demo Trace Loaded',
-        'This is a prewritten visual fixture with 30-minute samples. No energy simulation was executed. The deterministic engine is planned for Phase 7.'
-      );
-    }, 800);
-  };
-
-  return (
-    <SolvantaScreen>
-      {/* Header */}
-      <View style={styles.headerRow}>
-        <View>
-          <Text style={[styles.title, { color: tokens.textPrimary }]}>
-            SIMULATION LAB
-          </Text>
-          <Text style={[styles.subtitle, { color: tokens.textMuted }]}>
-            DEMO trace • Engine not connected
-          </Text>
-        </View>
-      </View>
-
-      {/* Scenario Mode Selector */}
-      <PillSegmentedControl
-        selectedId={simMode}
-        onSelect={setSimMode}
-        options={[
-          { id: 'baseline', label: 'Baseline' },
-          { id: 'outage', label: '6h Outage ●' },
-          { id: 'whatif', label: 'What-If' },
-        ]}
-      />
-
-      {/* Signature Neon Battery SoC Ring Gauge */}
-      <BatterySocRing
-        socPct={DEMO_BUILDING.batterySocPct}
-        backupHours={DEMO_BUILDING.backupEstimatedHours}
-        outageDurationHours={6}
-        unservedCriticalKwh={1.2}
-      />
-
-      {/* Supply & Demand Wells */}
-      <View style={styles.metricsRow}>
-        <EnergyMetricCard
-          label="SOLAR PV GENERATION"
-          value={DEMO_BUILDING.currentPvKw.toFixed(1)}
-          unit="kW"
-          subtext="0.0 kW at night"
-        />
-        <View style={{ width: SPACING.sm }} />
-        <EnergyMetricCard
-          label="SCENARIO DEMAND"
-          value={DEMO_BUILDING.currentLoadKw.toFixed(2)}
-          unit="kW"
-          subtext="Unoptimized load"
-        />
-      </View>
-
-      {/* 15-Minute Timeline Comparison Card */}
-      <View
-        style={[
-          styles.timelineCard,
-          {
-            backgroundColor: tokens.surface,
-            borderColor: tokens.border,
-          },
-        ]}
-      >
-        <View style={styles.tHeader}>
-          <Text style={[styles.tTitle, { color: tokens.textSecondary }]}>
-            SOC TRAJECTORY (18:00 – 24:00)
-          </Text>
-          <View style={styles.legendRow}>
-            <View style={[styles.legendDot, { backgroundColor: tokens.red }]} />
-            <Text style={[styles.legendText, { color: tokens.textMuted }]}>
-              Baseline
-            </Text>
-            <View
-              style={[
-                styles.legendDot,
-                { backgroundColor: tokens.lime, marginLeft: 10 },
-              ]}
-            />
-            <Text style={[styles.legendText, { color: tokens.textMuted }]}>
-              Optimized
-            </Text>
-          </View>
-        </View>
-
-        {/* Timeline intervals step trace */}
-        <View style={styles.traceContainer}>
-          {DEMO_SIMULATION_TRACE.map((step, idx) => (
-            <View key={idx} style={styles.traceStep}>
-              <View style={styles.stepBars}>
-                {/* Baseline bar */}
-                <View
-                  style={[
-                    styles.stepBar,
-                    {
-                      height: (step.baselineSoc / 100) * 50,
-                      backgroundColor:
-                        step.baselineSoc <= 20 ? tokens.red : 'rgba(255, 98, 106, 0.5)',
-                    },
-                  ]}
-                />
-                {/* Optimized bar */}
-                <View
-                  style={[
-                    styles.stepBar,
-                    {
-                      height: (step.optimizedSoc / 100) * 50,
-                      backgroundColor: tokens.lime,
-                    },
-                  ]}
-                />
-              </View>
-              {idx % 3 === 0 && (
-                <Text style={[styles.stepTime, { color: tokens.textMuted }]}>
-                  {step.timeLabel}
-                </Text>
-              )}
-            </View>
-          ))}
-        </View>
-
-        {/* Coverage Progress Bar */}
-        <View style={styles.covBox}>
-          <View style={styles.covLabelRow}>
-            <Text style={[styles.covText, { color: tokens.textPrimary }]}>
-              Critical Load Coverage:
-            </Text>
-            <Text style={[styles.covPct, { color: tokens.lime }]}>
-              86% (Baseline) → 100% (Optimized)
-            </Text>
-          </View>
-          <View style={[styles.covTrack, { backgroundColor: tokens.surfaceElevated }]}>
-            <View
-              style={[
-                styles.covFill,
-                { width: '86%', backgroundColor: tokens.lime },
-              ]}
-            />
-          </View>
-        </View>
-      </View>
-
-      {/* Primary Simulation CTA */}
-      <LimeCTA
-        title="Preview Demo Outage Trace"
-        loading={isRunning}
-        onPress={handleRunSimulation}
-        icon={<Play size={16} color={tokens.onLime} style={{ marginRight: 6 }} />}
-      />
-
-      <LimeCTA
-        title="View Recommended Schedules & Plan"
-        variant="surface"
-        onPress={() => router.push('/scheduling')}
-        icon={<Sparkles size={16} color={tokens.lime} style={{ marginRight: 6 }} />}
-        style={{ marginBottom: SPACING.xl }}
-      />
-    </SolvantaScreen>
-  );
+import React,{useEffect,useState} from 'react';
+import {View,Switch} from 'react-native';
+import Svg,{Circle} from 'react-native-svg';
+import {router} from 'expo-router';
+import {SolvantaScreen} from '../../src/components/SolvantaScreen';
+import {Card,Label,Field,Action,BuildingPicker,useBuildings} from '../../src/components/TwinControls';
+import {useTheme} from '../../src/theme/ThemeContext';
+import {api} from '../../src/api/client';
+import {EnergyRun,parseOutages} from '../../src/api/simulation';
+export default function SimulationScreen(){
+ const {tokens:t}=useTheme();const building=useBuildings();
+ const [outages,setOutages]=useState('480-600');const [generator,setGenerator]=useState(false);
+ const [run,setRun]=useState<EnergyRun|null>(null);const [step,setStep]=useState(0);
+ const [history,setHistory]=useState<Array<{id:string;created_at:string}>>([]);
+ const [message,setMessage]=useState('Save a roof/PV design and select appliances before running.');const [busy,setBusy]=useState(false);
+ useEffect(()=>{let active=true;setRun(null);setHistory([]);setStep(0);if(building.id)api.get<Array<{id:string;created_at:string}>>(`/buildings/${building.id}/simulations`).then(r=>{if(active)setHistory(r);}).catch(e=>{if(active)setMessage(e.message);});return()=>{active=false;};},[building.id]);
+ async function execute(){if(!building.id||busy)return;setBusy(true);try{
+ const result=await api.post<EnergyRun>(`/buildings/${building.id}/simulations`,{outages:parseOutages(outages),use_generator:generator});setRun(result);setStep(0);setHistory([{id:result.id,created_at:result.created_at},...history].slice(0,20));setMessage('Simulation saved. No physical switching occurred.');
+ }catch(e:any){setMessage(e.message);}finally{setBusy(false);}}
+ async function open(id:string){setBusy(true);try{setRun(await api.get<EnergyRun>(`/buildings/${building.id}/simulations/${id}`));setStep(0);setMessage('Loaded immutable saved run.');}catch(e:any){setMessage(e.message);}finally{setBusy(false);}}
+ const p=run?.result.trace[step];
+ return <SolvantaScreen banner="SIMULATED • Saved 15-minute energy balance"><Label>ENERGY & OUTAGE SIMULATOR</Label><BuildingPicker state={building}/>
+ <Card><Field label="Outages: minute ranges (0–1440), separated by commas" value={outages} onChange={setOutages}/><Label>Example: 480-600 means 08:00–10:00. Blank means grid available all day.</Label>
+ <View style={{flexDirection:'row',justifyContent:'space-between'}}><Label>Use configured generator</Label><Switch accessibilityLabel="Use configured generator" value={generator} onValueChange={setGenerator} trackColor={{true:t.lime}}/></View>
+ <Action title="Run & Save Simulation" disabled={busy||!building.id} onPress={execute}/><Label>{message}</Label><Action title="Open Scheduling" onPress={()=>router.push('/scheduling')}/></Card>
+ {run&&p&&<Card><Label>RUN {run.id.slice(0,8)} · {run.snapshot.pv.source}</Label>
+ <Label>Requested {run.result.summary.load_kwh.toFixed(2)} kWh · Unmet {run.result.summary.unmet_kwh.toFixed(2)} kWh</Label>
+ <Label>Critical unmet {run.result.summary.unserved_critical_kwh.toFixed(2)} kWh · Grid import {run.result.summary.grid_import_kwh.toFixed(2)} kWh</Label>
+ <Label>Generator fuel {run.result.summary.generator_fuel_l.toFixed(2)} L · Curtailed {run.result.summary.curtailed_kwh.toFixed(2)} kWh</Label>
+ <View style={{alignItems:'center'}}><Svg width={150} height={150}><Circle cx={75} cy={75} r={60} stroke={t.border} strokeWidth={12} fill="none"/><Circle cx={75} cy={75} r={60} stroke={t.lime} strokeWidth={12} fill="none" strokeDasharray={`${p.soc_pct/100*377} 377`} rotation={-90} origin="75,75"/></Svg><Label>Battery {p.soc_pct.toFixed(1)}% · {p.battery_end_kwh.toFixed(3)} kWh</Label></View>
+ <View accessibilityLabel="Battery state of charge over 24 hours" style={{height:80,flexDirection:'row',alignItems:'flex-end',gap:1}}>{run.result.trace.map((v,i)=><View key={i} style={{flex:1,height:Math.max(1,v.soc_pct*.8),backgroundColor:i===step?t.cyan:t.lime}}/>)}</View>
+ <Label>Interval {step+1}/96 · {Math.floor(p.minute/60).toString().padStart(2,'0')}:{(p.minute%60).toString().padStart(2,'0')} · Grid {p.grid_available?'available':'outage'}</Label>
+ <Action title="Previous Interval" disabled={step===0} onPress={()=>setStep(step-1)}/><Action title="Next Interval" disabled={step===95} onPress={()=>setStep(step+1)}/>
+ <Label>PV {p.pv_kw.toFixed(3)} kW · Load {p.load_kw.toFixed(3)} kW</Label><Label>Grid {p.grid_import_kw.toFixed(3)} kW · Generator {p.generator_kw.toFixed(3)} kW</Label>
+ <Label>Charge {p.charge_kw.toFixed(3)} kW · Discharge {p.discharge_kw.toFixed(3)} kW · Unmet {p.unmet_kw.toFixed(3)} kW</Label>
+ {run.result.assumptions.map(a=><Label key={a}>{a}</Label>)}
+ </Card>}
+ <Card><Label>SAVED RUNS (LATEST 20)</Label>{history.map(r=><Action key={r.id} disabled={busy} title={`${new Date(r.created_at).toLocaleString()} · ${r.id.slice(0,8)}`} onPress={()=>open(r.id)}/>)}</Card>
+ </SolvantaScreen>;
 }
-
-const styles = StyleSheet.create({
-  headerRow: {
-    marginBottom: SPACING.sm,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-  subtitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: SPACING.xs,
-  },
-  timelineCard: {
-    borderRadius: RADIUS.card,
-    padding: SPACING.cardPadding,
-    marginVertical: SPACING.sm,
-    borderWidth: 1,
-  },
-  tHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-  },
-  tTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-  },
-  legendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  legendDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 4,
-  },
-  legendText: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  traceContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    height: 75,
-    marginVertical: SPACING.sm,
-  },
-  traceStep: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  stepBars: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 2,
-  },
-  stepBar: {
-    width: 4,
-    borderRadius: 2,
-  },
-  stepTime: {
-    fontSize: 9,
-    marginTop: 4,
-  },
-  covBox: {
-    marginTop: SPACING.sm,
-    paddingTop: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  covLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  covText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  covPct: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  covTrack: {
-    height: 8,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  covFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-});
