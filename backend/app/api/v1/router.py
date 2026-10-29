@@ -18,3 +18,6 @@ api_router.include_router(simulation.router, prefix="/buildings", tags=["Simulat
 
 from .endpoints import forecast
 api_router.include_router(forecast.router,prefix="/buildings",tags=["Forecast"])
+
+from .endpoints import scheduling
+api_router.include_router(scheduling.router,prefix="/buildings",tags=["Scheduling"])

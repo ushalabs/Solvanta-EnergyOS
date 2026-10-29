@@ -119,3 +119,6 @@ Deterministic quarter-hour energy balance, saved input snapshots and trace, auth
 
 ### Phase 8 — Codex
 Deterministic configured/latest-simulation forecast providers with explicit provenance and shortage projection, low-data fallback and mobile PV/load chart. No trained-model accuracy claimed. Full suite: 50 backend, 29 mobile tests, TypeScript and web export. See PHASE_08_REVIEW.md.
+
+### Phase 9 — Codex
+OR-Tools minute-resolution scheduling, independent validator, saved schedules and mobile timeline. Branch phase/09-appliance-scheduling; 55 backend and 29 mobile tests, TypeScript and web export pass. See PHASE_09_REVIEW.md. Current five-hour allowance was 94% consumed at phase-end; Phase 10 is unstarted and remains authorized for continuation.
