@@ -125,3 +125,6 @@ OR-Tools minute-resolution scheduling, independent validator, saved schedules an
 
 ### Phase 10 — Codex
 Critical-reserve dispatch with identical-baseline comparison, immutable saved inputs/results, interval explanations and mobile comparison/history. 59 backend tests, 29 mobile tests, TypeScript and web export pass. See PHASE_10_REVIEW.md.
+
+### Phase 11 — Codex
+Three immutable configuration alternatives, expiring revision-controlled plan approval, idempotency, concurrent action serialization, audit, linked simulation and verified/failed results. 64 backend tests / 29 mobile tests, TypeScript and web export pass. See PHASE_11_REVIEW.md.
