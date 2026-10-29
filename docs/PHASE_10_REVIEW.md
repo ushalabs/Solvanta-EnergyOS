@@ -1,0 +1,7 @@
+# Phase 10 — Outage resilience
+
+A deterministic reserve heuristic protects battery energy against the remaining critical deficit. Critical loads can still discharge to the physical reserve; noncritical battery service uses only energy above the estimated future need. PV, grid, generator, charging, discharge, export and curtailment remain governed by the same Phase 7 physics. The future reserve estimate ignores future surplus charging and generator support, so it is conservative rather than globally optimal.
+
+The baseline and candidate use identical demand, PV, initial state and source limits. Candidate selection requires lower critical unmet energy, or lower total unmet energy with no worsening critical service. Otherwise the baseline is retained. Deferred noncritical energy is explicitly counted as unmet; later completion is not claimed. Stored comparison snapshots, full traces and interval explanations make decisions reviewable. The mobile Simulation screen shows coverage, tradeoffs, saved comparisons and interval details.
+
+Verification: 59 backend tests, 29 mobile tests, TypeScript and web export pass. Hand-calculated case preserves 2 kWh for a later critical load and raises critical coverage from zero to 100%, while honestly retaining 2 kWh unmet noncritical demand. Randomized conservation, reserve/power constraints, impossible coverage, persistence and cross-tenant access are checked. Native phone interaction remains unverified.

@@ -122,3 +122,6 @@ Deterministic configured/latest-simulation forecast providers with explicit prov
 
 ### Phase 9 — Codex
 OR-Tools minute-resolution scheduling, independent validator, saved schedules and mobile timeline. Branch phase/09-appliance-scheduling; 55 backend and 29 mobile tests, TypeScript and web export pass. See PHASE_09_REVIEW.md. Current five-hour allowance was 94% consumed at phase-end; Phase 10 is unstarted and remains authorized for continuation.
+
+### Phase 10 — Codex
+Critical-reserve dispatch with identical-baseline comparison, immutable saved inputs/results, interval explanations and mobile comparison/history. 59 backend tests, 29 mobile tests, TypeScript and web export pass. See PHASE_10_REVIEW.md.
