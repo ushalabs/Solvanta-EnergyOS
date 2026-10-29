@@ -1,0 +1,16 @@
+import React,{useEffect,useState} from 'react';
+import {Card,Label,Action} from './TwinControls';
+import {api} from '../api/client';
+type Incident={id:string;source:string;code:string;state:string;possible_cause:string;evidence:Array<{minute:number;expected:number;observed:number;unit:string;threshold:number}>;verifications:Array<{state:string;meaning:string}>};
+type Plan={id:string;state:string};
+export function TelemetryCard({buildingId,runId}:{buildingId:string;runId?:string}){
+ const [incidents,setIncidents]=useState<Incident[]>([]);const [fixture,setFixture]=useState('none');const [busy,setBusy]=useState(false);const [message,setMessage]=useState('Generate simulated observations from the selected saved run.');const [plans,setPlans]=useState<Plan[]>([]);const [plan,setPlan]=useState('');
+ useEffect(()=>{setIncidents([]);setPlans([]);setPlan('');},[buildingId]);
+ async function refresh(){const [i,p]=await Promise.all([api.get<Incident[]>(`/buildings/${buildingId}/incidents`),api.get<Plan[]>(`/buildings/${buildingId}/plans`)]);setIncidents(i);const verified=p.filter(x=>x.state==='VERIFIED');setPlans(verified);setPlan(old=>verified.some(x=>x.id===old)?old:verified[0]?.id||'');}
+ async function generate(){setBusy(true);try{await api.post(`/buildings/${buildingId}/telemetry`,{run_id:runId,fixture,seed:14});await refresh();setMessage('Synthetic observations and detector evidence saved. Pending incidents are polled by the configured n8n anomaly workflow.');}catch(e:any){setMessage(e.message);}finally{setBusy(false);}}
+ async function reload(){setBusy(true);try{await refresh();setMessage('Reloaded persisted incidents and verified plans.');}catch(e:any){setMessage(e.message);}finally{setBusy(false);}}
+ async function verify(id:string){setBusy(true);try{const r=await api.post<{state:string;meaning:string}>(`/buildings/${buildingId}/incidents/${id}/verify`,{plan_id:plan,verification_id:`ui-${Date.now()}-${Math.random().toString(36).slice(2)}`,fixture});setMessage(`${r.state}: ${r.meaning}`);await refresh();}catch(e:any){setMessage(e.message);}finally{setBusy(false);}}
+ return <Card><Label>SIMULATED TELEMETRY & INCIDENTS</Label><Label>No physical inverter or smart meter is connected.</Label>{['none','pv_dropout','battery_drain','load_spike'].map(f=><Action key={f} title={`${fixture===f?'Selected: ':''}${f.replaceAll('_',' ')}`} onPress={()=>setFixture(f)}/>)}<Action title="Generate Simulated Observations" disabled={!buildingId||!runId||busy} onPress={generate}/><Action title="Refresh Incidents & Verified Plans" disabled={!buildingId||busy} onPress={reload}/><Label>{message}</Label><Label>Verification plan</Label>{plans.map(p=><Action key={p.id} title={`${plan===p.id?'Selected: ':''}${p.id.slice(0,8)}`} onPress={()=>setPlan(p.id)}/>)}
+ {incidents.map(i=><Card key={i.id}><Label>{i.source} · {i.code} · {i.state}</Label><Label>{i.possible_cause}</Label>{i.evidence.map((e,n)=><Label key={n}>Minute {e.minute}: expected {e.expected.toFixed(3)} {e.unit}, observed {e.observed.toFixed(3)} {e.unit} · threshold {e.threshold.toFixed(3)}</Label>)}<Action title="Verify Synthetic Post-plan Response" disabled={!plan||busy} onPress={()=>verify(i.id)}/>{i.verifications.map((v,n)=><Label key={n}>{v.state}: {v.meaning}</Label>)}</Card>)}
+ </Card>;
+}

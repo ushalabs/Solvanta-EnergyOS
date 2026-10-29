@@ -10,7 +10,7 @@ def docker(*args):
  if r.returncode:raise RuntimeError((r.stderr+r.stdout)[-2500:].replace(SECRET,'[REDACTED]') if SECRET else (r.stderr+r.stdout)[-2500:])
  return r.stdout
 
-def configure(reuse=False):
+def configure(reuse=False,only=None):
  global SECRET
  c=httpx.Client(base_url='http://127.0.0.1:8000',timeout=60)
  auth=c.post('/api/v1/auth/login',data={'username':'demo@solvanta.energy','password':os.environ.get('SOLVANTA_DEMO_PASSWORD','Solvanta2026!')});auth.raise_for_status();token=auth.json()['access_token'];SECRET=token;c.headers['Authorization']='Bearer '+token
@@ -33,6 +33,7 @@ def configure(reuse=False):
   credential.unlink(missing_ok=True)
   docker('exec','-u','root','solvanta-n8n','rm','-f','/tmp/solvanta-auth.json')
  for template in ([] if reuse else sorted((ROOT/'workflows').glob('*.json'))):
+  if only and template.stem!=only:continue
   content=template.read_text(encoding='utf-8').replace('CONFIGURE_BUILDING_ID',site['id']);target=RUNTIME/template.name;target.write_text(content,encoding='utf-8')
   docker('cp',str(target),'solvanta-n8n:/tmp/'+template.name)
   docker('exec','solvanta-n8n','n8n','import:workflow','--input=/tmp/'+template.name)

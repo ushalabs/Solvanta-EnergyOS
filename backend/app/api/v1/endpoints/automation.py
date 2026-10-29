@@ -9,6 +9,7 @@ from ....db.session import get_db
 from ....models.user import User
 from ....models.plan import EnergyPlan
 from ....models.automation import AutomationEvent
+from ....models.telemetry import Incident
 from ....models.audit import AuditLog
 from ...deps import get_current_user
 from .buildings import get_building
@@ -18,6 +19,7 @@ class EventInput(PlanInput):
  event_id:str=Field(min_length=8,max_length=100)
  correlation_id:str=Field(min_length=8,max_length=100)
  kind:Literal['shortage','daily_planner','anomaly_incident']
+ incident_id:str|None=None
 
 def event_view(event,plan):
  d=event.data;expired=datetime.now(timezone.utc)>=datetime.fromisoformat(plan.snapshot['expires_at'])
@@ -29,18 +31,27 @@ def event_view(event,plan):
 @router.post('/{building_id}/events')
 async def start(building_id:str,data:EventInput,user:User=Depends(get_current_user),db:AsyncSession=Depends(get_db)):
  await get_building(building_id,user,db)
- digest=hashlib.sha256(json.dumps(data.model_dump(),sort_keys=True).encode()).hexdigest()
+ incident=None
+ if data.incident_id:
+  incident=(await db.execute(select(Incident).where(Incident.id==data.incident_id,Incident.building_id==building_id).with_for_update())).scalar_one_or_none()
+  if incident is None or incident.building_id!=building_id:raise HTTPException(404,'Incident not found')
+  if data.kind!='anomaly_incident':raise HTTPException(422,'Incident links require anomaly event kind')
+ digest=hashlib.sha256(json.dumps(data.model_dump(exclude_none=True),sort_keys=True).encode()).hexdigest()
  key=int.from_bytes(hashlib.sha256((user.id+data.event_id).encode()).digest()[:8],'big',signed=True)
  await db.execute(text('SELECT pg_advisory_xact_lock(:key)'),{'key':key})
  old=(await db.execute(select(AutomationEvent).where(AutomationEvent.actor_id==user.id,AutomationEvent.event_id==data.event_id))).scalar_one_or_none()
  if old:
   if old.building_id!=building_id or old.data['digest']!=digest:raise HTTPException(409,'Event id reused with different input')
   return event_view(old,await db.get(EnergyPlan,old.data['plan_id']))
+ if incident and incident.data['automation_event_id']:raise HTTPException(409,'Incident already linked to an automation event')
  plan=await build_plan(building_id,data,user,db)
  d=copy.deepcopy(plan.snapshot);d['state']='PENDING_APPROVAL';d['revision']=2;plan.snapshot=d
  audit(db,user,plan,'automation_submit',{'correlation_id':data.correlation_id,'event_id':data.event_id,'revision':2})
  event=AutomationEvent(building_id=building_id,actor_id=user.id,event_id=data.event_id,data=dict(digest=digest,correlation_id=data.correlation_id,kind=data.kind,plan_id=plan.id,notice=f'{data.kind}: review plan {plan.id[:8]}. Simulation requires explicit approval.'))
- db.add(event);await db.flush();await db.commit()
+ db.add(event);await db.flush()
+ if incident:
+  state=copy.deepcopy(incident.data);state['automation_event_id']=event.id;state['state']='REVIEW_REQUESTED';incident.data=state
+ await db.commit()
  return event_view(event,plan)
 
 @router.get('/{building_id}/events/{event_id}')

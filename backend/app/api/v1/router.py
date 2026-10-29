@@ -30,3 +30,6 @@ api_router.include_router(plans.router,prefix="/buildings",tags=["Plans"])
 
 from .endpoints import automation
 api_router.include_router(automation.router,prefix="/buildings",tags=["Automation"])
+
+from .endpoints import telemetry
+api_router.include_router(telemetry.router,prefix="/buildings",tags=["Simulated telemetry"])

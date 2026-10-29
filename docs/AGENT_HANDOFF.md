@@ -134,3 +134,6 @@ Saved-trace digital twin playback, speed, seek, source flow, requested appliance
 
 ### Phase 13 — Codex
 User deferred AR/VR and GUI overhaul until the end and authorized continuation through Phase 17. Three n8n workflows verified on 2.45.6 with restart during durable wait, two approved/verified paths and one rejected path. Evidence in docs/evidence/phase13/n8n-executions.json. Backend 65 / mobile 31 tests, TypeScript and web export pass.
+
+### Phase 14 — Codex
+Persisted simulated telemetry, deterministic anomaly fixtures/rules, incident evidence, scheduled n8n incident polling and post-plan synthetic verification. 71 backend / 31 mobile tests, TypeScript and web export pass. Live evidence in docs/evidence/phase14/detector-workflow.json. Native AR and GUI overhaul remain deferred by user.
