@@ -137,3 +137,9 @@ User deferred AR/VR and GUI overhaul until the end and authorized continuation t
 
 ### Phase 14 — Codex
 Persisted simulated telemetry, deterministic anomaly fixtures/rules, incident evidence, scheduled n8n incident polling and post-plan synthetic verification. 71 backend / 31 mobile tests, TypeScript and web export pass. Live evidence in docs/evidence/phase14/detector-workflow.json. Native AR and GUI overhaul remain deferred by user.
+
+## 29 October 2026 — Current delivery authorization
+
+The user explicitly authorized sequential implementation through Phase 17, separate phase branch pushes and merges to main, with full validation at each phase boundary. This supersedes the earlier LOCKED planning rows and per-phase stop instructions. It is delivery authorization, not a claim of manual acceptance. AR/VR, final GUI overhaul and APK/dev-client packaging are explicitly deferred.
+
+Phase 15: integrated workflow audit delivered on `phase/15-integration-audit`; 74 backend and 34 mobile tests passed, TypeScript, dependency alignment and web export checked. See `PHASE_15_REVIEW.md` and `evidence/phase15/`. Exact delivery commits will be consolidated in the Phase 17 ledger.

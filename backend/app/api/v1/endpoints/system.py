@@ -32,5 +32,5 @@ async def readiness_check(db: AsyncSession = Depends(get_db)):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Database readiness probe failed: {str(e)}"
+            detail="Database readiness check failed"
         )

@@ -123,3 +123,18 @@ describe('Solvanta Mobile API Client', () => {
    process.env.EXPO_PUBLIC_API_BASE_URL = 'https://api.example.com';
    expect(client.getBaseUrl()).toBe('https://api.example.com/api/v1');
  });
+
+test('renders structured validation errors as readable field messages',()=>{
+ const error=new SolvantaApiError(422,{detail:[{loc:['body','rated_power_w'],msg:'Input should be greater than 0'}]});
+ expect(error.message).toContain('rated_power_w');expect(error.message).toContain('greater than 0');
+});
+test('caller cancellation retains a bounded timeout and distinct cancellation status',async()=>{
+ const client=new SolvantaApiClient('http://test/api/v1');
+ (globalThis as any).fetch=jest.fn((_url,options)=>new Promise((_resolve,reject)=>{
+  const fail=()=>reject(Object.assign(new Error('cancelled'),{name:'AbortError'}));
+  if(options.signal.aborted)fail();else options.signal.addEventListener('abort',fail);
+ }));
+ const external=new AbortController();
+ await expect(client.request('/slow',{signal:external.signal},5)).rejects.toMatchObject({status:408});
+ external.abort();await expect(client.request('/cancelled',{signal:external.signal},100)).rejects.toMatchObject({status:499});
+});

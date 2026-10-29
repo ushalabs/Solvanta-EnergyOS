@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, router } from 'expo-router';
 import { FloatingTabDock, TabName } from '../../src/components/FloatingTabDock';
 
 export default function TabsLayout() {
@@ -8,13 +8,13 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
       }}
-      tabBar={({ state, navigation }: any) => {
+      tabBar={({ state }: any) => {
         const currentRoute = state.routes[state.index].name as TabName;
         return (
           <FloatingTabDock
             currentTab={currentRoute}
             onSelectTab={(tabName) => {
-              navigation.navigate(tabName);
+              router.navigate(tabName === 'index' ? '/' : `/${tabName}`);
             }}
           />
         );

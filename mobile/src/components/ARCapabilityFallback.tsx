@@ -25,7 +25,7 @@ export const ARCapabilityFallback: React.FC<ARCapabilityFallbackProps> = ({
     >
       <View style={[styles.badge, { backgroundColor: 'rgba(249, 188, 70, 0.15)' }]}>
         <Text style={[styles.badgeText, { color: tokens.amber }]}>
-          DEMO â€¢ NATIVE AR NOT INTEGRATED
+          DEMO • NATIVE AR NOT INTEGRATED
         </Text>
       </View>
 

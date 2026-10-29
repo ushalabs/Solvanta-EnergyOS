@@ -9,9 +9,9 @@ import { useTheme } from '../../src/theme/ThemeContext';
 const numberKeys = ['rated_power_w','required_runtime_min','earliest_min','latest_min','max_interruptions'] as const;
 const labels = { rated_power_w:'Rated power (W)',required_runtime_min:'Required runtime (minutes)',earliest_min:'Earliest start (minute after midnight)',latest_min:'Latest finish (minute after midnight; 1440 = 24:00)',max_interruptions:'Maximum interruptions' };
 
-export default function AppliancesScreen() {
+function AppliancesWorkspace({buildingId}:{buildingId:string}) {
   const { tokens:t } = useTheme();
-  const building=useBuildings();
+  const building={id:buildingId};
   const [list,setList]=useState<ApplianceList | null>(null);
   const [form,setForm]=useState<ApplianceInput>(emptyAppliance);
   const [raw,setRaw]=useState<Record<string,string>>({});
@@ -54,7 +54,7 @@ export default function AppliancesScreen() {
     catch(e:any){setMessage(e.message);} finally{setBusy(false);}
   }
   const visible=(list?.items||[]).filter(a=>filter==='all'||(filter==='critical'?a.critical:a.flexible));
-  return <SolvantaScreen banner="APPLIANCES • Saved twin & scenario selection"><Label>APPLIANCE DIGITAL TWIN</Label><BuildingPicker state={building}/>
+  return <>
     <Card><Label>Switches select loads for a simulation scenario only. They do not physically turn appliances or electrical circuits on or off.</Label>
       <Label>{message}</Label><Label>REQUESTED SCENARIO LOAD: {(list?.summary.requested_kw||0).toFixed(2)} kW</Label>
       <Label>CRITICAL DEMAND: {(list?.summary.critical_kw||0).toFixed(2)} kW · {list?.summary.selected_count||0} selected</Label>
@@ -77,5 +77,10 @@ export default function AppliancesScreen() {
       <View style={{flexDirection:'row',justifyContent:'space-between'}}><Label>Interruptible</Label><Switch accessibilityLabel="Interruptible" value={form.interruptible} onValueChange={v=>setForm({...form,interruptible:v,flexible:v?true:form.flexible,max_interruptions:v?form.max_interruptions:0})} trackColor={{true:t.lime}}/></View>
       <Action title="Save Appliance" disabled={busy} onPress={save}/><Action title="Cancel Editor" onPress={()=>setShowForm(false)}/>
     </Card>}
-  </SolvantaScreen>;
+  </>;
+}
+
+export default function AppliancesScreen() {
+ const building=useBuildings();
+ return <SolvantaScreen banner="APPLIANCES - Saved twin and scenario selection"><Label>APPLIANCE DIGITAL TWIN</Label><BuildingPicker state={building}/><AppliancesWorkspace key={building.id} buildingId={building.id}/></SolvantaScreen>;
 }

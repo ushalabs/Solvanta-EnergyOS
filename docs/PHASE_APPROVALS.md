@@ -35,3 +35,9 @@ In accordance with Section K of `AntiGravity_prompt.md`, **no phase may begin un
 1. Antigravity must never self-approve.
 2. GPT reviewer advice is consultative; only the **human user** can authorize phase advancement.
 3. Commit SHA recorded above must match the exact Git commit pushed to GitHub.
+
+## 29 October 2026 — Current delivery authorization
+
+The user explicitly authorized sequential implementation through Phase 17, separate phase branch pushes and merges to main, with full validation at each phase boundary. This supersedes the earlier LOCKED planning rows and per-phase stop instructions. It is delivery authorization, not a claim of manual acceptance. AR/VR, final GUI overhaul and APK/dev-client packaging are explicitly deferred.
+
+Phase 15: integrated workflow audit delivered on `phase/15-integration-audit`; 74 backend and 34 mobile tests passed, TypeScript, dependency alignment and web export checked. See `PHASE_15_REVIEW.md` and `evidence/phase15/`. Exact delivery commits will be consolidated in the Phase 17 ledger.
