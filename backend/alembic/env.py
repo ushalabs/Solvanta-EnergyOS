@@ -23,6 +23,7 @@ from app.models.pv import PVDesign
 from app.models.simulation import SimulationRun
 from app.models.schedule import Schedule
 from app.models.plan import EnergyPlan
+from app.models.automation import AutomationEvent
 from app.models.resilience import ResilienceRun
 from app.models.appliance import Appliance, ScenarioSelection
 

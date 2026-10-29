@@ -131,3 +131,6 @@ Three immutable configuration alternatives, expiring revision-controlled plan ap
 
 ### Phase 12 — Codex
 Saved-trace digital twin playback, speed, seek, source flow, requested appliance activity and measured roof fallback implemented. 31 mobile tests, TypeScript and web export pass. Native AR remains blocked: Viro 3.0.3 peer metadata excludes Expo 58; ADB reported no devices. Exact evidence and unblock steps are in AR_COMPATIBILITY.md and PHASE_12_REVIEW.md. No native AR completion is claimed.
+
+### Phase 13 — Codex
+User deferred AR/VR and GUI overhaul until the end and authorized continuation through Phase 17. Three n8n workflows verified on 2.45.6 with restart during durable wait, two approved/verified paths and one rejected path. Evidence in docs/evidence/phase13/n8n-executions.json. Backend 65 / mobile 31 tests, TypeScript and web export pass.

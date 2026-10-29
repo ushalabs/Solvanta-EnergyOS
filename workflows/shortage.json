@@ -1,0 +1,455 @@
+{
+  "id": "solvanta-shortage",
+  "name": "Solvanta Energy Shortage Response",
+  "active": false,
+  "versionId": "7a12490d-dcb5-40cb-8fbc-3ef2f311e215",
+  "nodes": [
+    {
+      "id": "1e262389-337a-4ffb-aeae-7b46178e381d",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "solvanta-shortage",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "solvanta-backend-auth",
+          "name": "Solvanta Backend Auth"
+        }
+      },
+      "webhookId": "6e47b97c-2cb4-482c-9c67-de091966b60c"
+    },
+    {
+      "id": "28b06c55-de5e-40b8-9def-e8a4639a8bfa",
+      "name": "Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        210,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "6dfea1df-c589-400b-a5fb-ef50ce8895bf",
+      "name": "Prepare Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const input=$json.body || $json; return [{json:{building_id:input.building_id || 'CONFIGURE_BUILDING_ID',event_id:input.event_id || 'n8n-'+$execution.id+'-shortage',correlation_id:input.correlation_id || 'n8n-'+$execution.id,kind:'shortage',outages:input.outages || [{start_min:480,end_min:600}],use_generator:input.use_generator || false,expiry_minutes:input.expiry_minutes || 60}}];"
+      }
+    },
+    {
+      "id": "863ec197-7788-4254-b776-e18fcdb74891",
+      "name": "Start Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        630,
+        300
+      ],
+      "parameters": {
+        "url": "=http://host.docker.internal:8000/api/v1/buildings/{{$json.building_id}}/events",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({event_id:$json.event_id,correlation_id:$json.correlation_id,kind:$json.kind,outages:$json.outages,use_generator:$json.use_generator,expiry_minutes:$json.expiry_minutes}) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "solvanta-backend-auth",
+          "name": "Solvanta Backend Auth"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "id": "9c493c7d-f032-486c-99ba-36fdee674977",
+      "name": "Terminal?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        840,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "af2de457-680b-4e2f-9b5b-4abc267265e7",
+              "leftValue": "={{ $json.terminal }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a5341d3b-b852-4079-bb99-3a85207c8920",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1050,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "80340a29-4452-483d-a9cc-63b6ed199b44",
+              "leftValue": "={{ $json.state === 'APPROVED' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "e11f62d9-1dad-498d-987e-2f55fa5f06a6",
+      "name": "Simulated?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1260,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6bb58d77-ca89-4286-9247-bc2707d13950",
+              "leftValue": "={{ $json.state === 'SIMULATED' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "17cba142-ffa6-4050-918c-c40f26c6f166",
+      "name": "Durable Approval Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1470,
+        300
+      ],
+      "parameters": {
+        "amount": 70,
+        "unit": "seconds"
+      },
+      "webhookId": "d4146d7f-e94c-4c71-af67-45ed818ab34d"
+    },
+    {
+      "id": "ad6cc38f-7509-4846-a0de-a757f0ec02e3",
+      "name": "Poll Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        300
+      ],
+      "parameters": {
+        "url": "=http://host.docker.internal:8000/api/v1/buildings/{{ $('Start Event').first().json.building_id }}/events/{{ $('Start Event').first().json.id }}",
+        "method": "GET",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "solvanta-backend-auth",
+          "name": "Solvanta Backend Auth"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "id": "04c21934-c8f6-43dd-8a2c-5e542a14b389",
+      "name": "Simulate Approved Plan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1890,
+        300
+      ],
+      "parameters": {
+        "url": "=http://host.docker.internal:8000/api/v1/buildings/{{ $('Start Event').first().json.building_id }}/plans/{{ $('Start Event').first().json.plan_id }}/actions",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({action:'simulate',expected_revision:$json.plan_revision ?? $json.revision,idempotency_key:$('Start Event').first().json.id+'-simulate-r'+($json.plan_revision ?? $json.revision),comment:'n8n correlation '+$('Start Event').first().json.correlation_id}) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "solvanta-backend-auth",
+          "name": "Solvanta Backend Auth"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "id": "293dde2f-9c8a-4c8f-8290-3a74d5776bf2",
+      "name": "Verify Simulation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2100,
+        300
+      ],
+      "parameters": {
+        "url": "=http://host.docker.internal:8000/api/v1/buildings/{{ $('Start Event').first().json.building_id }}/plans/{{ $('Start Event').first().json.plan_id }}/actions",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({action:'verify',expected_revision:$json.plan_revision ?? $json.revision,idempotency_key:$('Start Event').first().json.id+'-verify-r'+($json.plan_revision ?? $json.revision),comment:'n8n correlation '+$('Start Event').first().json.correlation_id}) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "solvanta-backend-auth",
+          "name": "Solvanta Backend Auth"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "id": "7b67a72b-43d9-49ef-b540-5fcc6fc0e88a",
+      "name": "Complete",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2310,
+        300
+      ],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual": {
+      "main": [
+        [
+          {
+            "node": "Prepare Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Event": {
+      "main": [
+        [
+          {
+            "node": "Start Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Event": {
+      "main": [
+        [
+          {
+            "node": "Terminal?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Poll Event": {
+      "main": [
+        [
+          {
+            "node": "Terminal?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Durable Approval Wait": {
+      "main": [
+        [
+          {
+            "node": "Poll Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simulate Approved Plan": {
+      "main": [
+        [
+          {
+            "node": "Verify Simulation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Simulation": {
+      "main": [
+        [
+          {
+            "node": "Poll Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Terminal?": {
+      "main": [
+        [
+          {
+            "node": "Complete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Simulate Approved Plan",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Simulated?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simulated?": {
+      "main": [
+        [
+          {
+            "node": "Verify Simulation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Durable Approval Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Karachi",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all"
+  },
+  "pinData": {}
+}

@@ -1,10 +1,10 @@
 # Solvanta — Current Project Status
 
-**Last Updated:** 29 October 2026 (Phase 12 Twin Replay)
-**Active Phase:** Phase 12 2D replay complete; native AR blocked by SDK compatibility and device validation
+**Last Updated:** 29 October 2026 (Phase 13 Workflow Automation)
+**Active Phase:** Phase 13 complete; AR/VR and GUI overhaul deferred by user until the end
 **Overall FYP-I Target:** Complete local working prototype through MCP by 10 November 2026  
 **Current Git Remote:** `https://github.com/ushalabs/Solvanta-EnergyOS`  
-**Current Branch:** `main` (Phase 4–12 branches merged)
+**Current Branch:** `main` (Phase 4–13 branches merged)
 **Approval Protocol:** User authorized continued sequential phases until session capacity, with complete phase validation, separate branch push, and merge to main after each phase.
 
 ---
@@ -26,7 +26,7 @@
 | 10 | Outage Resilience Optimizer | Codex | COMPLETED | 59 backend, 29 mobile, TypeScript, web export | Conservative heuristic; native UI unverified | 04 Nov 2026 |
 | 11 | What-If & Approval State Machine | Codex | COMPLETED | 64 backend, 29 mobile, TypeScript, web export | Native UI unverified | 05 Nov 2026 |
 | 12 | Digital Twin Replay & AR Preview | Codex | 2D COMPLETE / NATIVE AR BLOCKED | 31 mobile, TypeScript, web export; backend last verified 64 | Viro 3.0.3 excludes Expo 58; no connected device | 06 Nov 2026 |
-| 13 | n8n Workflow Automation | Antigravity / Team | NOT STARTED | - | After Phase 12 validation | 07 Nov 2026 |
+| 13 | n8n Workflow Automation | Codex | COMPLETED | 65 backend, 31 mobile, build, real n8n execution/restart evidence | AR/GUI deferred separately | 07 Nov 2026 |
 | 14 | Simulated Telemetry & Anomaly Ops | Antigravity / Team | NOT STARTED | - | After Phase 13 validation | 08 Nov 2026 |
 | 15 | E2E Integration & Security Audit | Antigravity / Team | NOT STARTED | - | After Phase 14 validation | 09 Nov 2026 |
 | 16 | MCP Server & AI Operations Tools | Antigravity / Team | NOT STARTED | - | After Phase 15 validation | 09 Nov 2026 |

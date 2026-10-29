@@ -1,0 +1,56 @@
+{
+  "restart_during_approval_wait": true,
+  "n8n_version": "2.45.6",
+  "events": [
+    {
+      "id": "b9c96f26-60e1-4b09-b37a-a80f187c6dea",
+      "event_id": "136e5ec4-df19-483e-9fc3-cdaaf8357417",
+      "correlation_id": "647bad68-18e0-49fd-8fa6-be8f3ed982c1",
+      "kind": "daily_planner",
+      "plan_id": "27f6cf7c-a0b4-4f39-ad05-abd0ad02a21e",
+      "state": "REJECTED",
+      "run_id": null
+    },
+    {
+      "id": "34c7316f-4f05-46ff-a818-57fe312a2d40",
+      "event_id": "c5c32ff2-227f-4c0d-973d-968873b758eb",
+      "correlation_id": "e0931654-6457-4691-bb67-d254e6a399e5",
+      "kind": "shortage",
+      "plan_id": "a805ed2c-74dc-4430-92ac-955680c553cc",
+      "state": "VERIFIED",
+      "run_id": "4742bdb7-d8b1-4cdc-82d7-1d440b653c9b"
+    },
+    {
+      "id": "af861860-3e33-4351-8bf2-6f98935d75cc",
+      "event_id": "f5f9aa93-519c-42d4-95a0-7bd9ed768d81",
+      "correlation_id": "46b76d20-ceb5-42a9-a65c-7ad9c504f8c6",
+      "kind": "anomaly_incident",
+      "plan_id": "d21e52a1-1107-4c98-9fdb-0690eb87317d",
+      "state": "VERIFIED",
+      "run_id": "94219f52-5674-4033-a517-5a21e7f7f848"
+    }
+  ],
+  "executions": [
+    {
+      "id": 3,
+      "workflowId": "solvanta-anomaly_incident",
+      "status": "success",
+      "startedAt": "2026-10-29 12:10:17.533",
+      "stoppedAt": "2026-10-29 12:11:28.264"
+    },
+    {
+      "id": 2,
+      "workflowId": "solvanta-daily_planner",
+      "status": "success",
+      "startedAt": "2026-10-29 12:10:16.457",
+      "stoppedAt": "2026-10-29 12:11:26.956"
+    },
+    {
+      "id": 1,
+      "workflowId": "solvanta-shortage",
+      "status": "success",
+      "startedAt": "2026-10-29 12:10:15.169",
+      "stoppedAt": "2026-10-29 12:11:26.781"
+    }
+  ]
+}
