@@ -110,3 +110,6 @@ PV design and 24-hour typed generation profile added. See PHASE_05_REVIEW.md. Us
 
 ### Phase 6 — Codex
 Saved appliance CRUD, validated run windows and interruption limits, and separate scenario selections with server-calculated demand. See PHASE_06_REVIEW.md. No physical switching implemented.
+
+### Branch integration — 29 October 2026
+Phase 4 dedicated branch phase/04-roof-geometry merged to main at 5152a0a (original Phase 4 content had already entered via PR #7). Phase 5 branch phase/05-pv-generation merged at 9996bf3. Phase 6 branch phase/06-appliance-twin merged at b2bd4ec. All three branches were pushed before their dedicated merge commits.

@@ -4,7 +4,7 @@
 **Active Phase:** Phase 6 complete; awaiting review for Phase 7
 **Overall FYP-I Target:** Complete local working prototype through MCP by 10 November 2026  
 **Current Git Remote:** `https://github.com/ushalabs/Solvanta-EnergyOS`  
-**Current Branch:** `phase/03-building-models`  
+**Current Branch:** `main` (Phase 4–6 branches merged)  
 **Approval Protocol:** User authorized work through Phase 6, with phase-end validation and commit/push after each phase.
 
 ---
