@@ -5,6 +5,6 @@ const previous = config.resolver.blockList;
 config.resolver.blockList = [
   ...(Array.isArray(previous) ? previous : previous ? [previous] : []),
   /[/\\]\.expo[/\\]/,
-  /[/\\]mobile[/\\]dist[/\\]/,
+  /[/\\]mobile[/\\]dist(?:-no-firebase)?[/\\]/,
 ];
 module.exports = config;

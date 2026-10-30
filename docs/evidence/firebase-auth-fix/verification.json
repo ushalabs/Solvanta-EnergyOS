@@ -1,0 +1,42 @@
+{
+  "date": "2026-10-30",
+  "baseline_commit": "3944e499",
+  "failing_run": "https://github.com/ushalabs/Solvanta-EnergyOS/actions/runs/41025871273",
+  "environment": "Fresh local clone --no-hardlinks; npm ci from lockfile; no local dotenv files or native Google JSON copied",
+  "reproduction": {
+    "exit_code": 1,
+    "error": "auth/invalid-api-key"
+  },
+  "cause": "Root layout imported AuthContext, importing eager Firebase Auth with an empty API key during Expo server static rendering. CI had no Firebase build variables. getAuth also ran before initializeAuth, bypassing the intended native persistence initialization.",
+  "verification": {
+    "typescript": "PASS",
+    "jest": {
+      "tests": 69,
+      "suites": 15
+    },
+    "static_export_without_config": "PASS",
+    "static_export_real_web_config": "PASS",
+    "firebase_project_config_http": 200,
+    "native_google_web_client_matches_android_json": true,
+    "android_google_json": "Preserved locally, unchanged and untracked",
+    "source_security_scan": "PASS; no private keys, OAuth secrets or service-account material detected",
+    "source_encoding": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "github_actions_variables": {
+    "configured": 8,
+    "values_recorded": false,
+    "classification": "Firebase Web SDK public client configuration only"
+  },
+  "production_dependency_audit": {
+    "low": 6,
+    "high": 7,
+    "critical": 0,
+    "notes": "Existing Expo/Zod and Firebase Firestore/gRPC advisories; no SDK downgrade/major override forced"
+  },
+  "not_performed": [
+    "Native Google account-picker/device sign-in",
+    "Real email delivery or account creation"
+  ],
+  "history_request": "User explicitly requested replacement of 3944e49 on main without an archive branch. Unrelated history must remain. GitHub may retain unreachable objects/cache."
+}

@@ -17,6 +17,9 @@ jobs:
       - name: Check source encoding
         run: python scripts/check-source-encoding.py
 
+      - name: Check source credential hygiene
+        run: python scripts/check-source-security.py
+
       - name: Verify Documentation & Contracts
         run: |
           test -f Solvanta.md
@@ -116,7 +119,21 @@ jobs:
           cd mobile
           npm test
 
-      - name: Build Expo web routes
+      - name: Build Expo web routes without Firebase configuration
         run: |
           cd mobile
-          npx expo export --platform web --max-workers 1
+          node scripts/export-web.cjs --without-firebase
+
+      - name: Build Expo web routes with Firebase Web SDK configuration
+        env:
+          EXPO_PUBLIC_FIREBASE_API_KEY: ${{ vars.EXPO_PUBLIC_FIREBASE_API_KEY }}
+          EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          EXPO_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.EXPO_PUBLIC_FIREBASE_PROJECT_ID }}
+          EXPO_PUBLIC_FIREBASE_APP_ID: ${{ vars.EXPO_PUBLIC_FIREBASE_APP_ID }}
+          EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ vars.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+          EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+          EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID: ${{ vars.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID }}
+          EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          cd mobile
+          node scripts/export-web.cjs

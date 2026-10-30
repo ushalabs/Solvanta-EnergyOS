@@ -92,3 +92,7 @@ pgdata/
 tmp/
 temp/
 scratch/
+
+# Firebase/Google configuration templates stay local; no credential examples.
+google*.json.example
+firebase*.example
