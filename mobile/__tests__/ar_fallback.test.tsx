@@ -99,29 +99,16 @@ test.each([['dark', darkTokens], ['light', lightTokens]])('uses readable theme c
   expect(colours).not.toContain(tokens.textMuted);
 });
 
-// These fail on purpose the day an AR dependency lands, so this honest gate cannot go stale silently.
-describe('the gate matches what is actually installed', () => {
+// These fail on purpose if the pinned native AR dependency drifts.
+describe('the AR dependency matches the repository', () => {
   const fs: any = require('fs');
   const path: any = require('path');
   const root: string = (process as any).cwd();
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  const installed = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies });
 
-  test('no AR runtime or camera module is a dependency', () => {
-    expect(installed.filter(name => /viro|arcore|arkit|expo-camera|vision-camera|expo-gl|expo-three/i.test(name))).toEqual([]);
-  });
-  test('the Expo SDK the gate names is the one in package.json, on the React Native line ViroReact 3.0.3 accepts', () => {
-    expect(pkg.dependencies.expo).toMatch(/^~57\./);
-    expect(pkg.dependencies['react-native']).toMatch(/^0\.86\./);
-  });
-  test('the app config asks for no camera-AR native plugin', () => {
-    const app = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'));
-    expect(JSON.stringify(app.expo.plugins)).not.toMatch(/viro|arcore|arkit/i);
-  });
-  test('no app source imports an AR module', () => {
-    const walk = (dir: string): string[] => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e: any) => e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]);
-    const sources = [...walk(path.join(root, 'app')), ...walk(path.join(root, 'src'))].filter(f => /\.tsx?$/.test(f));
-    expect(sources.length).toBeGreaterThan(20);
-    for (const file of sources) expect(fs.readFileSync(file, 'utf8')).not.toMatch(/from\s+['"][^'"]*(viro|arcore|arkit)[^'"]*['"]/i);
+  test('ViroReact is pinned to the version whose peer ranges were checked, on the SDK they allow', () => {
+    expect(pkg.dependencies['@reactvision/react-viro']).toBe('3.0.3');
+    expect(pkg.dependencies.expo).toMatch(/^~57./);
+    expect(pkg.dependencies['react-native']).toMatch(/^0.86./);
   });
 });

@@ -16,7 +16,13 @@
         "backgroundColor": "#090B0A"
       },
       "package": "com.solvanta.energyos",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -32,7 +38,21 @@
           "resizeMode": "contain"
         }
       ],
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      [
+        "@reactvision/react-viro",
+        {
+          "provider": "none",
+          "android": {
+            "xRMode": [
+              "AR"
+            ]
+          },
+          "ios": {
+            "cameraUsagePermission": "Solvanta uses the camera to show your saved rooftop panel layout on a flat surface in AR. The preview is a visualization, not a measurement."
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
