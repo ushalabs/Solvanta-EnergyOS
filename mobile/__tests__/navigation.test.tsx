@@ -8,7 +8,7 @@ jest.mock('expo-router',()=>{
 jest.mock('../src/components/FloatingTabDock',()=>({FloatingTabDock:(props:any)=>require('react').createElement('Dock',props)}));
 import TabsLayout from '../app/(tabs)/_layout';
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT=true;
-test('SDK58 dock navigates without a legacy navigation callback prop',async()=>{
+test('dock navigates without a legacy navigation callback prop',async()=>{
  let tree!:ReactTestRenderer;await act(async()=>{tree=create(<TabsLayout/>);});
  const dock=tree.root.findByType('Dock' as any);
  for(const tab of ['simulation','rooftop','index'])await act(async()=>dock.props.onSelectTab(tab));

@@ -39,7 +39,7 @@ export const ARCapabilityFallback: React.FC<ARCapabilityFallbackProps> = ({
       </Text>
 
       <Text style={[styles.body, { color: tokens.textSecondary }]}>
-        The measured 2D editor and saved panel placement are available. This Expo SDK 58 build has no native AR module. The checked ViroReact package excludes SDK 58, and no physical ARCore device is connected for validation.
+        The measured 2D editor and saved panel placement are available. This Expo SDK 57 build has no native AR module. ViroReact is not installed yet, and no physical ARCore device is connected for validation.
       </Text>
 
       <LimeCTA
