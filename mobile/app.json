@@ -7,10 +7,6 @@
     "icon": "./assets/icon.png",
     "scheme": "solvanta",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "backgroundColor": "#090B0A",
-      "resizeMode": "contain"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.solvanta.energyos"
@@ -29,6 +25,13 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#090B0A",
+          "resizeMode": "contain"
+        }
+      ],
       "@react-native-google-signin/google-signin"
     ],
     "experiments": {
