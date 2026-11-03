@@ -54,6 +54,7 @@ export default function ForgotPasswordScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
+          accessibilityRole="button"
           activeOpacity={0.8}
           onPress={() => router.canGoBack() ? router.back() : router.replace('/login')}
           style={[styles.backBtn, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
@@ -73,13 +74,14 @@ export default function ForgotPasswordScreen() {
         </View>
 
         {sentSuccess ? (
-          <View style={[styles.successBanner, { backgroundColor: 'rgba(77, 225, 162, 0.12)', borderColor: tokens.green }]}>
-            <CheckCircle2 size={28} color={tokens.green} style={{ marginBottom: 10 }} />
-            <Text style={[styles.successTitle, { color: tokens.green }]}>Reset Link Sent</Text>
+          <View style={[styles.successBanner, { backgroundColor: tokens.greenTint, borderColor: tokens.green }]}>
+            <CheckCircle2 size={28} color={tokens.greenText} style={{ marginBottom: 10 }} />
+            <Text style={[styles.successTitle, { color: tokens.greenText }]}>Reset Link Sent</Text>
             <Text style={[styles.successDesc, { color: tokens.textPrimary }]}>
               If an account exists for {email}, you will receive a password reset link shortly. Please check your inbox and spam folder.
             </Text>
             <TouchableOpacity
+              accessibilityRole="button"
               style={[styles.backToLoginBtn, { backgroundColor: tokens.lime }]}
               onPress={() => router.replace('/login')}
             >
@@ -90,8 +92,8 @@ export default function ForgotPasswordScreen() {
           <>
             {/* Error Banner */}
             {errorMessage ? (
-              <View style={[styles.errorBanner, { backgroundColor: 'rgba(255, 98, 106, 0.12)', borderColor: tokens.red }]}>
-                <Text style={[styles.errorText, { color: tokens.red }]}>{errorMessage}</Text>
+              <View style={[styles.errorBanner, { backgroundColor: tokens.redTint, borderColor: tokens.red }]}>
+                <Text style={[styles.errorText, { color: tokens.redText }]}>{errorMessage}</Text>
               </View>
             ) : null}
 
@@ -99,11 +101,12 @@ export default function ForgotPasswordScreen() {
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>REGISTERED EMAIL</Text>
               <View style={[styles.inputContainer, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
-                <Mail size={18} color={tokens.textMuted} style={styles.inputIcon} />
+                <Mail size={18} color={tokens.textSecondary} style={styles.inputIcon} />
                 <TextInput
+                  accessibilityLabel="Registered email"
                   style={[styles.textInput, { color: tokens.textPrimary }]}
                   placeholder="user@example.com"
-                  placeholderTextColor={tokens.textMuted}
+                  placeholderTextColor={tokens.textSecondary}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -118,6 +121,7 @@ export default function ForgotPasswordScreen() {
 
             {/* Send Reset Link Action */}
             <TouchableOpacity
+              accessibilityRole="button"
               style={[styles.primaryBtn, { backgroundColor: tokens.lime }]}
               activeOpacity={0.85}
               onPress={handleReset}
@@ -134,6 +138,7 @@ export default function ForgotPasswordScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
+              accessibilityRole="button"
               style={styles.cancelBtn}
               onPress={() => router.replace('/login')}
             >
@@ -157,9 +162,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -231,7 +236,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   inputLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.5,
     marginBottom: 6,
@@ -249,6 +254,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
+    alignSelf: 'stretch',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -268,7 +274,8 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     alignItems: 'center',
-    paddingVertical: SPACING.sm,
+    justifyContent: 'center',
+    minHeight: 44,
   },
   cancelBtnText: {
     fontSize: 13,

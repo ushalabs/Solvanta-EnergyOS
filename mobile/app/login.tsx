@@ -101,6 +101,7 @@ export default function LoginScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
+          accessibilityRole="button"
           activeOpacity={0.8}
           onPress={() => router.canGoBack() ? router.back() : router.replace('/welcome')}
           style={[styles.backBtn, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
@@ -121,8 +122,8 @@ export default function LoginScreen() {
 
         {/* Error Banner */}
         {errorMessage ? (
-          <View style={[styles.errorBanner, { backgroundColor: 'rgba(255, 98, 106, 0.12)', borderColor: tokens.red }]}>
-            <Text style={[styles.errorText, { color: tokens.red }]}>{errorMessage}</Text>
+          <View style={[styles.errorBanner, { backgroundColor: tokens.redTint, borderColor: tokens.red }]}>
+            <Text style={[styles.errorText, { color: tokens.redText }]}>{errorMessage}</Text>
           </View>
         ) : null}
 
@@ -130,11 +131,12 @@ export default function LoginScreen() {
         <View style={styles.inputGroup}>
           <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>EMAIL ADDRESS</Text>
           <View style={[styles.inputContainer, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
-            <Mail size={18} color={tokens.textMuted} style={styles.inputIcon} />
+            <Mail size={18} color={tokens.textSecondary} style={styles.inputIcon} />
             <TextInput
+              accessibilityLabel="Email address"
               style={[styles.textInput, { color: tokens.textPrimary }]}
               placeholder="user@example.com"
-              placeholderTextColor={tokens.textMuted}
+              placeholderTextColor={tokens.textSecondary}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -151,16 +153,17 @@ export default function LoginScreen() {
         <View style={styles.inputGroup}>
           <View style={styles.labelRow}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>PASSWORD</Text>
-            <TouchableOpacity onPress={() => router.push('/forgot-password')}>
-              <Text style={[styles.forgotText, { color: tokens.lime }]}>Forgot Password?</Text>
+            <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/forgot-password')} style={{ minHeight: 44, minWidth: 44, justifyContent: 'center' }}>
+              <Text style={[styles.forgotText, { color: tokens.limeText }]}>Forgot Password?</Text>
             </TouchableOpacity>
           </View>
           <View style={[styles.inputContainer, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
-            <Lock size={18} color={tokens.textMuted} style={styles.inputIcon} />
+            <Lock size={18} color={tokens.textSecondary} style={styles.inputIcon} />
             <TextInput
               style={[styles.textInput, { color: tokens.textPrimary }]}
+              accessibilityLabel="Password"
               placeholder="Enter your password"
-              placeholderTextColor={tokens.textMuted}
+              placeholderTextColor={tokens.textSecondary}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
               autoCorrect={false}
@@ -171,14 +174,15 @@ export default function LoginScreen() {
               }}
             />
             <TouchableOpacity
+              accessibilityRole="button"
               onPress={() => setShowPassword(!showPassword)}
               style={styles.eyeIconBtn}
               accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? (
-                <EyeOff size={18} color={tokens.textMuted} />
+                <EyeOff size={18} color={tokens.textSecondary} />
               ) : (
-                <Eye size={18} color={tokens.textMuted} />
+                <Eye size={18} color={tokens.textSecondary} />
               )}
             </TouchableOpacity>
           </View>
@@ -186,6 +190,7 @@ export default function LoginScreen() {
 
         {/* Sign In Primary CTA */}
         <TouchableOpacity
+          accessibilityRole="button"
           style={[styles.primaryBtn, { backgroundColor: tokens.lime }]}
           activeOpacity={0.85}
           onPress={handleEmailLogin}
@@ -204,22 +209,23 @@ export default function LoginScreen() {
         {/* Divider */}
         <View style={styles.dividerRow}>
           <View style={[styles.dividerLine, { backgroundColor: tokens.border }]} />
-          <Text style={[styles.dividerText, { color: tokens.textMuted }]}>OR</Text>
+          <Text style={[styles.dividerText, { color: tokens.textSecondary }]}>OR</Text>
           <View style={[styles.dividerLine, { backgroundColor: tokens.border }]} />
         </View>
 
         {/* Google Sign In */}
         <TouchableOpacity
+          accessibilityRole="button"
           style={[styles.googleBtn, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
           activeOpacity={0.85}
           onPress={handleGoogleSignIn}
           disabled={loadingGoogle}
         >
           {loadingGoogle ? (
-            <ActivityIndicator color={tokens.lime} size="small" />
+            <ActivityIndicator color={tokens.limeText} size="small" />
           ) : (
             <>
-              <Globe size={18} color={tokens.cyan} style={{ marginRight: 8 }} />
+              <Globe size={18} color={tokens.cyanText} style={{ marginRight: 8 }} />
               <Text style={[styles.googleBtnText, { color: tokens.textPrimary }]}>
                 Continue with Google
               </Text>
@@ -229,21 +235,22 @@ export default function LoginScreen() {
 
         {/* Continue Without Account */}
         <TouchableOpacity
+          accessibilityRole="button"
           style={[styles.guestBtn, { backgroundColor: tokens.surfaceElevated, borderColor: tokens.border }]}
           activeOpacity={0.85}
           onPress={handleGuestEntry}
         >
-          <ShieldCheck size={18} color={tokens.lime} style={{ marginRight: 8 }} />
-          <Text style={[styles.guestBtnText, { color: tokens.lime }]}>
+          <ShieldCheck size={18} color={tokens.limeText} style={{ marginRight: 8 }} />
+          <Text style={[styles.guestBtnText, { color: tokens.limeText }]}>
             Continue Without Account (Guest Mode)
           </Text>
         </TouchableOpacity>
 
         {/* Footer Link to Register */}
         <View style={styles.footerRow}>
-          <Text style={{ color: tokens.textMuted, fontSize: 13 }}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => router.push('/register')}>
-            <Text style={{ color: tokens.lime, fontSize: 13, fontWeight: '700' }}>Create Account</Text>
+          <Text style={{ color: tokens.textSecondary, fontSize: 13 }}>Don't have an account? </Text>
+          <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/register')} style={{ minHeight: 44, minWidth: 44, justifyContent: 'center' }}>
+            <Text style={{ color: tokens.limeText, fontSize: 13, fontWeight: '700' }}>Create Account</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -262,9 +269,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -312,7 +319,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   inputLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.5,
     marginBottom: 6,
@@ -334,11 +341,15 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
+    alignSelf: 'stretch',
     fontSize: 14,
     fontWeight: '600',
   },
   eyeIconBtn: {
-    padding: 6,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   primaryBtn: {
     flexDirection: 'row',

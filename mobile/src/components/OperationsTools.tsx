@@ -1,7 +1,10 @@
 import React, {useEffect, useState} from 'react';
+import {Platform, Text} from 'react-native';
 import {router} from 'expo-router';
+import {Wrench, ClipboardCheck} from 'lucide-react-native';
 import {api} from '../api/client';
-import {Action, Card, Label} from './TwinControls';
+import {useTheme} from '../theme/ThemeContext';
+import {Action, Badge, Card, CardHeader, Chip, ChipGroup, Label, Message} from './TwinControls';
 
 type Result = {tool:string;source:string;building_id:string;scenario_id:string|null;record_id:string|null;provenance:string;units:Record<string,string>;data:Record<string,any>};
 export function resultSummary(result:Result): Record<string,unknown> {
@@ -15,6 +18,7 @@ export function resultSummary(result:Result): Record<string,unknown> {
  return d;
 }
 export function OperationsTools({buildingId}:{buildingId:string}) {
+ const {tokens:t}=useTheme();
  const [tools,setTools]=useState<string[]>([]),[runs,setRuns]=useState<Array<{id:string;created_at:string}>>([]);
  const [scenario,setScenario]=useState(''),[busy,setBusy]=useState(false),[status,setStatus]=useState('Loading tools and saved scenarios…');
  const [result,setResult]=useState<Result|null>(null);
@@ -26,11 +30,12 @@ export function OperationsTools({buildingId}:{buildingId:string}) {
   const response=await api.post<Result>(`/operations/tools/${name}`,arguments_,30000);
   setResult(response);setStatus(`${name} completed. ${response.record_id?'Saved record '+response.record_id:'Read/calculation result returned.'}`);
  }catch(e:any){setStatus(e.message);}finally{setBusy(false);}};
- return <Card><Label>ENGINE TOOLS · MCP service gateway</Label><Label>Tool execution only. No language model is connected. Results use configured or SIMULATED data; tools never approve plans or control physical equipment.</Label><Label>{status}</Label>
-  <Label>SAVED SCENARIO · immutable simulation run</Label>{!runs.length&&<Label>Save a simulation first to enable scenario tools.</Label>}
-  {runs.map(r=><Action key={r.id} title={`${scenario===r.id?'✓ ':''}${r.id.slice(0,8)} · ${new Date(r.created_at).toLocaleString()}`} disabled={busy} onPress={()=>{setScenario(r.id);setResult(null);}}/>)}
-  {tools.map(name=><Action key={name} title={name.replaceAll('_',' ')} disabled={busy||(!scenario&&name!=='get_building_profile'&&name!=='get_energy_anomalies')} onPress={()=>invoke(name)}/>)}
-  {result&&<Card><Label>{result.source} · {result.tool}</Label><Label>Building: {result.building_id}</Label><Label>Scenario: {result.scenario_id||'Building configuration'}</Label><Label>{result.provenance}</Label><Label>Units: {Object.entries(result.units).map(([k,v])=>`${k} ${v}`).join(' · ')}</Label><Label>{JSON.stringify(resultSummary(result),null,2)}</Label></Card>}
-  <Action title="Open Human Plan Review" onPress={()=>router.push('/simulation')}/>
+ return <Card><CardHeader title="Engine tools" subtitle="MCP service gateway" icon={<Wrench size={18} color={t.limeText}/>}/><Label tone="secondary" caption>Tool execution only. No language model is connected. Results use configured or SIMULATED data; tools never approve plans or control physical equipment.</Label><Message>{status}</Message>
+  <Label tone="secondary" caption strong>Saved scenario · immutable simulation run</Label>{!runs.length&&<Message tone="warning">Save a simulation first to enable scenario tools.</Message>}
+  <ChipGroup>{runs.map(r=><Chip key={r.id} label={`${r.id.slice(0,8)} · ${new Date(r.created_at).toLocaleString()}`} a11yLabel={`${scenario===r.id?'✓ ':''}${r.id.slice(0,8)} · ${new Date(r.created_at).toLocaleString()}`} selected={scenario===r.id} disabled={busy} onPress={()=>{setScenario(r.id);setResult(null);}}/>)}</ChipGroup>
+  <Label tone="secondary" caption strong>Tools</Label>
+  {tools.map(name=><Action key={name} title={name.replaceAll('_',' ')} variant="secondary" disabled={busy||(!scenario&&name!=='get_building_profile'&&name!=='get_energy_anomalies')} onPress={()=>invoke(name)}/>)}
+  {result&&<Card nested><Badge label={result.source}/><Label strong>{result.tool}</Label><Label tone="secondary" caption>Building: {result.building_id}</Label><Label tone="secondary" caption>Scenario: {result.scenario_id||'Building configuration'}</Label><Label tone="secondary" caption>{result.provenance}</Label><Label tone="secondary" caption>Units: {Object.entries(result.units).map(([k,v])=>`${k} ${v}`).join(' · ')}</Label><Text style={{color:t.textPrimary,fontSize:12,lineHeight:18,fontFamily:Platform.select({ios:'Menlo',default:'monospace'}),padding:12,borderRadius:12,backgroundColor:t.surfaceElevated}}>{JSON.stringify(resultSummary(result),null,2)}</Text></Card>}
+  <Action title="Open Human Plan Review" icon={<ClipboardCheck size={16} color={t.onLime}/>} onPress={()=>router.push('/simulation')}/>
  </Card>;
 }

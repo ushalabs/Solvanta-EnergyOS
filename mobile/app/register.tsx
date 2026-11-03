@@ -82,6 +82,7 @@ export default function RegisterScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
+          accessibilityRole="button"
           activeOpacity={0.8}
           onPress={() => router.canGoBack() ? router.back() : router.replace('/welcome')}
           style={[styles.backBtn, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
@@ -102,13 +103,14 @@ export default function RegisterScreen() {
 
         {/* Success Banner */}
         {registeredSuccess ? (
-          <View style={[styles.successBanner, { backgroundColor: 'rgba(77, 225, 162, 0.12)', borderColor: tokens.green }]}>
-            <CheckCircle2 size={24} color={tokens.green} style={{ marginBottom: 8 }} />
-            <Text style={[styles.successTitle, { color: tokens.green }]}>Account Created Successfully!</Text>
+          <View style={[styles.successBanner, { backgroundColor: tokens.greenTint, borderColor: tokens.green }]}>
+            <CheckCircle2 size={24} color={tokens.greenText} style={{ marginBottom: 8 }} />
+            <Text style={[styles.successTitle, { color: tokens.greenText }]}>Account Created Successfully!</Text>
             <Text style={[styles.successDesc, { color: tokens.textPrimary }]}>
               A verification link has been sent to {email}. You can verify your email anytime from Account Settings.
             </Text>
             <TouchableOpacity
+              accessibilityRole="button"
               style={[styles.continueBtn, { backgroundColor: tokens.lime }]}
               onPress={() => router.replace('/(tabs)')}
             >
@@ -119,8 +121,8 @@ export default function RegisterScreen() {
 
         {/* Error Banner */}
         {errorMessage ? (
-          <View style={[styles.errorBanner, { backgroundColor: 'rgba(255, 98, 106, 0.12)', borderColor: tokens.red }]}>
-            <Text style={[styles.errorText, { color: tokens.red }]}>{errorMessage}</Text>
+          <View style={[styles.errorBanner, { backgroundColor: tokens.redTint, borderColor: tokens.red }]}>
+            <Text style={[styles.errorText, { color: tokens.redText }]}>{errorMessage}</Text>
           </View>
         ) : null}
 
@@ -130,11 +132,12 @@ export default function RegisterScreen() {
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>EMAIL ADDRESS</Text>
               <View style={[styles.inputContainer, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
-                <Mail size={18} color={tokens.textMuted} style={styles.inputIcon} />
+                <Mail size={18} color={tokens.textSecondary} style={styles.inputIcon} />
                 <TextInput
+                  accessibilityLabel="Email address"
                   style={[styles.textInput, { color: tokens.textPrimary }]}
                   placeholder="engineer@solvanta.energy"
-                  placeholderTextColor={tokens.textMuted}
+                  placeholderTextColor={tokens.textSecondary}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -151,11 +154,12 @@ export default function RegisterScreen() {
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>PASSWORD (MIN 8 CHARS)</Text>
               <View style={[styles.inputContainer, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
-                <Lock size={18} color={tokens.textMuted} style={styles.inputIcon} />
+                <Lock size={18} color={tokens.textSecondary} style={styles.inputIcon} />
                 <TextInput
+                  accessibilityLabel="Password (min 8 chars)"
                   style={[styles.textInput, { color: tokens.textPrimary }]}
                   placeholder="Create a strong password"
-                  placeholderTextColor={tokens.textMuted}
+                  placeholderTextColor={tokens.textSecondary}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -166,14 +170,15 @@ export default function RegisterScreen() {
                   }}
                 />
                 <TouchableOpacity
+                  accessibilityRole="button"
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeIconBtn}
                   accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? (
-                    <EyeOff size={18} color={tokens.textMuted} />
+                    <EyeOff size={18} color={tokens.textSecondary} />
                   ) : (
-                    <Eye size={18} color={tokens.textMuted} />
+                    <Eye size={18} color={tokens.textSecondary} />
                   )}
                 </TouchableOpacity>
               </View>
@@ -183,11 +188,12 @@ export default function RegisterScreen() {
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>CONFIRM PASSWORD</Text>
               <View style={[styles.inputContainer, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
-                <Lock size={18} color={tokens.textMuted} style={styles.inputIcon} />
+                <Lock size={18} color={tokens.textSecondary} style={styles.inputIcon} />
                 <TextInput
+                  accessibilityLabel="Confirm password"
                   style={[styles.textInput, { color: tokens.textPrimary }]}
                   placeholder="Re-enter your password"
-                  placeholderTextColor={tokens.textMuted}
+                  placeholderTextColor={tokens.textSecondary}
                   secureTextEntry={!showConfirmPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -198,14 +204,15 @@ export default function RegisterScreen() {
                   }}
                 />
                 <TouchableOpacity
+                  accessibilityRole="button"
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                   style={styles.eyeIconBtn}
                   accessibilityLabel={showConfirmPassword ? 'Hide password' : 'Show password'}
                 >
                   {showConfirmPassword ? (
-                    <EyeOff size={18} color={tokens.textMuted} />
+                    <EyeOff size={18} color={tokens.textSecondary} />
                   ) : (
-                    <Eye size={18} color={tokens.textMuted} />
+                    <Eye size={18} color={tokens.textSecondary} />
                   )}
                 </TouchableOpacity>
               </View>
@@ -213,6 +220,7 @@ export default function RegisterScreen() {
 
             {/* Create Account Primary CTA */}
             <TouchableOpacity
+              accessibilityRole="button"
               style={[styles.primaryBtn, { backgroundColor: tokens.lime }]}
               activeOpacity={0.85}
               onPress={handleRegister}
@@ -230,9 +238,9 @@ export default function RegisterScreen() {
 
             {/* Footer Link to Login */}
             <View style={styles.footerRow}>
-              <Text style={{ color: tokens.textMuted, fontSize: 13 }}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => router.push('/login')}>
-                <Text style={{ color: tokens.lime, fontSize: 13, fontWeight: '700' }}>Sign In</Text>
+              <Text style={{ color: tokens.textSecondary, fontSize: 13 }}>Already have an account? </Text>
+              <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/login')} style={{ minHeight: 44, minWidth: 44, justifyContent: 'center' }}>
+                <Text style={{ color: tokens.limeText, fontSize: 13, fontWeight: '700' }}>Sign In</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -253,9 +261,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -326,7 +334,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   inputLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.5,
     marginBottom: 6,
@@ -344,11 +352,15 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
+    alignSelf: 'stretch',
     fontSize: 14,
     fontWeight: '600',
   },
   eyeIconBtn: {
-    padding: 6,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   primaryBtn: {
     flexDirection: 'row',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Home,
@@ -9,7 +9,7 @@ import {
   Bot,
 } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeContext';
-import { RADIUS, SPACING } from '../theme/tokens';
+import { RADIUS } from '../theme/tokens';
 
 export type TabName = 'index' | 'appliances' | 'simulation' | 'rooftop' | 'ai';
 
@@ -44,6 +44,7 @@ export const FloatingTabDock: React.FC<FloatingTabDockProps> = ({
       ]}
     >
       <View
+        accessibilityRole="tablist"
         style={[
           styles.dockCapsule,
           {
@@ -62,7 +63,7 @@ export const FloatingTabDock: React.FC<FloatingTabDockProps> = ({
               key={tab.id}
               activeOpacity={0.8}
               onPress={() => onSelectTab(tab.id)}
-              style={styles.tabButton}
+              style={[styles.tabButton, isSelected && styles.tabButtonSelected]}
               accessibilityRole="tab"
               accessibilityState={{ selected: isSelected }}
               aria-selected={isSelected}
@@ -86,7 +87,7 @@ export const FloatingTabDock: React.FC<FloatingTabDockProps> = ({
                 <View style={styles.inactiveIconContainer}>
                   <IconComponent
                     size={20}
-                    color={tokens.textMuted}
+                    color={tokens.textSecondary}
                     strokeWidth={1.8}
                   />
                 </View>
@@ -102,20 +103,19 @@ export const FloatingTabDock: React.FC<FloatingTabDockProps> = ({
 const styles = StyleSheet.create({
   dockWrapper: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    left: 16,
+    right: 16,
     alignItems: 'center',
     zIndex: 999,
   },
   dockCapsule: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     height: 64,
-    width: Dimensions.get('window').width - 32,
+    width: '100%',
     maxWidth: 420,
     borderRadius: RADIUS.dock,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     borderWidth: 1,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
@@ -128,17 +128,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: '100%',
   },
+  tabButtonSelected: {
+    flex: 1.7,
+  },
   activePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+    minHeight: 46,
+    marginHorizontal: 2,
     borderRadius: RADIUS.pill,
-    shadowColor: '#C6F43D',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 3,
   },
   activeLabel: {
     fontSize: 12,
@@ -147,7 +147,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   inactiveIconContainer: {
-    padding: 10,
+    minWidth: 44,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },

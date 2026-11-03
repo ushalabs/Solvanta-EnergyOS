@@ -92,6 +92,7 @@ export default function SettingsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
+          accessibilityRole="button"
           activeOpacity={0.8}
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
           style={[styles.backBtn, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
@@ -99,17 +100,17 @@ export default function SettingsScreen() {
         >
           <ArrowLeft size={18} color={tokens.textPrimary} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: tokens.textPrimary }]}>SETTINGS</Text>
+        <Text accessibilityRole="header" style={[styles.title, { color: tokens.textPrimary }]}>Settings</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={{ color: tokens.lime, fontSize: 11, marginBottom: 12 }}>
+        <Text style={{ color: tokens.limeText, fontSize: 12, lineHeight: 17, fontWeight: '600', marginBottom: 4 }}>
           LIVE TWIN • Authenticated building and equipment configuration
         </Text>
 
         {/* Account & Profile Section */}
-        <Text style={[styles.sectionHeader, { color: tokens.textMuted }]}>
-          USER ACCOUNT & IDENTITY
+        <Text accessibilityRole="header" style={[styles.sectionHeader, { color: tokens.textPrimary }]}>
+          Account and identity
         </Text>
 
         <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
@@ -119,9 +120,9 @@ export default function SettingsScreen() {
               <View style={styles.profileHeader}>
                 <View style={[styles.avatarWell, { backgroundColor: tokens.surfaceElevated, borderColor: tokens.border }]}>
                   {isGoogle ? (
-                    <Globe size={20} color={tokens.cyan} />
+                    <Globe size={20} color={tokens.cyanText} />
                   ) : (
-                    <User size={20} color={tokens.lime} />
+                    <User size={20} color={tokens.limeText} />
                   )}
                 </View>
                 <View style={{ flex: 1, marginLeft: 12 }}>
@@ -137,15 +138,15 @@ export default function SettingsScreen() {
                     styles.providerBadge,
                     {
                       backgroundColor: isGoogle
-                        ? 'rgba(40, 206, 219, 0.15)'
-                        : 'rgba(198, 244, 61, 0.15)',
+                        ? tokens.cyanTint
+                        : tokens.limeTint,
                     },
                   ]}
                 >
                   <Text
                     style={[
                       styles.providerBadgeText,
-                      { color: isGoogle ? tokens.cyan : tokens.lime },
+                      { color: isGoogle ? tokens.cyanText : tokens.limeText },
                     ]}
                   >
                     {isGoogle ? 'GOOGLE' : 'EMAIL/PWD'}
@@ -153,24 +154,24 @@ export default function SettingsScreen() {
                 </View>
               </View>
 
-              <View style={styles.divider} />
+              <View style={[styles.divider, { backgroundColor: tokens.divider }]} />
 
               {/* Email Verification Status Row */}
               <View style={styles.infoRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Mail size={16} color={emailVerified ? tokens.green : tokens.amber} style={{ marginRight: 8 }} />
+                  <Mail size={16} color={emailVerified ? tokens.greenText : tokens.amberText} style={{ marginRight: 8 }} />
                   <Text style={[styles.infoLabel, { color: tokens.textSecondary }]}>Email Verification</Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   {emailVerified ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <CheckCircle2 size={14} color={tokens.green} style={{ marginRight: 4 }} />
-                      <Text style={[styles.infoVal, { color: tokens.green }]}>VERIFIED</Text>
+                      <CheckCircle2 size={14} color={tokens.greenText} style={{ marginRight: 4 }} />
+                      <Text style={[styles.infoVal, { color: tokens.greenText }]}>VERIFIED</Text>
                     </View>
                   ) : (
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <AlertCircle size={14} color={tokens.amber} style={{ marginRight: 4 }} />
-                      <Text style={[styles.infoVal, { color: tokens.amber }]}>UNVERIFIED</Text>
+                      <AlertCircle size={14} color={tokens.amberText} style={{ marginRight: 4 }} />
+                      <Text style={[styles.infoVal, { color: tokens.amberText }]}>UNVERIFIED</Text>
                     </View>
                   )}
                 </View>
@@ -179,11 +180,12 @@ export default function SettingsScreen() {
               {/* Verification Actions if unverified */}
               {!emailVerified ? (
                 <View style={[styles.verifyActionsBox, { backgroundColor: tokens.surfaceElevated }]}>
-                  <Text style={[styles.verifyHint, { color: tokens.textMuted }]}>
+                  <Text style={[styles.verifyHint, { color: tokens.textSecondary }]}>
                     Please verify your email address to enable security alerts and full cloud capabilities.
                   </Text>
                   <View style={styles.verifyBtnRow}>
                     <TouchableOpacity
+                      accessibilityRole="button"
                       style={[
                         styles.verifyBtn,
                         {
@@ -196,7 +198,7 @@ export default function SettingsScreen() {
                       <Text
                         style={[
                           styles.verifyBtnText,
-                          { color: resendCooldown > 0 ? tokens.textMuted : tokens.onLime },
+                          { color: resendCooldown > 0 ? tokens.textSecondary : tokens.onLime },
                         ]}
                       >
                         {resendCooldown > 0
@@ -206,12 +208,13 @@ export default function SettingsScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
+                      accessibilityRole="button"
                       style={[styles.reloadBtn, { borderColor: tokens.border }]}
                       onPress={handleReloadUser}
                       disabled={reloadingStatus}
                     >
                       {reloadingStatus ? (
-                        <ActivityIndicator color={tokens.lime} size="small" />
+                        <ActivityIndicator color={tokens.limeText} size="small" />
                       ) : (
                         <>
                           <RefreshCw size={14} color={tokens.textPrimary} style={{ marginRight: 4 }} />
@@ -226,21 +229,22 @@ export default function SettingsScreen() {
               ) : null}
 
               {resendStatus ? (
-                <Text style={[styles.resendStatusText, { color: tokens.cyan }]}>
+                <Text style={[styles.resendStatusText, { color: tokens.cyanText }]}>
                   {resendStatus}
                 </Text>
               ) : null}
 
-              <View style={styles.divider} />
+              <View style={[styles.divider, { backgroundColor: tokens.divider }]} />
 
               {/* Sign Out Action */}
               <TouchableOpacity
+                accessibilityRole="button"
                 style={styles.signOutRow}
                 onPress={handleSignOut}
                 activeOpacity={0.8}
               >
-                <LogOut size={16} color={tokens.red} style={{ marginRight: 8 }} />
-                <Text style={[styles.signOutText, { color: tokens.red }]}>Sign Out of Solvanta</Text>
+                <LogOut size={16} color={tokens.redText} style={{ marginRight: 8 }} />
+                <Text style={[styles.signOutText, { color: tokens.redText }]}>Sign Out of Solvanta</Text>
               </TouchableOpacity>
             </>
           ) : authMode === 'guest' ? (
@@ -248,29 +252,30 @@ export default function SettingsScreen() {
               {/* Local-Only Guest Mode */}
               <View style={styles.profileHeader}>
                 <View style={[styles.avatarWell, { backgroundColor: tokens.surfaceElevated, borderColor: tokens.border }]}>
-                  <ShieldCheck size={20} color={tokens.lime} />
+                  <ShieldCheck size={20} color={tokens.limeText} />
                 </View>
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={[styles.userName, { color: tokens.textPrimary }]}>
                     {guestIdentity?.displayName || 'Offline Guest User'}
                   </Text>
-                  <Text style={[styles.userEmail, { color: tokens.textMuted }]}>
+                  <Text style={[styles.userEmail, { color: tokens.textSecondary }]}>
                     Local ID: {guestIdentity?.guestId?.substring(0, 18)}...
                   </Text>
                 </View>
-                <View style={[styles.providerBadge, { backgroundColor: 'rgba(198, 244, 61, 0.15)' }]}>
-                  <Text style={[styles.providerBadgeText, { color: tokens.lime }]}>GUEST MODE</Text>
+                <View style={[styles.providerBadge, { backgroundColor: tokens.limeTint }]}>
+                  <Text style={[styles.providerBadgeText, { color: tokens.limeText }]}>GUEST MODE</Text>
                 </View>
               </View>
 
-              <Text style={[styles.guestNotice, { color: tokens.textMuted }]}>
+              <Text style={[styles.guestNotice, { color: tokens.textSecondary }]}>
                 You are using Solvanta in Local-Only Mode. Electrical models, simulation runs, and appliance configs are stored securely on this device without cloud sync.
               </Text>
 
-              <View style={styles.divider} />
+              <View style={[styles.divider, { backgroundColor: tokens.divider }]} />
 
               <View style={styles.guestBtnGroup}>
                 <TouchableOpacity
+                  accessibilityRole="button"
                   style={[styles.linkAccountBtn, { backgroundColor: tokens.lime }]}
                   onPress={() => router.push('/login')}
                   activeOpacity={0.85}
@@ -282,12 +287,13 @@ export default function SettingsScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
+                  accessibilityRole="button"
                   style={[styles.exitGuestBtn, { borderColor: tokens.border }]}
                   onPress={handleSignOut}
                   activeOpacity={0.85}
                 >
-                  <LogOut size={16} color={tokens.red} style={{ marginRight: 6 }} />
-                  <Text style={[styles.exitGuestBtnText, { color: tokens.red }]}>
+                  <LogOut size={16} color={tokens.redText} style={{ marginRight: 6 }} />
+                  <Text style={[styles.exitGuestBtnText, { color: tokens.redText }]}>
                     Exit Guest Session
                   </Text>
                 </TouchableOpacity>
@@ -295,10 +301,11 @@ export default function SettingsScreen() {
             </>
           ) : (
             <View style={styles.profileHeader}>
-              <Text style={{ color: tokens.textMuted, fontSize: 13 }}>
+              <Text style={{ color: tokens.textSecondary, fontSize: 13 }}>
                 No active session. Please sign in or continue as guest.
               </Text>
               <TouchableOpacity
+                accessibilityRole="button"
                 style={[styles.linkAccountBtn, { backgroundColor: tokens.lime, marginTop: 10 }]}
                 onPress={() => router.push('/welcome')}
               >
@@ -309,76 +316,84 @@ export default function SettingsScreen() {
         </View>
 
         {/* Building & Equipment Profile Section */}
-        <Text style={[styles.sectionHeader, { color: tokens.textMuted }]}>
-          BUILDING & EQUIPMENT TWIN CONFIGURATION
+        <Text accessibilityRole="header" style={[styles.sectionHeader, { color: tokens.textPrimary }]}>
+          Building and equipment twin
         </Text>
         <BuildingEquipmentEditor />
 
         {/* Appearance Section */}
-        <Text style={[styles.sectionHeader, { color: tokens.textMuted }]}>
-          APPEARANCE (THEME PERSISTENCE)
+        <Text accessibilityRole="header" style={[styles.sectionHeader, { color: tokens.textPrimary }]}>
+          Appearance
         </Text>
 
         <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
           {/* Dark Mode Row */}
           <TouchableOpacity
+            accessibilityRole="radio"
+            accessibilityLabel="Dark Neon-Lime theme"
+            accessibilityState={{ checked: isDark }}
+            aria-checked={isDark}
             activeOpacity={0.8}
             onPress={() => setTheme('dark')}
             style={[styles.themeOption, isDark && { backgroundColor: tokens.surfaceElevated }]}
           >
             <View style={styles.themeLeft}>
-              <Moon size={18} color={isDark ? tokens.lime : tokens.textMuted} style={{ marginRight: 10 }} />
-              <View>
+              <Moon size={18} color={isDark ? tokens.limeText : tokens.textSecondary} style={{ marginRight: 10 }} />
+              <View style={{ flex: 1 }}>
                 <Text style={[styles.themeTitle, { color: tokens.textPrimary }]}>
                   Dark Neon-Lime
                 </Text>
-                <Text style={[styles.themeDesc, { color: tokens.textMuted }]}>
+                <Text style={[styles.themeDesc, { color: tokens.textSecondary }]}>
                   Default on first launch • Reference matched near-black
                 </Text>
               </View>
             </View>
-            {isDark && <CheckCircle size={18} color={tokens.lime} />}
+            {isDark && <CheckCircle size={18} color={tokens.limeText} />}
           </TouchableOpacity>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: tokens.divider }]} />
 
           {/* Light Mode Row */}
           <TouchableOpacity
+            accessibilityRole="radio"
+            accessibilityLabel="Light Solar theme"
+            accessibilityState={{ checked: !isDark }}
+            aria-checked={!isDark}
             activeOpacity={0.8}
             onPress={() => setTheme('light')}
             style={[styles.themeOption, !isDark && { backgroundColor: tokens.surfaceElevated }]}
           >
             <View style={styles.themeLeft}>
-              <Sun size={18} color={!isDark ? tokens.lime : tokens.textMuted} style={{ marginRight: 10 }} />
-              <View>
+              <Sun size={18} color={!isDark ? tokens.limeText : tokens.textSecondary} style={{ marginRight: 10 }} />
+              <View style={{ flex: 1 }}>
                 <Text style={[styles.themeTitle, { color: tokens.textPrimary }]}>
                   Light Solar
                 </Text>
-                <Text style={[styles.themeDesc, { color: tokens.textMuted }]}>
+                <Text style={[styles.themeDesc, { color: tokens.textSecondary }]}>
                   Clean daylight contrast • Persisted across app restarts
                 </Text>
               </View>
             </View>
-            {!isDark && <CheckCircle size={18} color={tokens.lime} />}
+            {!isDark && <CheckCircle size={18} color={tokens.limeText} />}
           </TouchableOpacity>
         </View>
 
         {/* Units Configuration */}
-        <Text style={[styles.sectionHeader, { color: tokens.textMuted }]}>
-          ENGINEERING UNITS & CONVENTIONS
+        <Text accessibilityRole="header" style={[styles.sectionHeader, { color: tokens.textPrimary }]}>
+          Engineering units and conventions
         </Text>
 
         <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: tokens.textSecondary }]}>Power Measurement</Text>
-            <Text style={[styles.infoVal, { color: tokens.lime }]}>Kilowatts (kW) / Watts (W)</Text>
+            <Text style={[styles.infoVal, { color: tokens.limeText }]}>Kilowatts (kW) / Watts (W)</Text>
           </View>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: tokens.divider }]} />
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: tokens.textSecondary }]}>Energy Accumulation</Text>
-            <Text style={[styles.infoVal, { color: tokens.lime }]}>Kilowatt-hours (kWh)</Text>
+            <Text style={[styles.infoVal, { color: tokens.limeText }]}>Kilowatt-hours (kWh)</Text>
           </View>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: tokens.divider }]} />
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: tokens.textSecondary }]}>Simulation Resolution</Text>
             <Text style={[styles.infoVal, { color: tokens.textPrimary }]}>15-Minute Parameterized Step</Text>
@@ -386,42 +401,42 @@ export default function SettingsScreen() {
         </View>
 
         {/* Data Provenance & Safety Boundaries */}
-        <Text style={[styles.sectionHeader, { color: tokens.textMuted }]}>
-          PROVENANCE & HARDWARE BOUNDARIES
+        <Text accessibilityRole="header" style={[styles.sectionHeader, { color: tokens.textPrimary }]}>
+          Provenance and hardware boundaries
         </Text>
 
         <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
           <View style={styles.infoRow}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Database size={16} color={tokens.amber} style={{ marginRight: 8 }} />
+              <Database size={16} color={tokens.amberText} style={{ marginRight: 8 }} />
               <Text style={[styles.infoLabel, { color: tokens.textSecondary }]}>Data Mode</Text>
             </View>
-            <Text style={[styles.infoVal, { color: tokens.amber }]}>SIMULATED (FYP-I)</Text>
+            <Text style={[styles.infoVal, { color: tokens.amberText }]}>SIMULATED (FYP-I)</Text>
           </View>
-          <Text style={[styles.noticeText, { color: tokens.textMuted }]}>
+          <Text style={[styles.noticeText, { color: tokens.textSecondary }]}>
             Building and appliance records are saved through the authenticated API. Energy runs and telemetry observations are explicitly simulated. Physical inverter integration and electrical controls remain outside this prototype.
           </Text>
         </View>
 
         {/* Toolchain & SDK Versions */}
-        <Text style={[styles.sectionHeader, { color: tokens.textMuted }]}>
-          TOOLCHAIN & ARCHITECTURE
+        <Text accessibilityRole="header" style={[styles.sectionHeader, { color: tokens.textPrimary }]}>
+          Toolchain and architecture
         </Text>
 
         <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
           <View style={styles.infoRow}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Cpu size={16} color={tokens.lime} style={{ marginRight: 8 }} />
+              <Cpu size={16} color={tokens.limeText} style={{ marginRight: 8 }} />
               <Text style={[styles.infoLabel, { color: tokens.textSecondary }]}>Expo SDK Version</Text>
             </View>
-            <Text style={[styles.infoVal, { color: tokens.lime }]}>Expo {APP_RUNTIME.expo} • SDK 58</Text>
+            <Text style={[styles.infoVal, { color: tokens.limeText }]}>Expo {APP_RUNTIME.expo} • SDK 58</Text>
           </View>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: tokens.divider }]} />
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: tokens.textSecondary }]}>React Native Engine</Text>
             <Text style={[styles.infoVal, { color: tokens.textPrimary }]}>{APP_RUNTIME.reactNative}</Text>
           </View>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: tokens.divider }]} />
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: tokens.textSecondary }]}>Decision Engine</Text>
             <Text style={[styles.infoVal, { color: tokens.textPrimary }]}>Google OR-Tools CP-SAT</Text>
@@ -443,29 +458,31 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
   },
   backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: RADIUS.pill,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     marginRight: 12,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '900',
-    letterSpacing: 1,
+    fontSize: 24,
+    fontWeight: '700',
   },
   scrollContent: {
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
     paddingHorizontal: SPACING.horizontalPadding,
     paddingBottom: 40,
   },
   sectionHeader: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    marginTop: SPACING.lg,
-    marginBottom: SPACING.xs,
+    fontSize: 16,
+    lineHeight: 21,
+    fontWeight: '700',
+    marginTop: SPACING.xl,
+    marginBottom: SPACING.sm,
   },
   card: {
     borderRadius: RADIUS.card,
@@ -499,7 +516,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.pill,
   },
   providerBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
@@ -521,7 +538,7 @@ const styles = StyleSheet.create({
   },
   verifyBtn: {
     flex: 1,
-    height: 36,
+    minHeight: 48,
     borderRadius: RADIUS.sm,
     alignItems: 'center',
     justifyContent: 'center',
@@ -534,7 +551,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 36,
+    minHeight: 48,
     paddingHorizontal: 12,
     borderRadius: RADIUS.sm,
     borderWidth: 1,
@@ -573,7 +590,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 42,
+    minHeight: 48,
     borderRadius: RADIUS.md,
   },
   linkAccountBtnText: {
@@ -584,7 +601,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 42,
+    minHeight: 48,
     borderRadius: RADIUS.md,
     borderWidth: 1,
   },
@@ -608,15 +625,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   themeDesc: {
-    fontSize: 11,
+    fontSize: 12,
     marginTop: 2,
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   infoRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.xs,
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: SPACING.cardPadding,
@@ -626,11 +644,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   infoVal: {
-    fontSize: 12,
+    flexShrink: 1,
+    fontSize: 13,
     fontWeight: '700',
   },
   noticeText: {
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
     paddingHorizontal: SPACING.cardPadding,
     paddingBottom: SPACING.cardPadding,
