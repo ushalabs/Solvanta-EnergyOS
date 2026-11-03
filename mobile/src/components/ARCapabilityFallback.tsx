@@ -15,29 +15,30 @@ export const ARCapabilityFallback: React.FC<ARCapabilityFallbackProps> = ({
 
   return (
     <View
+      accessibilityLiveRegion="polite"
       style={[
         styles.card,
         {
-          backgroundColor: tokens.surface,
-          borderColor: tokens.border,
+          backgroundColor: tokens.backgroundRaised,
+          borderColor: tokens.amberText,
         },
       ]}
     >
-      <View style={[styles.badge, { backgroundColor: 'rgba(249, 188, 70, 0.15)' }]}>
-        <Text style={[styles.badgeText, { color: tokens.amber }]}>
+      <View style={[styles.badge, { backgroundColor: tokens.amberTint }]}>
+        <Text style={[styles.badgeText, { color: tokens.amberText }]}>
           DEMO • NATIVE AR NOT INTEGRATED
         </Text>
       </View>
 
-      <Text style={[styles.title, { color: tokens.textPrimary }]}>
+      <Text accessibilityRole="header" style={[styles.title, { color: tokens.textPrimary }]}>
         Native AR Environment Gate
       </Text>
 
-      <Text style={[styles.body, { color: tokens.textSecondary }]}>
+      <Text style={[styles.body, { color: tokens.textPrimary }]}>
         Native AR overlay requires an Android device with Google Play Services for AR (ARCore) and a custom native development client build (EAS dev client). ViroReact cannot execute inside Expo Go or standard web preview.
       </Text>
 
-      <Text style={[styles.body, { color: tokens.textMuted }]}>
+      <Text style={[styles.body, { color: tokens.textSecondary }]}>
         The measured 2D editor and saved panel placement are available. This Expo SDK 58 build has no native AR module. The checked ViroReact package excludes SDK 58, and no physical ARCore device is connected for validation.
       </Text>
 
@@ -52,32 +53,31 @@ export const ARCapabilityFallback: React.FC<ARCapabilityFallbackProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: RADIUS.card,
+    borderRadius: RADIUS.md,
     padding: SPACING.cardPadding,
-    marginVertical: SPACING.sm,
     borderWidth: 1,
   },
   badge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: RADIUS.sm,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: RADIUS.pill,
     marginBottom: SPACING.sm,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   title: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     marginBottom: 6,
   },
   body: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginBottom: 6,
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 8,
   },
   cta: {
     marginTop: SPACING.sm,

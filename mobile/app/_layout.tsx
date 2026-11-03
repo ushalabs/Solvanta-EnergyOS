@@ -33,11 +33,11 @@ function AuthNavigationWatcher() {
     return (
       <View style={[styles.splashContainer, { backgroundColor: tokens.background }]}>
         <View style={[styles.splashIconWell, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
-          <Zap size={36} color={tokens.lime} />
+          <Zap size={36} color={tokens.limeText} />
         </View>
         <Text style={[styles.splashTitle, { color: tokens.textPrimary }]}>SOLVANTA</Text>
-        <Text style={[styles.splashSubtitle, { color: tokens.lime }]}>ENERGYOS</Text>
-        <ActivityIndicator color={tokens.lime} size="large" style={{ marginTop: 24 }} />
+        <Text style={[styles.splashSubtitle, { color: tokens.limeText }]}>ENERGYOS</Text>
+        <ActivityIndicator color={tokens.limeText} size="large" style={{ marginTop: 24 }} />
       </View>
     );
   }

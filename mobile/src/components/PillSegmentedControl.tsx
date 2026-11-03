@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ViewStyle } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
-import { SPACING, RADIUS } from '../theme/tokens';
+import { RADIUS } from '../theme/tokens';
 
 interface Option {
   id: string;
@@ -14,6 +14,7 @@ interface PillSegmentedControlProps {
   selectedId: string;
   onSelect: (id: string) => void;
   style?: ViewStyle;
+  a11yLabel?: string;
 }
 
 export const PillSegmentedControl: React.FC<PillSegmentedControlProps> = ({
@@ -21,15 +22,18 @@ export const PillSegmentedControl: React.FC<PillSegmentedControlProps> = ({
   selectedId,
   onSelect,
   style,
+  a11yLabel,
 }) => {
   const { tokens } = useTheme();
 
   return (
     <View
+      accessibilityRole="radiogroup"
+      accessibilityLabel={a11yLabel}
       style={[
         styles.container,
         {
-          backgroundColor: tokens.surface,
+          backgroundColor: tokens.surfaceElevated,
           borderColor: tokens.border,
         },
         style,
@@ -42,6 +46,10 @@ export const PillSegmentedControl: React.FC<PillSegmentedControlProps> = ({
             key={option.id}
             activeOpacity={0.8}
             onPress={() => onSelect(option.id)}
+            accessibilityRole="radio"
+            accessibilityLabel={option.label}
+            accessibilityState={{ selected: isSelected, checked: isSelected }}
+            aria-checked={isSelected}
             style={[
               styles.pill,
               isSelected && {
@@ -67,7 +75,7 @@ export const PillSegmentedControl: React.FC<PillSegmentedControlProps> = ({
                   {
                     backgroundColor: isSelected
                       ? tokens.onLime
-                      : tokens.surfaceElevated,
+                      : tokens.surface,
                   },
                 ]}
               >
@@ -94,17 +102,16 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     borderRadius: RADIUS.pill,
-    padding: 4,
+    padding: 3,
     borderWidth: 1,
-    marginVertical: SPACING.sm,
   },
   pill: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    minHeight: 44,
+    paddingHorizontal: 8,
     borderRadius: RADIUS.pill,
   },
   label: {
@@ -118,7 +125,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
   },
 });

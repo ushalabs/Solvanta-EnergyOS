@@ -16,3 +16,16 @@ export function parsePoints(text: string): Point[] {
   });
 }
 export const formatPoints = (points: Point[]) => points.map(p => `${Math.round(p.x)},${Math.round(p.y)}`).join('; ');
+
+/**
+ * Convert a touch position inside the on-screen canvas to roof units (canvas is uniformly scaled).
+ * A finger released past the edge reports a location outside the view; clamp it because the API
+ * rejects any point outside the image canvas.
+ */
+export function tapToRoofPoint(x: number, y: number, viewWidth: number, roofWidth: number, roofHeight = Infinity): Point {
+  const scale = viewWidth > 0 ? roofWidth / viewWidth : 1;
+  return { x: Math.min(roofWidth, Math.max(0, Math.round(x * scale))), y: Math.min(roofHeight, Math.max(0, Math.round(y * scale))) };
+}
+/** Size in roof units that renders as `px` screen pixels, so markers stay visible on small phones. */
+export const screenPx = (px: number, viewWidth: number, roofWidth: number) =>
+  viewWidth > 0 ? (px * roofWidth) / viewWidth : px;

@@ -22,6 +22,19 @@ export interface ColorTokens {
   green: string;
   overlay: string;
   shadow: string;
+  // Accents safe for text/icons on surfaces. Spec colours such as light-mode lime are fills.
+  limeText: string;
+  amberText: string;
+  redText: string;
+  greenText: string;
+  cyanText: string;
+  limeMark: string;             // Chart bars and drawn geometry on surfaces
+  limeTint: string;
+  amberTint: string;
+  redTint: string;
+  greenTint: string;
+  cyanTint: string;
+  divider: string;
 }
 
 export const darkTokens: ColorTokens = {
@@ -43,6 +56,18 @@ export const darkTokens: ColorTokens = {
   green: '#4DE1A2',             // Positive verification / 100% coverage
   overlay: 'rgba(9, 11, 10, 0.75)',
   shadow: 'rgba(0, 0, 0, 0.6)',
+  limeText: '#C6F43D',
+  amberText: '#F9BC46',
+  redText: '#FF626A',
+  greenText: '#4DE1A2',
+  cyanText: '#28CEDB',
+  limeMark: '#C6F43D',
+  limeTint: 'rgba(198, 244, 61, 0.14)',
+  amberTint: 'rgba(249, 188, 70, 0.14)',
+  redTint: 'rgba(255, 98, 106, 0.14)',
+  greenTint: 'rgba(77, 225, 162, 0.14)',
+  cyanTint: 'rgba(40, 206, 219, 0.14)',
+  divider: 'rgba(255, 255, 255, 0.08)',
 };
 
 export const lightTokens: ColorTokens = {
@@ -64,6 +89,18 @@ export const lightTokens: ColorTokens = {
   green: '#14835A',             // Forest green success
   overlay: 'rgba(245, 247, 241, 0.85)',
   shadow: 'rgba(0, 0, 0, 0.08)',
+  limeText: '#4A6500',
+  amberText: '#8A5300',
+  redText: '#A32C3B',
+  greenText: '#0E6B49',
+  cyanText: '#066A7B',
+  limeMark: '#6F9600',
+  limeTint: 'rgba(156, 204, 23, 0.18)',
+  amberTint: 'rgba(179, 109, 0, 0.12)',
+  redTint: 'rgba(185, 54, 70, 0.10)',
+  greenTint: 'rgba(20, 131, 90, 0.10)',
+  cyanTint: 'rgba(8, 126, 145, 0.10)',
+  divider: 'rgba(26, 32, 25, 0.10)',
 };
 
 export const HERO_LIME_GRADIENT: [string, string, string] = [

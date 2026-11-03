@@ -69,12 +69,7 @@ const styles = StyleSheet.create({
   gradient: {
     borderRadius: RADIUS.card,
     padding: SPACING.cardPadding,
-    marginVertical: SPACING.sm,
-    shadowColor: '#C6F43D',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 4,
+    marginVertical: SPACING.xs,
   },
   topRow: {
     flexDirection: 'row',
@@ -104,10 +99,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: '500',
     marginTop: 2,
-    opacity: 0.85,
   },
   rightSlot: {
     marginLeft: SPACING.sm,

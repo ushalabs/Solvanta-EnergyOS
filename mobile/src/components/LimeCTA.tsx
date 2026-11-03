@@ -30,18 +30,25 @@ export const LimeCTA: React.FC<LimeCTAProps> = ({
   let fg = tokens.onLime;
   let border = 'transparent';
 
-  if (variant === 'surface') {
+  if (disabled) {
+    bg = tokens.surfaceElevated;
+    fg = tokens.textSecondary;
+    border = tokens.border;
+  } else if (variant === 'surface') {
     bg = tokens.surfaceElevated;
     fg = tokens.textPrimary;
   } else if (variant === 'outline') {
     bg = 'transparent';
-    fg = tokens.lime;
-    border = tokens.lime;
+    fg = tokens.limeText;
+    border = tokens.limeText;
   }
 
   return (
     <TouchableOpacity
       activeOpacity={0.82}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
       onPress={onPress}
       disabled={disabled || loading}
       style={[
@@ -49,7 +56,6 @@ export const LimeCTA: React.FC<LimeCTAProps> = ({
         {
           backgroundColor: bg,
           borderColor: border,
-          opacity: disabled ? 0.5 : 1,
         },
         style,
       ]}

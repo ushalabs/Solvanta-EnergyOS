@@ -5,7 +5,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Switch,
   ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -27,6 +26,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { SPACING, RADIUS } from '../theme/tokens';
 import { api, BuildingPayload, SolvantaApiError } from '../api/client';
 import { LimeCTA } from './LimeCTA';
+import { Toggle } from './Toggle';
 
 export const EQUIPMENT_STORAGE_PREFIX = '@solvanta_equipment_';
 
@@ -514,8 +514,8 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
   if (loading) {
     return (
       <View style={[styles.loadingBox, { backgroundColor: tokens.surface }]}>
-        <ActivityIndicator color={tokens.lime} size="small" />
-        <Text style={[styles.loadingText, { color: tokens.textMuted }]}>
+        <ActivityIndicator color={tokens.limeText} size="small" />
+        <Text style={[styles.loadingText, { color: tokens.textSecondary }]}>
           Loading equipment digital twin from PostgreSQL...
         </Text>
       </View>
@@ -526,27 +526,27 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
     <View style={styles.container}>
       {/* Feedback & Status Banners */}
       {syncStatus === 'synced' && (
-        <View style={[styles.feedbackBanner, { backgroundColor: 'rgba(198, 244, 61, 0.12)', borderColor: tokens.lime }]}>
-          <CheckCircle size={16} color={tokens.lime} style={{ marginRight: 8 }} />
-          <Text style={[styles.feedbackText, { color: tokens.lime }]}>
+        <View accessibilityLiveRegion="polite" style={[styles.feedbackBanner, { backgroundColor: tokens.limeTint, borderColor: tokens.limeText }]}>
+          <CheckCircle size={16} color={tokens.limeText} style={{ marginRight: 8 }} />
+          <Text style={[styles.feedbackText, { color: tokens.limeText }]}>
             {successMsg || 'Server Confirmed • Authoritative configuration synchronized with PostgreSQL'}
           </Text>
         </View>
       )}
 
       {syncStatus === 'local_draft' && (
-        <View style={[styles.feedbackBanner, { backgroundColor: 'rgba(255, 179, 0, 0.12)', borderColor: tokens.amber }]}>
-          <AlertTriangle size={16} color={tokens.amber} style={{ marginRight: 8 }} />
-          <Text style={[styles.feedbackText, { color: tokens.amber }]}>
+        <View accessibilityLiveRegion="polite" style={[styles.feedbackBanner, { backgroundColor: tokens.amberTint, borderColor: tokens.amberText }]}>
+          <AlertTriangle size={16} color={tokens.amberText} style={{ marginRight: 8 }} />
+          <Text style={[styles.feedbackText, { color: tokens.amberText }]}>
             {successMsg || 'Local Device Draft • Unsynchronized. Sign in below to persist changes to PostgreSQL.'}
           </Text>
         </View>
       )}
 
       {errorMsg && (
-        <View style={[styles.feedbackBanner, { backgroundColor: 'rgba(255, 68, 68, 0.15)', borderColor: '#FF4444' }]}>
-          <AlertTriangle size={16} color="#FF4444" style={{ marginRight: 8 }} />
-          <Text style={[styles.feedbackText, { color: '#FF7777' }]}>{errorMsg}</Text>
+        <View accessibilityRole="alert" style={[styles.feedbackBanner, { backgroundColor: tokens.redTint, borderColor: tokens.redText }]}>
+          <AlertTriangle size={16} color={tokens.redText} style={{ marginRight: 8 }} />
+          <Text style={[styles.feedbackText, { color: tokens.redText }]}>{errorMsg}</Text>
         </View>
       )}
 
@@ -554,7 +554,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
       <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
         <View style={styles.cardHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <UserIcon size={16} color={currentUser ? tokens.lime : tokens.textMuted} style={{ marginRight: 8 }} />
+            <UserIcon size={16} color={currentUser ? tokens.limeText : tokens.textSecondary} style={{ marginRight: 8 }} />
             <Text style={[styles.cardTitle, { color: tokens.textPrimary }]}>ACCOUNT & FASTAPI AUTH</Text>
           </View>
           <Text
@@ -562,7 +562,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
               styles.unitBadge,
               {
                 backgroundColor: tokens.surfaceElevated,
-                color: currentUser ? tokens.lime : tokens.amber,
+                color: currentUser ? tokens.limeText : tokens.amberText,
               },
             ]}
           >
@@ -578,7 +578,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
             </View>
             <View style={styles.infoRow}>
               <Text style={[styles.infoLabel, { color: tokens.textSecondary }]}>Role</Text>
-              <Text style={[styles.infoVal, { color: tokens.lime }]}>{currentUser.role.toUpperCase()}</Text>
+              <Text style={[styles.infoVal, { color: tokens.limeText }]}>{currentUser.role.toUpperCase()}</Text>
             </View>
 
             {/* Building Selection */}
@@ -588,6 +588,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                   {availableBuildings.map((b) => (
                     <TouchableOpacity
+                      accessibilityRole="button"
                       key={b.id}
                       activeOpacity={0.8}
                       onPress={() => selectBuilding(b.id)}
@@ -610,44 +611,48 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
             )}
 
             <TouchableOpacity
+              accessibilityRole="button"
               activeOpacity={0.8}
               onPress={handleLogout}
               style={[styles.smallBtn, { borderColor: tokens.border, backgroundColor: tokens.surfaceElevated, marginTop: 12 }]}
             >
-              <LogOut size={14} color={tokens.textMuted} style={{ marginRight: 6 }} />
-              <Text style={[styles.smallBtnText, { color: tokens.textMuted }]}>Sign Out</Text>
+              <LogOut size={14} color={tokens.textPrimary} style={{ marginRight: 6 }} />
+              <Text style={[styles.smallBtnText, { color: tokens.textPrimary }]}>Sign Out</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View>
             {authError && (
-              <Text style={{ color: '#FF7777', fontSize: 11, marginBottom: 8 }}>{authError}</Text>
+              <Text accessibilityRole="alert" style={{ color: tokens.redText, fontSize: 13, lineHeight: 18, marginBottom: 8 }}>{authError}</Text>
             )}
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Email</Text>
               <TextInput
+                accessibilityLabel="Email"
                 style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
                 value={loginEmail}
                 onChangeText={setLoginEmail}
                 autoCapitalize="none"
                 keyboardType="email-address"
                 placeholder="demo@solvanta.energy"
-                placeholderTextColor={tokens.textMuted}
+                placeholderTextColor={tokens.textSecondary}
               />
             </View>
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Password</Text>
               <TextInput
+                accessibilityLabel="Password"
                 style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
                 value={loginPassword}
                 onChangeText={setLoginPassword}
                 secureTextEntry
                 placeholder="••••••••"
-                placeholderTextColor={tokens.textMuted}
+                placeholderTextColor={tokens.textSecondary}
               />
             </View>
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
               <TouchableOpacity
+                accessibilityRole="button"
                 activeOpacity={0.8}
                 onPress={handleLogin}
                 disabled={authLoading}
@@ -663,6 +668,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
                 )}
               </TouchableOpacity>
               <TouchableOpacity
+                accessibilityRole="button"
                 activeOpacity={0.8}
                 onPress={handleDemoFill}
                 style={[styles.smallBtn, { backgroundColor: tokens.surfaceElevated, borderColor: tokens.border }]}
@@ -678,7 +684,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
       <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border, marginTop: SPACING.md }]}>
         <View style={styles.cardHeader}>
           <Text style={[styles.cardTitle, { color: tokens.textPrimary }]}>SITE IDENTITY</Text>
-          <Text style={[styles.unitBadge, { backgroundColor: tokens.surfaceElevated, color: tokens.lime }]}>
+          <Text style={[styles.unitBadge, { backgroundColor: tokens.surfaceElevated, color: tokens.limeText }]}>
             Phase 3 Model
           </Text>
         </View>
@@ -686,11 +692,12 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
         <View style={styles.inputGroup}>
           <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Building Name</Text>
           <TextInput
+            accessibilityLabel="Building Name"
             style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
             value={name}
             onChangeText={setName}
             placeholder="e.g. Residential Solar Twin"
-            placeholderTextColor={tokens.textMuted}
+            placeholderTextColor={tokens.textSecondary}
           />
         </View>
 
@@ -698,16 +705,18 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Location / Address</Text>
             <TextInput
+              accessibilityLabel="Location / Address"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={address}
               onChangeText={setAddress}
               placeholder="Lahore, Pakistan"
-              placeholderTextColor={tokens.textMuted}
+              placeholderTextColor={tokens.textSecondary}
             />
           </View>
           <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Timezone</Text>
             <TextInput
+              accessibilityLabel="Timezone"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={timezone}
               onChangeText={setTimezone}
@@ -720,10 +729,10 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
       <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border, marginTop: SPACING.md }]}>
         <View style={styles.cardHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Sun size={18} color={tokens.lime} style={{ marginRight: 8 }} />
+            <Sun size={18} color={tokens.limeText} style={{ marginRight: 8 }} />
             <Text style={[styles.cardTitle, { color: tokens.textPrimary }]}>SOLAR PV ARRAY</Text>
           </View>
-          <Text style={[styles.unitBadge, { backgroundColor: tokens.surfaceElevated, color: tokens.lime }]}>
+          <Text style={[styles.unitBadge, { backgroundColor: tokens.surfaceElevated, color: tokens.limeText }]}>
             kWp / Units / Degrees
           </Text>
         </View>
@@ -732,6 +741,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Declared Capacity (kWp)</Text>
             <TextInput
+              accessibilityLabel="Declared Capacity (kWp)"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={pvCapacityKwp}
               onChangeText={setPvCapacityKwp}
@@ -741,6 +751,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Module Count (Units)</Text>
             <TextInput
+              accessibilityLabel="Module Count (Units)"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={moduleCount}
               onChangeText={setModuleCount}
@@ -753,6 +764,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Module Wattage (W)</Text>
             <TextInput
+              accessibilityLabel="Module Wattage (W)"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={moduleWattageW}
               onChangeText={setModuleWattageW}
@@ -762,6 +774,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Tilt Angle (°)</Text>
             <TextInput
+              accessibilityLabel="Tilt Angle (°)"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={panelTiltDeg}
               onChangeText={setPanelTiltDeg}
@@ -774,6 +787,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Azimuth Angle (°)</Text>
             <TextInput
+              accessibilityLabel="Azimuth Angle (°)"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={panelAzimuthDeg}
               onChangeText={setPanelAzimuthDeg}
@@ -783,6 +797,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>System Losses (%)</Text>
             <TextInput
+              accessibilityLabel="System Losses (%)"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={systemLossesPct}
               onChangeText={setSystemLossesPct}
@@ -796,10 +811,10 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
       <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border, marginTop: SPACING.md }]}>
         <View style={styles.cardHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Zap size={18} color={tokens.lime} style={{ marginRight: 8 }} />
+            <Zap size={18} color={tokens.limeText} style={{ marginRight: 8 }} />
             <Text style={[styles.cardTitle, { color: tokens.textPrimary }]}>INVERTER</Text>
           </View>
-          <Text style={[styles.unitBadge, { backgroundColor: tokens.surfaceElevated, color: tokens.lime }]}>
+          <Text style={[styles.unitBadge, { backgroundColor: tokens.surfaceElevated, color: tokens.limeText }]}>
             kW / %
           </Text>
         </View>
@@ -808,6 +823,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>AC Rating (kW)</Text>
             <TextInput
+              accessibilityLabel="AC Rating (kW)"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={inverterRatingKw}
               onChangeText={setInverterRatingKw}
@@ -817,6 +833,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Efficiency (%)</Text>
             <TextInput
+              accessibilityLabel="Efficiency (%)"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={inverterEffPct}
               onChangeText={setInverterEffPct}
@@ -827,9 +844,10 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
 
         <View style={styles.inputGroup}>
           <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Inverter Topology</Text>
-          <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
             {['hybrid', 'string', 'microinverter', 'central'].map((type) => (
               <TouchableOpacity
+                accessibilityRole="button"
                 key={type}
                 activeOpacity={0.8}
                 onPress={() => setInverterType(type)}
@@ -854,10 +872,10 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
       <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border, marginTop: SPACING.md }]}>
         <View style={styles.cardHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Battery size={18} color={tokens.lime} style={{ marginRight: 8 }} />
+            <Battery size={18} color={tokens.limeText} style={{ marginRight: 8 }} />
             <Text style={[styles.cardTitle, { color: tokens.textPrimary }]}>BATTERY STORAGE</Text>
           </View>
-          <Text style={[styles.unitBadge, { backgroundColor: tokens.surfaceElevated, color: tokens.lime }]}>
+          <Text style={[styles.unitBadge, { backgroundColor: tokens.surfaceElevated, color: tokens.limeText }]}>
             kWh / %
           </Text>
         </View>
@@ -866,6 +884,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Nominal (kWh)</Text>
             <TextInput
+              accessibilityLabel="Nominal (kWh)"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={batteryNominalKwh}
               onChangeText={setBatteryNominalKwh}
@@ -875,6 +894,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Usable (kWh)</Text>
             <TextInput
+              accessibilityLabel="Usable (kWh)"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={batteryUsableKwh}
               onChangeText={setBatteryUsableKwh}
@@ -887,6 +907,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Initial SoC (%)</Text>
             <TextInput
+              accessibilityLabel="Initial SoC (%)"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={batteryInitialSocPct}
               onChangeText={setBatteryInitialSocPct}
@@ -896,6 +917,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Reserve Limit (%)</Text>
             <TextInput
+              accessibilityLabel="Reserve Limit (%)"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={batteryMinSocPct}
               onChangeText={setBatteryMinSocPct}
@@ -908,6 +930,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Max Charge (kW)</Text>
             <TextInput
+              accessibilityLabel="Max Charge (kW)"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={batteryMaxChargeKw}
               onChangeText={setBatteryMaxChargeKw}
@@ -917,6 +940,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Max Discharge (kW)</Text>
             <TextInput
+              accessibilityLabel="Max Discharge (kW)"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={batteryMaxDischargeKw}
               onChangeText={setBatteryMaxDischargeKw}
@@ -929,6 +953,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Round-Trip Eff (%)</Text>
             <TextInput
+              accessibilityLabel="Round-Trip Eff (%)"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={batteryRoundTripPct}
               onChangeText={setBatteryRoundTripPct}
@@ -937,9 +962,10 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           </View>
           <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Chemistry</Text>
-            <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
               {['LFP', 'NMC', 'lead_acid'].map((chem) => (
                 <TouchableOpacity
+                  accessibilityRole="button"
                   key={chem}
                   activeOpacity={0.8}
                   onPress={() => setBatteryChemistry(chem)}
@@ -965,15 +991,10 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
       <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border, marginTop: SPACING.md }]}>
         <View style={styles.cardHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Fuel size={18} color={tokens.amber} style={{ marginRight: 8 }} />
+            <Fuel size={18} color={tokens.amberText} style={{ marginRight: 8 }} />
             <Text style={[styles.cardTitle, { color: tokens.textPrimary }]}>BACKUP GENERATOR</Text>
           </View>
-          <Switch
-            value={hasGenerator}
-            onValueChange={setHasGenerator}
-            trackColor={{ false: tokens.surfaceElevated, true: tokens.lime }}
-            thumbColor={hasGenerator ? tokens.onLime : tokens.textMuted}
-          />
+          <Toggle a11yLabel="Backup generator enabled" value={hasGenerator} onValueChange={setHasGenerator} />
         </View>
 
         {hasGenerator && (
@@ -982,6 +1003,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
               <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
                 <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Rated Output (kW)</Text>
                 <TextInput
+                  accessibilityLabel="Rated Output (kW)"
                   style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
                   value={generatorRatingKw}
                   onChangeText={setGeneratorRatingKw}
@@ -991,6 +1013,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
               <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
                 <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Fuel Consumption (L/kWh)</Text>
                 <TextInput
+                  accessibilityLabel="Fuel Consumption (L/kWh)"
                   style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
                   value={generatorFuelConsumption}
                   onChangeText={setGeneratorFuelConsumption}
@@ -1003,6 +1026,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
               <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
                 <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Min Runtime (Minutes)</Text>
                 <TextInput
+                  accessibilityLabel="Min Runtime (Minutes)"
                   style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
                   value={generatorMinRuntime}
                   onChangeText={setGeneratorMinRuntime}
@@ -1011,9 +1035,10 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
               </View>
               <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
                 <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Fuel Type</Text>
-                <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
                   {['diesel', 'natural_gas', 'propane'].map((f) => (
                     <TouchableOpacity
+                      accessibilityRole="button"
                       key={f}
                       activeOpacity={0.8}
                       onPress={() => setGeneratorFuelType(f)}
@@ -1041,10 +1066,10 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
       <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border, marginTop: SPACING.md }]}>
         <View style={styles.cardHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Network size={18} color={tokens.lime} style={{ marginRight: 8 }} />
+            <Network size={18} color={tokens.limeText} style={{ marginRight: 8 }} />
             <Text style={[styles.cardTitle, { color: tokens.textPrimary }]}>GRID INTERCONNECTION</Text>
           </View>
-          <Text style={[styles.unitBadge, { backgroundColor: tokens.surfaceElevated, color: tokens.lime }]}>
+          <Text style={[styles.unitBadge, { backgroundColor: tokens.surfaceElevated, color: tokens.limeText }]}>
             kW / Limits
           </Text>
         </View>
@@ -1053,6 +1078,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Sanctioned Import (kW)</Text>
             <TextInput
+              accessibilityLabel="Sanctioned Import (kW)"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={gridImportLimitKw}
               onChangeText={setGridImportLimitKw}
@@ -1062,6 +1088,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Export Limit (kW)</Text>
             <TextInput
+              accessibilityLabel="Export Limit (kW)"
               style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
               value={gridExportLimitKw}
               onChangeText={setGridExportLimitKw}
@@ -1073,9 +1100,10 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
         <View style={styles.rowInputs}>
           <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
             <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Phase Type</Text>
-            <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
               {['three_phase', 'single_phase'].map((pt) => (
                 <TouchableOpacity
+                  accessibilityRole="button"
                   key={pt}
                   activeOpacity={0.8}
                   onPress={() => setGridConnectionType(pt)}
@@ -1098,12 +1126,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           <View style={[styles.inputGroup, { flex: 1, marginLeft: 8, justifyContent: 'center' }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
               <Text style={[styles.inputLabel, { color: tokens.textSecondary, marginBottom: 0 }]}>Net Metering</Text>
-              <Switch
-                value={hasNetMetering}
-                onValueChange={setHasNetMetering}
-                trackColor={{ false: tokens.surfaceElevated, true: tokens.lime }}
-                thumbColor={hasNetMetering ? tokens.onLime : tokens.textMuted}
-              />
+              <Toggle a11yLabel="Net metering" value={hasNetMetering} onValueChange={setHasNetMetering} />
             </View>
           </View>
         </View>
@@ -1144,6 +1167,8 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.xs,
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: SPACING.sm,
@@ -1154,26 +1179,27 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   unitBadge: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
     borderRadius: RADIUS.pill,
+    overflow: 'hidden',
   },
   inputGroup: {
     marginTop: 8,
   },
   inputLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     marginBottom: 4,
   },
   input: {
-    height: 42,
+    minHeight: 48,
     borderRadius: RADIUS.md,
     borderWidth: 1,
     paddingHorizontal: 12,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   rowInputs: {
@@ -1211,12 +1237,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 8,
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
     borderRadius: RADIUS.pill,
     borderWidth: 1,
   },
   chipText: {
-    fontSize: 11,
+    flexShrink: 1,
+    fontSize: 12,
     fontWeight: '700',
   },
   smallBtn: {
@@ -1224,6 +1254,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
+    minHeight: 48,
     paddingHorizontal: 12,
     borderRadius: RADIUS.md,
     borderWidth: 1,

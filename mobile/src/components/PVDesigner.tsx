@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Switch } from 'react-native';
-import { Card, Label, Field, Action } from './TwinControls';
+import { View, Text } from 'react-native';
+import { Sun } from 'lucide-react-native';
+import { Card, CardHeader, Label, Message, Metric, MetricGrid, Field, FieldRow, Toggle, Action, ActionRow } from './TwinControls';
 import { useTheme } from '../theme/ThemeContext';
 import { api } from '../api/client';
 import { PVParameters, PVRecord, PVProfile, parseIrradiance } from '../api/pv';
@@ -8,6 +9,7 @@ import { PVParameters, PVRecord, PVProfile, parseIrradiance } from '../api/pv';
 const defaults = { module_wattage_w: '550', inverter_kw: '8', inverter_efficiency_pct: '96', tilt_deg: '25', azimuth_deg: '180', losses_pct: '14', latitude_deg: '31.52', cell_temperature_c: '25', temperature_coefficient_per_c: '-0.004' };
 const labels: Record<keyof typeof defaults, string> = { module_wattage_w: 'Module rating (W)', inverter_kw: 'Inverter AC rating (kW)', inverter_efficiency_pct: 'Inverter efficiency (%)', tilt_deg: 'Tilt (degrees)', azimuth_deg: 'Azimuth (degrees from north)', losses_pct: 'System losses (%)', latitude_deg: 'Latitude (degrees)', cell_temperature_c: 'Assumed cell temperature (°C)', temperature_coefficient_per_c: 'Power temperature coefficient (/°C)' };
 const stringDefaults = { modules_per_string: '10', module_voc_v: '49', module_vmp_v: '41', inverter_max_dc_v: '600', mppt_min_v: '120', mppt_max_v: '550' };
+const stringLabels: Record<keyof typeof stringDefaults, string> = { modules_per_string: 'Modules per string', module_voc_v: 'Module Voc (V)', module_vmp_v: 'Module Vmp (V)', inverter_max_dc_v: 'Inverter max DC (V)', mppt_min_v: 'MPPT min (V)', mppt_max_v: 'MPPT max (V)' };
 
 export function PVDesigner({ buildingId }: { buildingId: string }) {
   const { tokens: t } = useTheme();
@@ -43,21 +45,19 @@ export function PVDesigner({ buildingId }: { buildingId: string }) {
       else { setProfile(await api.post<PVProfile>(`/buildings/${buildingId}/pv/preview`, data)); setMessage('Calculated preview — not saved yet.'); }
     } catch (e: any) { setProfile(null); setMessage(e.message); } finally { setBusy(false); }
   }
-  return <Card><Label>PV DESIGN & GENERATION ESTIMATE</Label><Label>Panel count comes from the saved roof layout. Save roof edits before calculating. These design assumptions do not overwrite installed equipment in Settings.</Label>
-    {(Object.keys(defaults) as Array<keyof typeof defaults>).map(k => <Field key={k} label={labels[k]} numeric value={fields[k]} onChange={v => { setFields({ ...fields, [k]: v }); dirty(); }} />)}
-    <Label>Optional reference string voltage checks</Label><Switch accessibilityLabel="Check string voltages" value={checkStrings} onValueChange={v => { setCheckStrings(v); dirty(); }} trackColor={{ true: t.lime }} />
-    {checkStrings && (Object.keys(stringDefaults) as Array<keyof typeof stringDefaults>).map(k => <Field key={k} label={k.replaceAll('_', ' ')} numeric value={strings[k]} onChange={v => { setStrings({ ...strings, [k]: v }); dirty(); }} />)}
-    <Field label="Optional hourly plane-of-array irradiance (24 comma-separated W/m² values)" value={irradiance} onChange={v => { setIrradiance(v); dirty(); }} />
-    <Label>Blank irradiance uses a synthetic equinox solar day. Supplied values are already on the panel plane, so tilt/azimuth are not applied again.</Label>
-    <Action title="Calculate PV Estimate" disabled={!buildingId || busy} onPress={() => calculate(false)} />
-    <Action title="Save PV Design" disabled={!buildingId || busy} onPress={() => calculate(true)} />
-    <Label>{message}</Label>
-    {profile && <><Label>{profile.panel_count} panels · {profile.dc_capacity_kwp.toFixed(2)} kWp · DC/AC {profile.dc_ac_ratio.toFixed(2)}</Label><Label>{profile.daily_energy_kwh.toFixed(2)} kWh / representative day</Label><Label>{profile.source}</Label><Label>{profile.time_basis}</Label>
-      <View accessibilityLabel="Hourly estimated AC power" style={{ flexDirection: 'row', alignItems: 'flex-end', height: 100, gap: 2 }}>{profile.timeline.map(p => <View key={p.hour} style={{ flex: 1, height: Math.max(1, 95*p.ac_kw/profile.inverter_kw), backgroundColor: t.lime }} />)}</View>
-      <Label>00:00                         12:00                         24:00</Label>
-      {profile.warnings.map(w => <Label key={w}>{w}</Label>)}
-      <Action title={expanded ? 'Hide Hourly Values' : 'Show Hourly Values'} onPress={() => setExpanded(!expanded)} />
-      {expanded && profile.timeline.map(p => <Label key={p.hour}>{String(p.hour).padStart(2,'0')}:00 · {p.poa_w_m2.toFixed(0)} W/m² · {p.ac_kw.toFixed(3)} kW · {p.energy_kwh.toFixed(3)} kWh</Label>)}
+  return <Card><CardHeader title="PV design & generation estimate" icon={<Sun size={18} color={t.limeText} />} /><Label tone="secondary" caption>Panel count comes from the saved roof layout. Save roof edits before calculating. These design assumptions do not overwrite installed equipment in Settings.</Label>
+    <FieldRow>{(Object.keys(defaults) as Array<keyof typeof defaults>).map(k => <Field key={k} label={labels[k]} numeric value={fields[k]} onChange={v => { setFields({ ...fields, [k]: v }); dirty(); }} />)}</FieldRow>
+    <Toggle label="Optional reference string voltage checks" a11yLabel="Check string voltages" value={checkStrings} onValueChange={v => { setCheckStrings(v); dirty(); }} />
+    {checkStrings && <FieldRow>{(Object.keys(stringDefaults) as Array<keyof typeof stringDefaults>).map(k => <Field key={k} label={stringLabels[k]} numeric value={strings[k]} onChange={v => { setStrings({ ...strings, [k]: v }); dirty(); }} />)}</FieldRow>}
+    <Field label="Optional hourly plane-of-array irradiance (24 comma-separated W/m² values)" value={irradiance} onChange={v => { setIrradiance(v); dirty(); }} hint="Blank irradiance uses a synthetic equinox solar day. Supplied values are already on the panel plane, so tilt/azimuth are not applied again." />
+    <ActionRow><Action title="Calculate PV Estimate" variant="secondary" disabled={!buildingId || busy} onPress={() => calculate(false)} /><Action title="Save PV Design" disabled={!buildingId || busy} onPress={() => calculate(true)} /></ActionRow>
+    <Message>{message}</Message>
+    {profile && <><MetricGrid><Metric label="Panels" value={profile.panel_count} /><Metric label="DC capacity" value={profile.dc_capacity_kwp.toFixed(2)} unit="kWp" /><Metric label="DC/AC ratio" value={profile.dc_ac_ratio.toFixed(2)} /><Metric label="Representative day" value={profile.daily_energy_kwh.toFixed(2)} unit="kWh" tone="accent" /></MetricGrid><Label tone="secondary" caption>{profile.source}</Label><Label tone="secondary" caption>{profile.time_basis}</Label>
+      <View accessibilityLabel="Hourly estimated AC power" style={{ flexDirection: 'row', alignItems: 'flex-end', height: 100, gap: 3 }}>{profile.timeline.map(p => <View key={p.hour} style={{ flex: 1, height: Math.max(1, 95*p.ac_kw/profile.inverter_kw), borderTopLeftRadius: 3, borderTopRightRadius: 3, backgroundColor: t.limeMark }} />)}</View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>{['00:00', '12:00', '24:00'].map(h => <Text key={h} style={{ color: t.textSecondary, fontSize: 12 }}>{h}</Text>)}</View>
+      {profile.warnings.map(w => <Message key={w} tone="warning">{w}</Message>)}
+      <Action title={expanded ? 'Hide Hourly Values' : 'Show Hourly Values'} variant="secondary" onPress={() => setExpanded(!expanded)} />
+      {expanded && profile.timeline.map(p => <Label key={p.hour} tone="secondary" caption>{String(p.hour).padStart(2,'0')}:00 · {p.poa_w_m2.toFixed(0)} W/m² · {p.ac_kw.toFixed(3)} kW · {p.energy_kwh.toFixed(3)} kWh</Label>)}
     </>}
   </Card>;
 }

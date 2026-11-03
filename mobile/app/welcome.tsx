@@ -10,14 +10,15 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Zap, ShieldCheck, Mail, LogIn, UserPlus, Globe, Sparkles } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Zap, ShieldCheck, LogIn, UserPlus, Globe, Sparkles } from 'lucide-react-native';
 import { useTheme } from '../src/theme/ThemeContext';
 import { useAuth } from '../src/auth/AuthContext';
 import { SPACING, RADIUS } from '../src/theme/tokens';
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const { tokens, isDark } = useTheme();
+  const { tokens, heroGradient } = useTheme();
   const { continueAsGuest, signInWithGoogle, isGoogleAvailable } = useAuth();
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [loadingGuest, setLoadingGuest] = useState(false);
@@ -68,11 +69,11 @@ export default function WelcomeScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Brand Header */}
         <View style={styles.brandContainer}>
-          <View style={[styles.logoWell, { backgroundColor: tokens.surfaceElevated, borderColor: tokens.border }]}>
-            <Zap size={36} color={tokens.lime} />
-          </View>
+          <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.logoWell}>
+            <Zap size={36} color={tokens.onLime} />
+          </LinearGradient>
           <Text style={[styles.title, { color: tokens.textPrimary }]}>SOLVANTA</Text>
-          <Text style={[styles.titleAccent, { color: tokens.lime }]}>ENERGYOS</Text>
+          <Text style={[styles.titleAccent, { color: tokens.limeText }]}>ENERGYOS</Text>
           <Text style={[styles.tagline, { color: tokens.textSecondary }]}>
             Intelligent Decentralized Microgrid Operating System
           </Text>
@@ -81,19 +82,19 @@ export default function WelcomeScreen() {
         {/* Feature Badges Card */}
         <View style={[styles.featureCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
           <View style={styles.featureRow}>
-            <ShieldCheck size={18} color={tokens.lime} style={{ marginRight: 10 }} />
+            <ShieldCheck size={18} color={tokens.limeText} style={{ marginRight: 10 }} />
             <Text style={[styles.featureText, { color: tokens.textPrimary }]}>
               Offline-First Local Twin & Private Storage
             </Text>
           </View>
           <View style={styles.featureRow}>
-            <Sparkles size={18} color={tokens.cyan} style={{ marginRight: 10 }} />
+            <Sparkles size={18} color={tokens.cyanText} style={{ marginRight: 10 }} />
             <Text style={[styles.featureText, { color: tokens.textPrimary }]}>
               Solar, Inverter, Battery & Resilient Dispatch
             </Text>
           </View>
           <View style={styles.featureRow}>
-            <Globe size={18} color={tokens.green} style={{ marginRight: 10 }} />
+            <Globe size={18} color={tokens.greenText} style={{ marginRight: 10 }} />
             <Text style={[styles.featureText, { color: tokens.textPrimary }]}>
               Optional Firebase Cloud Identity Sync
             </Text>
@@ -102,8 +103,8 @@ export default function WelcomeScreen() {
 
         {/* Error message banner */}
         {errorMessage ? (
-          <View style={[styles.errorBanner, { backgroundColor: 'rgba(255, 98, 106, 0.12)', borderColor: tokens.red }]}>
-            <Text style={[styles.errorText, { color: tokens.red }]}>{errorMessage}</Text>
+          <View style={[styles.errorBanner, { backgroundColor: tokens.redTint, borderColor: tokens.red }]}>
+            <Text style={[styles.errorText, { color: tokens.redText }]}>{errorMessage}</Text>
           </View>
         ) : null}
 
@@ -111,6 +112,7 @@ export default function WelcomeScreen() {
         <View style={styles.actionsContainer}>
           {/* Sign In Primary */}
           <TouchableOpacity
+            accessibilityRole="button"
             style={[styles.primaryBtn, { backgroundColor: tokens.lime }]}
             activeOpacity={0.85}
             onPress={() => router.push('/login')}
@@ -121,6 +123,7 @@ export default function WelcomeScreen() {
 
           {/* Create Account Secondary */}
           <TouchableOpacity
+            accessibilityRole="button"
             style={[styles.secondaryBtn, { backgroundColor: tokens.surfaceElevated, borderColor: tokens.border }]}
             activeOpacity={0.85}
             onPress={() => router.push('/register')}
@@ -131,16 +134,17 @@ export default function WelcomeScreen() {
 
           {/* Google Sign In */}
           <TouchableOpacity
+            accessibilityRole="button"
             style={[styles.googleBtn, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
             activeOpacity={0.85}
             onPress={handleGoogleSignIn}
             disabled={loadingGoogle}
           >
             {loadingGoogle ? (
-              <ActivityIndicator color={tokens.lime} size="small" />
+              <ActivityIndicator color={tokens.limeText} size="small" />
             ) : (
               <>
-                <Globe size={18} color={tokens.cyan} style={{ marginRight: 8 }} />
+                <Globe size={18} color={tokens.cyanText} style={{ marginRight: 8 }} />
                 <Text style={[styles.googleBtnText, { color: tokens.textPrimary }]}>
                   Continue with Google
                 </Text>
@@ -150,27 +154,28 @@ export default function WelcomeScreen() {
 
           <View style={styles.dividerRow}>
             <View style={[styles.dividerLine, { backgroundColor: tokens.border }]} />
-            <Text style={[styles.dividerText, { color: tokens.textMuted }]}>OR</Text>
+            <Text style={[styles.dividerText, { color: tokens.textSecondary }]}>OR</Text>
             <View style={[styles.dividerLine, { backgroundColor: tokens.border }]} />
           </View>
 
           {/* Continue Without Account (Mandatory Offline Guest Mode) */}
           <TouchableOpacity
+            accessibilityRole="button"
             style={[styles.guestBtn, { backgroundColor: tokens.surfaceElevated, borderColor: tokens.lime }]}
             activeOpacity={0.85}
             onPress={handleGuestEntry}
             disabled={loadingGuest}
           >
             {loadingGuest ? (
-              <ActivityIndicator color={tokens.lime} size="small" />
+              <ActivityIndicator color={tokens.limeText} size="small" />
             ) : (
               <>
-                <ShieldCheck size={18} color={tokens.lime} style={{ marginRight: 8 }} />
-                <View>
-                  <Text style={[styles.guestBtnTitle, { color: tokens.lime }]}>
+                <ShieldCheck size={18} color={tokens.limeText} style={{ marginRight: 8 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.guestBtnTitle, { color: tokens.limeText }]}>
                     Continue Without Account
                   </Text>
-                  <Text style={[styles.guestBtnSubtitle, { color: tokens.textMuted }]}>
+                  <Text style={[styles.guestBtnSubtitle, { color: tokens.textSecondary }]}>
                     Offline Local-Only Mode • No cloud registration required
                   </Text>
                 </View>
@@ -203,14 +208,13 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.md,
   },
   title: {
     fontSize: 26,
-    fontWeight: '900',
+    fontWeight: '800',
     letterSpacing: 2,
   },
   titleAccent: {
@@ -238,6 +242,7 @@ const styles = StyleSheet.create({
     marginVertical: 6,
   },
   featureText: {
+    flex: 1,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -322,7 +327,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   guestBtnSubtitle: {
-    fontSize: 11,
+    fontSize: 12,
     marginTop: 2,
   },
 });

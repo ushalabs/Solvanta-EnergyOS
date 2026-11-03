@@ -8,9 +8,10 @@ export type PriorityTier = 'critical' | 'high' | 'medium' | 'low';
 interface PriorityBadgeProps {
   priority: PriorityTier;
   flexible?: boolean;
+  critical?: boolean;
 }
 
-export const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority, flexible }) => {
+export const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority, flexible, critical }) => {
   const { tokens } = useTheme();
 
   let bg = tokens.surfaceElevated;
@@ -19,13 +20,13 @@ export const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority, flexible
 
   switch (priority) {
     case 'critical':
-      bg = 'rgba(255, 98, 106, 0.18)';
-      fg = tokens.red;
+      bg = tokens.redTint;
+      fg = tokens.redText;
       label = 'CRITICAL';
       break;
     case 'high':
-      bg = 'rgba(249, 188, 70, 0.18)';
-      fg = tokens.amber;
+      bg = tokens.amberTint;
+      fg = tokens.amberText;
       label = 'HIGH';
       break;
     case 'medium':
@@ -35,7 +36,7 @@ export const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority, flexible
       break;
     case 'low':
       bg = tokens.surfaceElevated;
-      fg = tokens.textMuted;
+      fg = tokens.textSecondary;
       label = 'LOW';
       break;
   }
@@ -45,9 +46,14 @@ export const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority, flexible
       <View style={[styles.badge, { backgroundColor: bg }]}>
         <Text style={[styles.text, { color: fg }]}>{label}</Text>
       </View>
+      {critical && priority !== 'critical' && (
+        <View style={[styles.badge, { backgroundColor: tokens.redTint }]}>
+          <Text style={[styles.text, { color: tokens.redText }]}>CRITICAL DEMAND</Text>
+        </View>
+      )}
       {flexible && (
-        <View style={[styles.badge, styles.flexBadge, { backgroundColor: 'rgba(198, 244, 61, 0.15)' }]}>
-          <Text style={[styles.text, { color: tokens.lime }]}>FLEXIBLE</Text>
+        <View style={[styles.badge, { backgroundColor: tokens.limeTint }]}>
+          <Text style={[styles.text, { color: tokens.limeText }]}>FLEXIBLE</Text>
         </View>
       )}
     </View>
@@ -57,21 +63,18 @@ export const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority, flexible
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   badge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: RADIUS.sm,
-  },
-  flexBadge: {
-    marginLeft: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: RADIUS.pill,
   },
   text: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
 });
