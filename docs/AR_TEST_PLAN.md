@@ -8,7 +8,7 @@ Last automated run: 3 November 2026, Windows 11, Node 24, Python 3.14. Full resu
 
 | File | Tests | What it covers |
 |---|---:|---|
-| `mobile/__tests__/ar_fallback.test.tsx` | 15 | The gate says native AR is not integrated and names ARCore, the dev client, Expo Go, web and SDK 58. It makes no claim that AR, camera, anchoring or tracking works, and no accuracy claim. "Return to 2D" fires once and rendering does not fire it. It has one named button, a live region and a heading, and readable colours in both themes. **Guards:** fails if an AR or camera package joins `package.json`, an AR plugin joins `app.json`, any app source imports an AR module, or the Expo SDK moves off 58, so the gate text cannot go stale silently. |
+| `mobile/__tests__/ar_fallback.test.tsx` | 15 | The gate says native AR is not integrated and names ARCore, the dev client, Expo Go, web and SDK 57, and says ViroReact is not installed. It makes no claim that AR, camera, anchoring or tracking works, and no accuracy claim. "Return to 2D" fires once and rendering does not fire it. It has one named button, a live region and a heading, and readable colours in both themes. **Guards:** fails if an AR or camera package joins `package.json`, an AR plugin joins `app.json`, any app source imports an AR module, or Expo moves off SDK 57 or React Native off 0.86, so the gate text cannot go stale silently. |
 | `mobile/__tests__/rooftop_ar_flow.test.tsx` | 25 | The whole Rooftop screen with the API mocked. The gate is hidden until requested. Opening it makes no camera request and no API call. Returning keeps saved geometry and panels. It can be reopened, the editor still works while it is open, and it works with no building. Also covers taps in roof, obstacle and scale mode, release past the canvas edge, undo, the obstacle three-point rule, the third scale tap restarting the line, refusal to calculate without a measured scale, an unfinished obstacle, malformed vertices, preview vs save, surfaced server errors, camera permission denial, picker cancel, photo size and aspect limits. |
 | `mobile/__tests__/roof_geometry.test.ts` | 31 | Tap-to-roof mapping at several view widths, uniform scale, edge clamping, marker sizing, defaults within API limits, coordinate parsing and round trips. |
 
@@ -34,7 +34,7 @@ A finger released outside the canvas reported a position outside the roof, which
 ## Preconditions for the manual cases
 
 1. ARCore-supported Android phone with Google Play Services for AR installed and up to date.
-2. A Viro (or other AR) release that declares Expo SDK 58 support, built as a custom development client. Expo Go and web cannot run it. Update the guards in `ar_fallback.test.tsx` in the same change.
+2. A Viro (or other AR) release that declares Expo SDK 57 support (ViroReact 3.0.3 does, but it is not installed yet), built as a custom development client. Expo Go and web cannot run it. Update the guards in `ar_fallback.test.tsx` in the same change.
 3. Backend running and reachable from the phone; a signed-in user with one building and a saved roof.
 
 ## Manual device cases (not executed)
