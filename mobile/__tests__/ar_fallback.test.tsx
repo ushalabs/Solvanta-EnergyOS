@@ -59,7 +59,8 @@ test('explains why it is blocked and that Expo Go and web cannot run AR', async 
   const { text } = await render();
   expect(text).toMatch(/Expo Go/);
   expect(text).toMatch(/web preview/);
-  expect(text).toMatch(/SDK 58/);
+  expect(text).toMatch(/SDK 57/);
+  expect(text).toMatch(/ViroReact is not installed/);
   expect(text).toMatch(/no native AR module/);
   expect(text).toMatch(/no physical ARCore device/);
 });
@@ -109,8 +110,9 @@ describe('the gate matches what is actually installed', () => {
   test('no AR runtime or camera module is a dependency', () => {
     expect(installed.filter(name => /viro|arcore|arkit|expo-camera|vision-camera|expo-gl|expo-three/i.test(name))).toEqual([]);
   });
-  test('the Expo SDK the gate names is the one in package.json', () => {
-    expect(pkg.dependencies.expo).toMatch(/^~58\./);
+  test('the Expo SDK the gate names is the one in package.json, on the React Native line ViroReact 3.0.3 accepts', () => {
+    expect(pkg.dependencies.expo).toMatch(/^~57\./);
+    expect(pkg.dependencies['react-native']).toMatch(/^0\.86\./);
   });
   test('the app config asks for no camera-AR native plugin', () => {
     const app = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'));

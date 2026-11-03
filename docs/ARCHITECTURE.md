@@ -1,6 +1,6 @@
 # Implemented architecture — Phase 17 source candidate
 
-React Native / Expo SDK 58 (React 19.3, React Native 0.88.1) uses authenticated REST against FastAPI. PostgreSQL 16 stores users/organizations, buildings, roof/PV inputs, appliance constraints, immutable simulation snapshots, schedules, resilience runs, energy plans, audit logs, automation events, simulated telemetry and incidents. Alembic is the schema authority. WebSockets, automatic roof segmentation and native AR are not implemented.
+React Native / Expo SDK 57 (Expo 57.0.31, React 19.2.3, React Native 0.86.3; pinned by ADR-009 in `DECISIONS.md`) uses authenticated REST against FastAPI. PostgreSQL 16 stores users/organizations, buildings, roof/PV inputs, appliance constraints, immutable simulation snapshots, schedules, resilience runs, energy plans, audit logs, automation events, simulated telemetry and incidents. Alembic is the schema authority. WebSockets, automatic roof segmentation and native AR are not implemented.
 
 ```mermaid
 flowchart TD

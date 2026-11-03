@@ -429,7 +429,7 @@ export default function SettingsScreen() {
               <Cpu size={16} color={tokens.limeText} style={{ marginRight: 8 }} />
               <Text style={[styles.infoLabel, { color: tokens.textSecondary }]}>Expo SDK Version</Text>
             </View>
-            <Text style={[styles.infoVal, { color: tokens.limeText }]}>Expo {APP_RUNTIME.expo} • SDK 58</Text>
+            <Text style={[styles.infoVal, { color: tokens.limeText }]}>Expo {APP_RUNTIME.expo} • SDK 57</Text>
           </View>
           <View style={[styles.divider, { backgroundColor: tokens.divider }]} />
           <View style={styles.infoRow}>

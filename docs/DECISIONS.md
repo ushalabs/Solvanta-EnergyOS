@@ -126,3 +126,20 @@ This document records the architectural and engineering decisions governing Solv
 * **Consequences:**  
   - Academic integrity is preserved; no false claims of hardware control.
   - Clean architectural bridge to FYP-II.
+
+---
+
+## ADR-009: Pin Expo SDK 57 for ViroReact Compatibility
+* **Status:** ACCEPTED, pending project review before any AR work
+* **Date:** 3 November 2026
+* **Context:**
+  The app moved to Expo SDK 58 at `eec22db`. On 3 November 2026, `npm view @reactvision/react-viro version peerDependencies --json` reported version 3.0.3 with peers `expo >=57.0.0 <58.0.0` and `react-native >=0.86.0 <0.87.0`. ViroReact 3.0.3 therefore supports only SDK 57, and SDK 58 sits outside its declared range. This applies the rule in ADR-001: if ViroReact requires SDK 57, lock to SDK 57.
+* **Decision:**
+  1. Pin the app to Expo SDK 57: `expo ~57.0.31`, `react 19.2.3`, `react-native 0.86.3`, with Expo-aligned packages at their SDK 57 versions.
+  2. Keep non-Expo packages (Firebase, Google Sign-In, Lucide and others) at their existing versions, because none of them broke.
+  3. Do not move to SDK 58 or later until a ViroReact release declares support for that SDK.
+  4. This decision adds no AR dependency or AR code. The `ARCapabilityFallback` gate stays in place.
+* **Consequences:**
+  - Compatibility rests on published peer ranges only. ViroReact is not installed, and no native build or ARCore device has proven that this combination works.
+  - Production `npm audit` is worse than on SDK 58: 22 findings (9 high) against 17 (6 high). The new high findings come through older `@expo/cli` and `expo-router` versions. SDK 58 is not available as a way to clear them while this pin holds.
+  - `expo install --fix` adds config plugins to `app.json` by itself. They were removed here because the downgrade did not need them, so check for this whenever that command is used.

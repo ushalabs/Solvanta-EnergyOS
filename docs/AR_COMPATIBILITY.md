@@ -1,4 +1,35 @@
-# Phase 12 compatibility update — 29 October 2026
+# SDK 57 pin — 3 November 2026
+
+The app is on Expo SDK 57 again (Expo 57.0.31, React 19.2.3, React Native 0.86.3). See ADR-009 in `DECISIONS.md`. The sections below are history and no longer describe this checkout.
+
+Executed `npm view @reactvision/react-viro version peerDependencies --json`:
+
+```text
+version: 3.0.3
+expo: >=57.0.0 <58.0.0
+react: >=19.0.0
+react-native: >=0.86.0 <0.87.0
+react-native-web: >=0.19.0
+@reactvision/viro-web-renderer: ^1.0.1
+@reactvision/react-native-visionos: >=0.86.0 <0.87.0
+```
+
+The Expo, React, React Native and React Native Web versions in this checkout fall inside these ranges. The Viro web renderer and visionOS peers were not evaluated.
+
+**Native AR is still not implemented.** Being inside a peer range does not prove that AR works:
+
+- ViroReact is not installed, and the app has no AR code.
+- No custom development client has been built on SDK 57 from this checkout.
+- No physical ARCore device has been used; `adb` is not on PATH on the machine that made this change.
+- Camera permission, tracking, scale, alignment, anchoring and return to 2D are all untested. The steps are in [AR_TEST_PLAN.md](AR_TEST_PLAN.md).
+
+The app shows the `ARCapabilityFallback` gate and keeps the measured 2D roof editor, obstacle and setback geometry, and saved panel layout.
+
+Next steps: install ViroReact 3.0.3 in a development client, build it, and run it on a supported phone. Capture evidence before marking native AR complete.
+
+---
+
+# Phase 12 compatibility update — 29 October 2026 (superseded by the SDK 57 pin above)
 
 The repository was upgraded to Expo SDK 58 at eec22db. The original Phase 1 decision below is historical and no longer establishes native AR compatibility for this checkout.
 
