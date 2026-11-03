@@ -1,5 +1,10 @@
-// Rooftop screen behaviour around the AR gate and the 2D editor it falls back to.
-// Native AR is not implemented, so this covers the gate and geometry only, never camera AR.
+// Rooftop screen behaviour around the AR button, the gate and the 2D editor it falls back to.
+// This runs without a device, so it covers the routing and geometry only, never camera AR.
+const mockCapability = jest.fn();
+jest.mock('../src/ar/detectAR', () => {
+  const actual = jest.requireActual('../src/ar/detectAR');
+  return { detectARCapability: (...args: any[]) => mockCapability(...args) ?? actual.detectARCapability(...args) };
+});
 jest.mock('react-native', () => {
   const React = require('react');
   const host = (name: string) => (props: any) => React.createElement(name, props, props.children);
@@ -35,6 +40,7 @@ jest.mock('../src/theme/ThemeContext', () => {
 import React from 'react';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
 import RooftopScreen from '../app/(tabs)/rooftop';
 import { api, SolvantaApiError } from '../src/api/client';
 import { emptyRoof, RoofRecord } from '../src/api/roof';
@@ -86,17 +92,27 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => tree.unmount()); jest.restoreAllMocks(); });
 
 describe('AR gate on the Rooftop screen', () => {
+  // This test run has no native AR module, the same answer a build without ViroReact gives.
+  const GATE = /This build has no AR module/;
+
   test('is hidden until requested', async () => {
     await render();
-    expect(texts()).not.toMatch(/NATIVE AR NOT INTEGRATED/);
+    expect(texts()).not.toMatch(GATE);
   });
 
-  test('opens with an honest message and no camera request or API call', async () => {
+  test('states that AR uses the saved layout and is a visualization', async () => {
+    await render();
+    expect(texts()).toMatch(/last saved layout, not unsaved changes/);
+    expect(texts()).toMatch(/visualization, not a measurement/);
+  });
+
+  test('without the native module, opens the gate with no navigation, camera request or API call', async () => {
     roofResponse = async () => savedRoof;
     await render();
     const calls = getSpy.mock.calls.length;
-    await press('Check Native AR Preview');
-    expect(texts()).toMatch(/NATIVE AR NOT INTEGRATED/);
+    await press('Preview in AR');
+    expect(texts()).toMatch(GATE);
+    expect(router.push).not.toHaveBeenCalled();
     expect(ImagePicker.requestCameraPermissionsAsync).not.toHaveBeenCalled();
     expect(ImagePicker.launchCameraAsync).not.toHaveBeenCalled();
     expect(getSpy.mock.calls.length).toBe(calls);
@@ -104,13 +120,13 @@ describe('AR gate on the Rooftop screen', () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  test('Return to 2D closes the gate and leaves saved geometry and layout intact', async () => {
+  test('Back to 2D closes the gate and leaves saved geometry and layout intact', async () => {
     roofResponse = async () => savedRoof;
     await render();
     const before = input(VERTICES).props.value;
-    await press('Check Native AR Preview');
-    await press('Return to 2D Layout Preview');
-    expect(texts()).not.toMatch(/NATIVE AR NOT INTEGRATED/);
+    await press('Preview in AR');
+    await press('Back to 2D layout');
+    expect(texts()).not.toMatch(GATE);
     expect(input(VERTICES).props.value).toBe(before);
     expect(tree.root.findAll(n => (n.type as any) === 'Rect')).toHaveLength(savedRoof.layout.panels.length);
     expect(texts()).toMatch(/Loaded saved roof/);
@@ -118,20 +134,61 @@ describe('AR gate on the Rooftop screen', () => {
 
   test('can be reopened, and the 2D editor keeps working while it is open', async () => {
     await render();
-    await press('Check Native AR Preview');
+    await press('Preview in AR');
     await tapCanvas(30, 30);
     expect(input(VERTICES).props.value).toBe('100,100');
-    expect(texts()).toMatch(/NATIVE AR NOT INTEGRATED/);
-    await press('Return to 2D Layout Preview');
-    await press('Check Native AR Preview');
-    expect(texts()).toMatch(/NATIVE AR NOT INTEGRATED/);
+    expect(texts()).toMatch(GATE);
+    await press('Back to 2D layout');
+    await press('Preview in AR');
+    expect(texts()).toMatch(GATE);
   });
 
   test('works with no building or saved roof, because it needs neither', async () => {
     jest.spyOn(api, 'getBuildings').mockResolvedValue([] as any);
     await render();
-    await press('Check Native AR Preview');
-    expect(texts()).toMatch(/NATIVE AR NOT INTEGRATED/);
+    await press('Preview in AR');
+    expect(texts()).toMatch(GATE);
+  });
+
+  describe('when the capability check answers', () => {
+    afterEach(() => { mockCapability.mockReset(); });
+
+    test('ready: opens the AR screen for this building with no gate', async () => {
+      mockCapability.mockResolvedValue('ready');
+      await render();
+      await press('Preview in AR');
+      expect(router.push).toHaveBeenCalledTimes(1);
+      expect(router.push).toHaveBeenCalledWith({ pathname: '/rooftop-ar', params: { buildingId: BUILDING } });
+      expect(texts()).not.toMatch(/Back to 2D layout/);
+    });
+
+    test('ready: keeps unsaved edits on the Rooftop screen', async () => {
+      mockCapability.mockResolvedValue('ready');
+      await render();
+      await tapCanvas(30, 30);
+      await press('Preview in AR');
+      expect(input(VERTICES).props.value).toBe('100,100');
+    });
+
+    test('unsupported device: names ARCore, stays on the 2D editor and does not navigate', async () => {
+      mockCapability.mockResolvedValue('unsupported');
+      await render();
+      await press('Preview in AR');
+      expect(texts()).toMatch(/ARCORE NOT SUPPORTED/);
+      expect(router.push).not.toHaveBeenCalled();
+      await tapCanvas(30, 30);
+      expect(input(VERTICES).props.value).toBe('100,100');
+    });
+
+    test('a failed check can be retried from the gate, and a clean answer closes the gate', async () => {
+      mockCapability.mockResolvedValueOnce('check-failed').mockResolvedValueOnce('ready');
+      await render();
+      await press('Preview in AR');
+      expect(texts()).toMatch(/ARCORE CHECK FAILED/);
+      await press('Check Again');
+      expect(texts()).not.toMatch(/ARCORE CHECK FAILED/);
+      expect(router.push).toHaveBeenCalledTimes(1);
+    });
   });
 });
 
