@@ -1,4 +1,55 @@
-# SDK 57 pin — 3 November 2026
+# ViroReact integration — 3 November 2026, branch `feat/ar-viro`
+
+ViroReact 3.0.3 is installed and the AR screen is written. See ADR-010 in `DECISIONS.md`. **AR has not been built into an app or run on a phone, so it is not known to work.** The sections below this one are history and no longer describe this checkout.
+
+Peer ranges, read again before installing with `npm view @reactvision/react-viro@3.0.3 peerDependencies --json`:
+
+| Peer | Required | This checkout | Result |
+|---|---|---|---|
+| `expo` | `>=57.0.0 <58.0.0` (optional) | 57.0.31 | Inside |
+| `react` | `>=19.0.0` | 19.2.3 | Inside |
+| `react-native` | `>=0.86.0 <0.87.0` | 0.86.3 | Inside |
+| `react-native-web` | `>=0.19.0` (optional) | ^0.21.2 | Inside |
+| `@reactvision/viro-web-renderer` | `^1.0.1` (optional) | Not installed | Not needed: web never loads Viro |
+| `@reactvision/react-native-visionos` | `>=0.86.0 <0.87.0` (optional) | Not installed | Not needed |
+
+Being inside a peer range does not prove that AR works.
+
+## What each environment does
+
+| Environment | Result of Preview in AR | Evidence |
+|---|---|---|
+| Web | "AR NOT AVAILABLE ON WEB" gate. The 2D editor works | Run in Chromium from the web export |
+| Expo Go | "Expo Go cannot open AR" gate. ViroReact is never loaded, because loading it without its native module would fail | Unit tests only |
+| Dev build, device reports `UNSUPPORTED` | "ARCORE NOT SUPPORTED" gate | Unit tests only |
+| Dev build, ARCore still `TRANSIENT` after 5 tries, `UNKNOWN`, or no answer in 5 s | "ARCORE CHECK FAILED" gate with Check Again | Unit tests only |
+| iOS | "ANDROID ONLY FOR NOW" gate. iOS is not configured or tested | Unit tests only |
+| Dev build, device reports `SUPPORTED` | AR screen | **Never run** |
+
+Android availability values come from the `ViroViewARCore$ARCoreAvailability` class in Viro's Android library. `SUPPORTED` means the device is capable, and ARCore may still need installing. Viro's renderer contains the install request, so that prompt should appear when the session starts. This is read from the package and has not been seen on a device.
+
+## Android manifest from prebuild
+
+From `expo prebuild` in a scratch copy, using a dummy `google-services.json`:
+
+- `com.google.ar.core` is `optional`. The Viro plugin hard-codes this and has no option to change it. It is the value this project needs: `required` would stop devices without ARCore from getting the app from Play, and the 2D editor must work on them.
+- `android.permission.CAMERA` is declared. `RECORD_AUDIO`, which Viro's libraries add for video recording, is removed through `blockedPermissions`, because the app does not record.
+- `ReactViroPackage` is registered in `AR` mode only, with no Cardboard or Daydream categories. No location permission is added, because the provider is `none`.
+- `android.hardware.camera` is declared without `required="false"`, so Play would hide the app from devices with no camera. This does not affect installing the APK directly.
+- The plugin replaces the manifest's `<queries>` block with one entry for ARCore.
+
+Android has no permission text in the manifest. The reason is shown in the runtime prompt, from `cameraPermission.ts`. The text in `app.json` is the iOS one.
+
+## Not verified
+
+- Gradle has never compiled this project on SDK 57 with Viro. There is no Java on the machine that made this change, and no cloud build has been started.
+- No Viro code has executed: camera start, plane detection, placement, tracking, real scale, the ARCore install prompt and leaving AR are all untested. The steps are in [AR_TEST_PLAN.md](AR_TEST_PLAN.md).
+- The app's other native modules, including Firebase and Google Sign-In, have not been built alongside Viro.
+- `react-native-reanimated` and the other native dependencies have not been checked for native conflicts with Viro's prebuilt libraries.
+
+---
+
+# SDK 57 pin — 3 November 2026 (ViroReact has since been installed, see above)
 
 The app is on Expo SDK 57 again (Expo 57.0.31, React 19.2.3, React Native 0.86.3). See ADR-009 in `DECISIONS.md`. The sections below are history and no longer describe this checkout.
 

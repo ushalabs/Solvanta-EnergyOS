@@ -1,59 +1,114 @@
 # Native AR test plan (physical device)
 
-Status: native AR is **not implemented** in the current build (see AR_COMPATIBILITY.md). The app shows an explicit gate (`ARCapabilityFallback`) and keeps the measured 2D roof editor. Nothing in this document shows that AR works. The automated and web results below cover the gate and the rooftop geometry only. The manual device cases have **not been executed**, because there is no AR build to run them on.
+Status: tracked AR with ViroReact is **written but not proven**. The code is on branch `feat/ar-viro`. No development build has been made, and it has never run on a phone. Nothing in this document shows that AR works. Every manual case below is **not executed**.
 
-Last automated run: 3 November 2026, Windows 11, Node 24, Python 3.14. Full results are in [TEST_REPORT.md](TEST_REPORT.md).
+Last automated run: 3 November 2026, Windows 11, Node 24.
 
 ## Automated: Jest, no device (all passing)
 
+Whole mobile suite: 361 of 361 tests in 26 suites. ViroReact and the native module are mocked in all of them.
+
 | File | Tests | What it covers |
 |---|---:|---|
-| `mobile/__tests__/ar_fallback.test.tsx` | 15 | The gate says native AR is not integrated and names ARCore, the dev client, Expo Go, web and SDK 57, and says ViroReact is not installed. It makes no claim that AR, camera, anchoring or tracking works, and no accuracy claim. "Return to 2D" fires once and rendering does not fire it. It has one named button, a live region and a heading, and readable colours in both themes. **Guards:** fails if an AR or camera package joins `package.json`, an AR plugin joins `app.json`, any app source imports an AR module, or Expo moves off SDK 57 or React Native off 0.86, so the gate text cannot go stale silently. |
-| `mobile/__tests__/rooftop_ar_flow.test.tsx` | 25 | The whole Rooftop screen with the API mocked. The gate is hidden until requested. Opening it makes no camera request and no API call. Returning keeps saved geometry and panels. It can be reopened, the editor still works while it is open, and it works with no building. Also covers taps in roof, obstacle and scale mode, release past the canvas edge, undo, the obstacle three-point rule, the third scale tap restarting the line, refusal to calculate without a measured scale, an unfinished obstacle, malformed vertices, preview vs save, surfaced server errors, camera permission denial, picker cancel, photo size and aspect limits. |
-| `mobile/__tests__/roof_geometry.test.ts` | 31 | Tap-to-roof mapping at several view widths, uniform scale, edge clamping, marker sizing, defaults within API limits, coordinate parsing and round trips. |
+| `mobile/__tests__/roof_to_ar.test.ts` | 18 | Layout to AR conversion: real size from `meters_per_pixel`, scale doubling, centring, plan orientation with no mirroring, preserved distances, span, flat rotation and lift, empty layout, refusal of a bad scale or panel. |
+| `mobile/__tests__/ar_capability.test.ts` | 27 | Each capability state, their order, retry while ARCore answers `TRANSIENT`, a probe that throws or never answers, error mapping, and the wording of each message: no accuracy or success claim. |
+| `mobile/__tests__/viro_native.test.ts` | 11 | The native bridge: ViroReact is not loaded just to ask about the module, the AR view is not loaded into a binary without the module, and each native answer maps to a capability result. The web stub reports no AR. |
+| `mobile/__tests__/roof_ar_view.test.tsx` | 17 | The tree handed to ViroReact: provider `none`, upward horizontal planes, anchor events forwarded to the selector, one flat quad per panel at real size. The overlay: visualization label, Back to 2D always offered, scan to choose to placed guidance, lost plane, tracking messages. |
+| `mobile/__tests__/rooftop_ar_screen.test.tsx` | 24 | The AR route's order: capability, saved layout, camera, AR view. Unsupported device, no module and Expo Go make no roof or camera request. No saved roof, no panels, server error and missing scale never ask for the camera. Camera granted, denied, blocked, return from Settings, and a permission API failure. A JavaScript failure in the view keeps the way back open. |
+| `mobile/__tests__/ar_fallback.test.tsx` | 33 | The gate for all six reasons, its buttons and accessibility, and readable colours in both themes. **Guards:** Viro pinned to 3.0.3 on SDK 57 and React Native 0.86, the dev client present, AR-only plugin config, camera declared and microphone blocked, square icon, the EAS profile, and only `RoofARView.tsx` and `viroNative.native.ts` importing ViroReact. |
+| `mobile/__tests__/rooftop_ar_flow.test.tsx` | 30 | The whole Rooftop screen with the API mocked: the AR button opens the route only when the check says ready, otherwise the gate appears inline and the 2D editor keeps working. Also the existing roof, obstacle, scale, save and photo cases. |
+| `mobile/__tests__/roof_geometry.test.ts` | 31 | Tap-to-roof mapping, uniform scale, edge clamping, marker sizing, defaults and coordinate parsing. |
 
-## Automated: backend geometry, pytest (all passing)
+These tests show that the app's logic and its calls into ViroReact are what the Viro 3.0.3 source asks for. They do not show that a scene renders, that planes are found, or that panels stay in place.
 
-`backend/tests/test_roof_geometry_deep.py` (43 tests) adds to `test_roof.py`: scale from a line at any angle, area scaling, physical panel size and gap, setback on a rectangle, setback larger than the roof, panel larger than the roof, an obstacle covering or splitting the roof, a triangle roof, no overlaps, panels inside the canvas, determinism, 25 kinds of invalid input, and preview that does not persist.
+## Automated: build-level checks
 
-## Automated: web export in Chromium at 390px (all passing)
+| Check | Result | What it does not show |
+|---|---|---|
+| `npx tsc --noEmit` | Pass, including `RoofARView.tsx` against Viro's own type definitions | Runtime behaviour |
+| `npx expo-doctor` | 21 of 21 | That Gradle can build the app |
+| `node scripts/export-web.cjs --without-firebase` | Pass, 19 static routes. No Viro code in the web bundle (`VRTARSceneNavigator`, `ViroARScene` and `isARSupportedOnDevice` each appear 0 times) | Anything native |
+| Exported web build in Chromium at 375px | `/rooftop-ar` shows "AR NOT AVAILABLE ON WEB". Rooftop's Preview in AR shows the same gate inline, and Back to 2D layout works, with no crash | Camera AR. The roof API was not signed in during this check |
+| `npx expo export --platform android` | Pass. Metro bundles ViroReact and the AR scene into the Android JS bundle | That the bundle runs |
+| `npx expo prebuild --platform android`, in a scratch copy with a dummy `google-services.json` | Pass. See the manifest result in [AR_COMPATIBILITY.md](AR_COMPATIBILITY.md) | That the generated project compiles |
 
-The end-to-end flow run drove the real UI against the local API: tap roof vertices, undo, refuse calculation without a scale, mark a scale, draw an obstacle, drag past the canvas edge, save and reload, then open the gate and return. On opening the gate it checked that no API request was sent and that geometry was unchanged.
+## Automated: backend geometry
 
-This run shows the gate and the 2D editor work in a browser. It says nothing about camera AR.
+`backend/tests/test_roof_geometry_deep.py` and `test_roof.py` cover scale, setbacks, obstacles and panel placement. They were not rerun for this change, because the backend did not change.
 
-## Defect found and fixed by this testing
+## Build and install the development client
 
-A finger released outside the canvas reported a position outside the roof, which the API then rejected on save with "All points must lie inside the image canvas". `tapToRoofPoint` now clamps to the canvas.
+**Blocker first:** `mobile/google-services.json` is not in this checkout and is gitignored, and `app.json` points to it. Prebuild stops with "Cannot copy google-services.json" without it. Download the file from the Firebase console (Android app `com.solvanta.energyos`) and put it in `mobile/`.
 
-## Known limits of the gate
+No cloud build has been started. From `mobile/`, with your own Expo account:
 
-- It shows the same message on every device. There is no ARCore capability probe, so case 1 below cannot pass until one exists.
-- The gate text says "no physical ARCore device is connected for validation". That is a fixed statement about the project, not a live check of the phone.
+```bash
+npx eas-cli@latest login
+```
+
+```bash
+npx eas-cli@latest init
+```
+
+`init` adds a project id to `app.json`, so commit that change. If it reports that it cannot write to the config, add the id it prints under `expo.extra.eas.projectId` by hand.
+
+```bash
+npx eas-cli@latest env:set --environment development --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --visibility secret --scope project
+```
+
+```bash
+npx eas-cli@latest build --profile development --platform android
+```
+
+EAS uploads the repository except for gitignored files. That includes the untracked `_auth_changes_backup/` folder if it is still there, so move it out first if you do not want it uploaded.
+
+When the build finishes, open the install link EAS prints on the phone and install the APK, allowing installs from that source. With `adb` on your PATH you can run `adb install <downloaded>.apk` instead.
+
+Then start the backend and the JS server, with the phone on the same Wi-Fi:
+
+```powershell
+cd backend
+.venv/Scripts/python.exe run.py
+```
+
+```bash
+npx expo start --dev-client
+```
+
+Open the Solvanta app on the phone and connect to the server it lists, or scan the QR code. Keep `EXPO_PUBLIC_API_BASE_URL` blank to follow the LAN host. If the app cannot reach the API, set it to `http://<your-PC-LAN-IP>:8000` in `mobile/.env` and restart. Rebuild only when native config or native dependencies change.
 
 ## Preconditions for the manual cases
 
-1. ARCore-supported Android phone with Google Play Services for AR installed and up to date.
-2. A Viro (or other AR) release that declares Expo SDK 57 support (ViroReact 3.0.3 does, but it is not installed yet), built as a custom development client. Expo Go and web cannot run it. Update the guards in `ar_fallback.test.tsx` in the same change.
-3. Backend running and reachable from the phone; a signed-in user with one building and a saved roof.
+1. An ARCore-supported Android phone. [Google's device list](https://developers.google.com/ar/devices) is the reference. A second phone without ARCore for case 1, if available.
+2. The development build above, installed.
+3. Backend reachable from the phone, and a signed-in user with one building and a saved roof with panels. Google Sign-In may not work in this build until its signing certificate is registered in Firebase, so use another sign-in if it fails.
 
 ## Manual device cases (not executed)
 
 | # | Area | Steps | Pass when |
 |---|------|-------|-----------|
-| 1 | Capability gate | Open Rooftop, tap Check Native AR Preview on a device without ARCore | A clear unsupported message appears; the 2D editor still works |
-| 2 | Camera permission | First launch of AR; deny, then allow | Denial shows a recoverable message; allow starts the camera |
-| 3 | Tracking start | Move phone slowly over a flat surface | Tracking state is shown; no crash while tracking is limited |
-| 4 | Scale | Place a known reference (for example a 1 m rule) and compare to the on-screen measure | Error within the tolerance the team agrees (record it) |
-| 5 | Anchoring | Place the saved panel layout, walk around it | Panels stay fixed to the surface without visible drift |
-| 6 | Alignment | Compare AR layout against the saved 2D layout | Panel count and positions match the saved layout |
-| 7 | Low light / glare | Repeat 3 and 5 in dim light and in direct sun | Degrades gracefully; a message explains lost tracking |
-| 8 | Interruptions | Background the app, lock the screen, take a call, rotate | AR session resumes or ends cleanly; no crash |
-| 9 | Return to 2D | Leave AR from every state | The 2D editor shows the same saved geometry |
-| 10 | Performance | Run AR for 5 minutes | No overheating warning, memory growth or frame stalls you can see |
-| 11 | Back navigation | Use the hardware back button inside AR | Returns to Rooftop, camera released |
-| 12 | Honest labelling | Read all AR text | No text claims accuracy or AR support that was not measured |
+| 1 | Capability gate | Tap Preview in AR on a device without ARCore | The "ARCORE NOT SUPPORTED" message appears; the 2D editor still works |
+| 2 | ARCore not installed | On a supported phone, uninstall Google Play Services for AR, then open AR | Viro's install prompt appears. Declining leaves a tracking message and Back to 2D layout, with no crash. Record what actually happens: this path was read from Viro's code, not seen |
+| 3 | Camera permission | First AR launch: deny, then allow | Denial shows a recoverable message; allowing starts the camera |
+| 4 | Camera blocked | Deny until Android stops asking, tap Open Settings, grant, come back | Settings opens; AR starts on return |
+| 5 | Tracking start | Move the phone slowly over a flat surface | Guidance and tracking messages change; no crash while tracking is limited |
+| 6 | Plane detection and placement | Wait for a highlighted surface, then tap it | Panels appear flat on that surface, centred where you tapped |
+| 7 | Scale | With a tape, compare one drawn panel with the panel size saved on the roof, outdoors or in a large room | Record the observed difference. It is an observation, not an accuracy claim, and the labels stay as they are |
+| 8 | Anchoring | Walk around the placed layout | Panels stay on the surface without drift you can see |
+| 9 | Alignment | Compare AR with the saved 2D layout | Panel count and arrangement match, including left and right (not mirrored) |
+| 10 | Another surface | Tap Choose Another Surface, then a different surface | The layout moves; the guidance returns to placing |
+| 11 | Low light / glare | Repeat 5 and 8 in dim light and in direct sun | Degrades gracefully; a message explains limited tracking |
+| 12 | Interruptions | Background the app, lock the screen, take a call | AR resumes or ends cleanly; no crash |
+| 13 | Return to 2D | Tap Back to 2D layout from every state | The 2D editor shows the same geometry, including unsaved edits |
+| 14 | Performance | Run AR for 5 minutes | No overheating warning, memory growth or frame stalls you can see |
+| 15 | Back navigation | Use the hardware back button inside AR | Returns to Rooftop; the camera is released |
+| 16 | Honest labelling | Read all AR text | "VISUALIZATION ONLY" is always visible; no text claims accuracy or support that was not measured |
+| 17 | Large layout | Open a roof of 10 m or more in a small room | The layout runs off the surface at real scale, with no crash. Note whether that is usable, because no scale-down mode exists |
 
 ## Evidence to capture
 
-Device model and Android version, app build id, a screen recording per case, measured vs reference distances for case 4, and a pass/fail table with the date. Attach it to the phase report before marking native AR complete.
+Device model and Android version, app build id, a screen recording per case, and a pass/fail table with the date. Add tape readings for case 7. Attach it to the phase report before marking native AR complete.
+
+## Defect found earlier by this testing
+
+A finger released outside the canvas reported a position outside the roof, which the API then rejected on save with "All points must lie inside the image canvas". `tapToRoofPoint` now clamps to the canvas.
