@@ -130,7 +130,7 @@ This document records the architectural and engineering decisions governing Solv
 ---
 
 ## ADR-009: Pin Expo SDK 57 for ViroReact Compatibility
-* **Status:** ACCEPTED, pending project review before any AR work
+* **Status:** ACCEPTED. ViroReact has since been added by ADR-010, so points about it not being installed are history.
 * **Date:** 3 November 2026
 * **Context:**
   The app moved to Expo SDK 58 at `eec22db`. On 3 November 2026, `npm view @reactvision/react-viro version peerDependencies --json` reported version 3.0.3 with peers `expo >=57.0.0 <58.0.0` and `react-native >=0.86.0 <0.87.0`. ViroReact 3.0.3 therefore supports only SDK 57, and SDK 58 sits outside its declared range. This applies the rule in ADR-001: if ViroReact requires SDK 57, lock to SDK 57.
@@ -143,3 +143,29 @@ This document records the architectural and engineering decisions governing Solv
   - Compatibility rests on published peer ranges only. ViroReact is not installed, and no native build or ARCore device has proven that this combination works.
   - Production `npm audit` is worse than on SDK 58: 22 findings (9 high) against 17 (6 high). The new high findings come through older `@expo/cli` and `expo-router` versions. SDK 58 is not available as a way to clear them while this pin holds.
   - `expo install --fix` adds config plugins to `app.json` by itself. They were removed here because the downgrade did not need them, so check for this whenever that command is used.
+
+---
+
+## ADR-010: Tracked AR with ViroReact, Capability-Gated
+* **Status:** ACCEPTED for development. Not proven on a device.
+* **Date:** 3 November 2026
+* **Context:**
+  The rooftop screen needs a real AR preview of the saved panel layout (`UI_DESIGN_SPEC.md` S05), as a visualization only. The 2D editor must keep working on every device. ViroReact 3.0.3 declares support for this SDK (ADR-009). It needs a development build and cannot run in Expo Go or on the web.
+* **Decision:**
+  1. Pin `@reactvision/react-viro` to exactly 3.0.3 and add `expo-dev-client`. An EAS `development` profile builds an APK.
+  2. Configure the plugin for `AR` mode only, with provider `none`. No Cardboard or Daydream entries, no location permission and no cloud service. Block `RECORD_AUDIO`, because the app does not record.
+  3. Keep ARCore `optional` in the manifest. The Viro plugin writes this value. `required` would stop devices without ARCore from getting the app, which conflicts with ADR-001.
+  4. Only `src/ar/viroNative.native.ts` and `src/ar/RoofARView.tsx` import ViroReact, and the second is required on demand. Web resolves `src/ar/viroNative.ts` instead. Loading the package without its native module fails, so Expo Go must never load it, and the web bundle must not depend on its uninstalled renderer peer.
+  5. Check in this order: capability, saved layout, camera permission, AR view. The camera is never requested when AR cannot start or there is nothing to show.
+  6. AR reads only the saved roof record. It writes nothing, and unsaved 2D edits stay on the Rooftop screen.
+  7. Scale comes only from `meters_per_pixel`. Roof image x maps to plane X and image y to plane Z, centred on the tapped point, with no fitting to the room. All AR text says visualization, and no accuracy figure is shown.
+  8. Android only for now. iOS shows the gate rather than an untested path.
+  9. Add `mobile/.npmrc` with `legacy-peer-deps=true`. The existing lockfile was generated in that mode, and EAS runs `npm ci`. Without it, npm also auto-installs `react-native-gesture-handler` 3.4.0, a major version ahead of the `~2.32.0` this SDK expects, which would then be built into the app.
+  10. Add `mobile/app.config.js` so an EAS build can receive the gitignored `google-services.json` as a file variable. `app.json` keeps its reference unchanged.
+  11. Replace the app icon, which was a 1222x285 crop of a design mockup, with a square dark icon and lime bolt. Move the splash settings to the `expo-splash-screen` plugin. `favicon.png` is still the old crop, because the schema check does not cover it.
+* **Consequences:**
+  - The app no longer runs its full feature set in Expo Go, though AR is its only feature that needs the development build.
+  - Native builds now depend on `google-services.json` being provided. It is not in the repository or in this checkout.
+  - ViroReact can be replaced by changing two files, plus the plugin entry.
+  - Real scale means a large roof will not fit in a small room. There is no scale-down mode, because it would misrepresent the size.
+  - Whether any of this works on a phone is unknown until `AR_TEST_PLAN.md` has been run.

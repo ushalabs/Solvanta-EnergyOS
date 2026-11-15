@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
+import { router } from 'expo-router';
 import Svg, { Polygon, Rect, Circle, Image as SvgImage, Line } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import { ImagePlus, Camera, Undo2, Check, Eraser, Calculator, Save, ScanLine, PencilRuler } from 'lucide-react-native';
@@ -11,13 +12,16 @@ import { useTheme } from '../../src/theme/ThemeContext';
 import { PVDesigner } from '../../src/components/PVDesigner';
 import { PillSegmentedControl } from '../../src/components/PillSegmentedControl';
 import { ARCapabilityFallback } from '../../src/components/ARCapabilityFallback';
+import type { ARUnavailable } from '../../src/ar/arCapability';
+import { detectARCapability } from '../../src/ar/detectAR';
 
 const geometryLabels = { setback_m: 'Setback (m)', panel_width_m: 'Panel width (m)', panel_height_m: 'Panel height (m)', gap_m: 'Panel gap (m)' };
 
 function RooftopWorkspace({buildingId}:{buildingId:string}) {
   const { tokens: t } = useTheme();
   const building = {id:buildingId};
-  const [showAR, setShowAR] = useState(false);
+  const [arGate, setArGate] = useState<ARUnavailable | null>(null);
+  const [checkingAR, setCheckingAR] = useState(false);
   const [roof, setRoof] = useState<RoofInput>(emptyRoof);
   const [layout, setLayout] = useState<Layout | null>(null);
   const [mode, setMode] = useState<'roof' | 'obstacle' | 'scale'>('roof');
@@ -66,6 +70,14 @@ function RooftopWorkspace({buildingId}:{buildingId:string}) {
       else { setLayout(await api.post<Layout>(`/buildings/${building.id}/roof/preview`, payload)); setRoof(payload); setMessage('Calculated preview — not saved yet.'); }
     } catch (e: any) { setMessage(e.message); } finally { setBusy(false); }
   };
+  const openAR = async () => {
+    setCheckingAR(true);
+    const capability = await detectARCapability();
+    setCheckingAR(false);
+    if (capability !== 'ready') { setArGate(capability); return; }
+    setArGate(null);
+    router.push({ pathname: '/rooftop-ar', params: { buildingId: building.id } });
+  };
   const legend = [{ color: t.limeMark, name: 'Roof / panels' }, { color: t.redText, name: 'Obstacle' }, { color: t.cyanText, name: 'Scale' }];
   return <>
     <Card><CardHeader title="Roof photo" subtitle="Top-down, rectified image" icon={<ImagePlus size={18} color={t.limeText} />} /><Label tone="secondary" caption>Use a top-down, rectified roof image. Perspective photos cannot provide reliable dimensions from one scale line. No automatic CV detection is claimed.</Label>
@@ -102,7 +114,8 @@ function RooftopWorkspace({buildingId}:{buildingId:string}) {
       {layout && <><MetricGrid><Metric label="Roof area" value={layout.roof_area_m2.toFixed(2)} unit="m²" /><Metric label="Usable area" value={layout.usable_area_m2.toFixed(2)} unit="m²" /><Metric label="Panels" value={layout.panel_count} tone="accent" /></MetricGrid><Label tone="secondary" caption>{layout.method}</Label></>}
     </Card>
     <Card><CardHeader title="AR preview" subtitle="Optional visualization. The 2D layout above stays available." icon={<ScanLine size={18} color={t.limeText} />} />
-      <Action title="Check Native AR Preview" variant="secondary" onPress={() => setShowAR(true)} />{showAR && <ARCapabilityFallback onContinue2D={() => setShowAR(false)} />}
+      <Label tone="secondary" caption>AR shows the last saved layout, not unsaved changes. It is a visualization, not a measurement.</Label>
+      <Action title="Preview in AR" loading={checkingAR} disabled={checkingAR} onPress={openAR} />{arGate && <ARCapabilityFallback capability={arGate} onContinue2D={() => setArGate(null)} onRetry={arGate === 'check-failed' ? openAR : undefined} />}
     </Card>
     <PVDesigner buildingId={building.id} />
   </>;
