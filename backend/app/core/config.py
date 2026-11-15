@@ -1,6 +1,6 @@
 import os
 from typing import List
-from pydantic import model_validator
+from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 INSECURE_DEV_SECRET = "solvanta-local-dev-insecure-secret-key-change-in-production-32chars"
@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_PREFIX: str = "/api/v1"
     BACKEND_ENV: str = "development"
+    WEATHERAPI_KEY: SecretStr | None = None
 
     # Security & Auth
     SECRET_KEY: str = INSECURE_DEV_SECRET
