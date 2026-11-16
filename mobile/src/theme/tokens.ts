@@ -1,6 +1,7 @@
 // ==============================================================================
 // Solvanta Design Tokens
-// Authoritative visual reference: design/reference/Neon_Smart_Home_Reference.png
+// Visual reference: docs/design-reference/ (DESIGN_TOKENS.md and the six screen images).
+// Dark values come from DESIGN_TOKENS.md. That folder has no light theme, so light values are unchanged.
 // ==============================================================================
 
 export interface ColorTokens {
@@ -35,39 +36,41 @@ export interface ColorTokens {
   greenTint: string;
   cyanTint: string;
   divider: string;
+  limeGlow: string;             // Soft glow behind lime buttons, the hub and the active dock item
 }
 
 export const darkTokens: ColorTokens = {
-  background: '#090B0A',        // Full canvas; near-black, not navy
-  backgroundRaised: '#121513',  // Scrolling sections / floating dock background
-  surface: '#1B1D1B',           // Matte graphite cards matching reference
-  surfaceElevated: '#262927',   // Chips, stat wells, selected item rows
-  border: '#343A33',            // Low-contrast thin hairline outlines
-  textPrimary: '#F7F8F5',       // Primary crisp high-contrast text
-  textSecondary: '#A6ADA4',     // Subtitles / supporting labels
-  textMuted: '#737B72',         // Quiet hints / units / provenance tags
-  lime: '#C6F43D',              // Electric acid-lime active state & actions
-  limeBright: '#E1FF67',        // Gradient highlight apex
-  limeDeep: '#99D40A',          // Gradient depth base
-  onLime: '#182107',            // High-contrast dark text/icon on lime
-  cyan: '#28CEDB',              // Grid / comparison / alternative curves
-  amber: '#F9BC46',             // Warnings / generator power
-  red: '#FF626A',               // Faults / unmet critical demand
-  green: '#4DE1A2',             // Positive verification / 100% coverage
-  overlay: 'rgba(9, 11, 10, 0.75)',
+  background: '#090C0A',        // Full canvas
+  backgroundRaised: '#0C100D',  // Nested cards; not in the reference, set between background and card
+  surface: '#101512',           // Cards
+  surfaceElevated: '#1A221D',   // Icon tiles, chips, stat wells
+  border: '#1E2621',            // 1px card border
+  textPrimary: '#E8EEEA',       // Main text
+  textSecondary: '#8A968F',     // Muted text
+  textMuted: '#6F7A74',         // Dimmer than the reference's muted; too faint for body text
+  lime: '#B8F23A',              // Accent
+  limeBright: '#C6F94A',        // Button gradient start
+  limeDeep: '#A9E42C',          // Button gradient end
+  onLime: '#182107',            // Dark text/icon on lime; not in the reference, kept
+  cyan: '#5CD8FF',              // Grid / comparison curves
+  amber: '#FFC46B',             // Warnings / generator power
+  red: '#FF6B5A',               // Faults / unmet critical demand
+  green: '#34D8B0',             // Teal in the reference: positive status
+  overlay: 'rgba(9, 12, 10, 0.75)',
   shadow: 'rgba(0, 0, 0, 0.6)',
-  limeText: '#C6F43D',
-  amberText: '#F9BC46',
-  redText: '#FF626A',
-  greenText: '#4DE1A2',
-  cyanText: '#28CEDB',
-  limeMark: '#C6F43D',
-  limeTint: 'rgba(198, 244, 61, 0.14)',
-  amberTint: 'rgba(249, 188, 70, 0.14)',
-  redTint: 'rgba(255, 98, 106, 0.14)',
-  greenTint: 'rgba(77, 225, 162, 0.14)',
-  cyanTint: 'rgba(40, 206, 219, 0.14)',
+  limeText: '#B8F23A',
+  amberText: '#FFC46B',
+  redText: '#FF6B5A',
+  greenText: '#34D8B0',
+  cyanText: '#5CD8FF',
+  limeMark: '#B8F23A',
+  limeTint: 'rgba(184, 242, 58, 0.14)',
+  amberTint: 'rgba(255, 196, 107, 0.14)',
+  redTint: 'rgba(255, 107, 90, 0.14)',
+  greenTint: 'rgba(52, 216, 176, 0.14)',
+  cyanTint: 'rgba(92, 216, 255, 0.14)',
   divider: 'rgba(255, 255, 255, 0.08)',
+  limeGlow: 'rgba(184, 242, 58, 0.3)',
 };
 
 export const lightTokens: ColorTokens = {
@@ -101,12 +104,14 @@ export const lightTokens: ColorTokens = {
   greenTint: 'rgba(20, 131, 90, 0.10)',
   cyanTint: 'rgba(8, 126, 145, 0.10)',
   divider: 'rgba(26, 32, 25, 0.10)',
+  limeGlow: 'rgba(156, 204, 23, 0.3)',
 };
 
+// The reference gradient runs #C6F94A to #A9E42C; the accent sits between them.
 export const HERO_LIME_GRADIENT: [string, string, string] = [
-  '#E1FF67',
-  '#C6F43D',
-  '#99D40A',
+  '#C6F94A',
+  '#B8F23A',
+  '#A9E42C',
 ];
 
 export const HERO_LIME_GRADIENT_LIGHT: [string, string, string] = [
@@ -123,20 +128,22 @@ export const SPACING = {
   xl: 20,
   xxl: 24,
   cardPadding: 16,
-  horizontalPadding: 18,
+  horizontalPadding: 16,
 };
 
 export const RADIUS = {
   sm: 8,
   md: 14,
-  card: 20,
-  dock: 30,
+  button: 16,
+  card: 18,
+  dock: 26,
   pill: 99,
 };
 
 export const TYPOGRAPHY = {
   kpiNumber: 28,
   heading: 22,
+  screenTitle: 19,
   sectionTitle: 16,
   body: 14,
   caption: 12,

@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   activeBarGlow: {
-    shadowColor: '#C6F43D',
+    shadowColor: '#B8F23A',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 6,

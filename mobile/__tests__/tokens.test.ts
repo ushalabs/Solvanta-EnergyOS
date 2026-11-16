@@ -1,19 +1,25 @@
-import { darkTokens, lightTokens, HERO_LIME_GRADIENT, SPACING, RADIUS } from '../src/theme/tokens';
+import { darkTokens, lightTokens, HERO_LIME_GRADIENT, SPACING, RADIUS, TYPOGRAPHY } from '../src/theme/tokens';
 
-describe('Solvanta Mobile Design Tokens (UI Spec Compliance)', () => {
-  test('Dark theme tokens match reference-matched specification', () => {
-    expect(darkTokens.background).toBe('#090B0A');
-    expect(darkTokens.surface).toBe('#1B1D1B');
-    expect(darkTokens.surfaceElevated).toBe('#262927');
-    expect(darkTokens.lime).toBe('#C6F43D');
-    expect(darkTokens.limeBright).toBe('#E1FF67');
-    expect(darkTokens.limeDeep).toBe('#99D40A');
-    expect(darkTokens.onLime).toBe('#182107');
-    expect(darkTokens.border).toBe('#343A33');
-    expect(darkTokens.textPrimary).toBe('#F7F8F5');
+// docs/design-reference/ (DESIGN_TOKENS.md and the six screen images) is the visual reference.
+describe('Solvanta mobile design tokens', () => {
+  test('dark theme matches docs/design-reference/DESIGN_TOKENS.md', () => {
+    expect(darkTokens.background).toBe('#090C0A');
+    expect(darkTokens.surface).toBe('#101512');
+    expect(darkTokens.border).toBe('#1E2621');
+    expect(darkTokens.surfaceElevated).toBe('#1A221D');
+    expect(darkTokens.textPrimary).toBe('#E8EEEA');
+    expect(darkTokens.textSecondary).toBe('#8A968F');
+    expect(darkTokens.lime).toBe('#B8F23A');
+    expect(darkTokens.limeBright).toBe('#C6F94A');
+    expect(darkTokens.limeDeep).toBe('#A9E42C');
+    expect(darkTokens.limeGlow).toBe('rgba(184, 242, 58, 0.3)');
+    expect(darkTokens.cyan).toBe('#5CD8FF');
+    expect(darkTokens.amber).toBe('#FFC46B');
+    expect(darkTokens.green).toBe('#34D8B0');
+    expect(darkTokens.red).toBe('#FF6B5A');
   });
 
-  test('Light theme tokens maintain semantic balance and readability', () => {
+  test('light theme is unchanged, because the reference folder is dark only', () => {
     expect(lightTokens.background).toBe('#F5F7F1');
     expect(lightTokens.surface).toBe('#FFFFFF');
     expect(lightTokens.lime).toBe('#9CCC17');
@@ -21,13 +27,16 @@ describe('Solvanta Mobile Design Tokens (UI Spec Compliance)', () => {
     expect(lightTokens.border).toBe('#DCE3D7');
   });
 
-  test('Signature hero lime gradient matches 3-stop specification', () => {
-    expect(HERO_LIME_GRADIENT).toEqual(['#E1FF67', '#C6F43D', '#99D40A']);
+  test('button gradient runs between the reference stops', () => {
+    expect(HERO_LIME_GRADIENT[0]).toBe('#C6F94A');
+    expect(HERO_LIME_GRADIENT[2]).toBe('#A9E42C');
   });
 
-  test('Floating dock radius and card radius meet layout bounds', () => {
-    expect(RADIUS.card).toBe(20);
-    expect(RADIUS.dock).toBe(30);
-    expect(SPACING.horizontalPadding).toBe(18);
+  test('shape and type follow the reference in both themes', () => {
+    expect(RADIUS.card).toBe(18);
+    expect(RADIUS.button).toBe(16);
+    expect(RADIUS.dock).toBe(26);
+    expect(SPACING.horizontalPadding).toBe(16);
+    expect(TYPOGRAPHY.screenTitle).toBe(19);
   });
 });

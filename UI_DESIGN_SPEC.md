@@ -2,6 +2,8 @@
 
 **Version:** 2.0 · **Date:** 28 October 2026 · **Platform:** React Native / Expo / TypeScript · **Default appearance:** Dark neon-lime · **Alternative:** Light mode · **Audience:** Antigravity, GPT reviewer, project team.
 
+> **Visual reference update, 17 November 2026.** `docs/design-reference/` (`DESIGN_TOKENS.md` and the six screen images) is now the visual reference for the mobile app. It replaces the `design/` images that sections 0, 1.1 and 2 of this file name as the visual source of truth, and its dark colour, radius and padding values replace the dark column of the table in section 1.1. The reference folder has no light theme, so the light values are unchanged. The honesty, data-labelling, accessibility and behaviour rules in this file still apply. The values in use are in `mobile/src/theme/tokens.ts`.
+
 > This file is implementation guidance, not a substitute for functioning engineering services. Screens must accurately show whether data are `SIMULATED`, `FORECAST`, or `LIVE`; FYP-I must not label synthetic readings as real household telemetry.
 
 ## 0. The visual references are binding
