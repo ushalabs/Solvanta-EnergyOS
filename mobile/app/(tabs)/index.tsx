@@ -3,6 +3,7 @@ import {router} from 'expo-router';
 import {Settings,Activity,Sliders,Sun,CalendarClock,Bot} from 'lucide-react-native';
 import {SolvantaScreen} from '../../src/components/SolvantaScreen';
 import {NeonHeroCard} from '../../src/components/NeonHeroCard';
+import {WeatherCard} from '../../src/components/WeatherCard';
 import {Card,CardHeader,Message,Metric,MetricGrid,ScreenHeader,IconButton,ChipGroup,Tile,BuildingPicker,useBuildings} from '../../src/components/TwinControls';
 import {useTheme} from '../../src/theme/ThemeContext';
 import {api,EquipmentSummary} from '../../src/api/client';
@@ -21,8 +22,10 @@ export default function Overview(){
    <Tile active title="Simulate, Compare & Approve" subtitle="Run an outage scenario and review plans" icon={c=><Activity size={20} color={c}/>} onPress={()=>router.push('/simulation')}/>
    <Tile title="Configure Appliances" icon={c=><Sliders size={20} color={c}/>} onPress={()=>router.push('/appliances')}/>
    <Tile title="Open Rooftop & PV Design" icon={c=><Sun size={20} color={c}/>} onPress={()=>router.push('/rooftop')}/>
+   <Tile title="Size Solar from Bill" subtitle="Compare 50%, 75%, and 100% usage offsets" icon={c=><Sun size={20} color={c}/>} onPress={()=>router.push('/solar-sizing')}/>
    <Tile title="Schedule Appliances" icon={c=><CalendarClock size={20} color={c}/>} onPress={()=>router.push('/scheduling')}/>
    <Tile title="Open Operations" icon={c=><Bot size={20} color={c}/>} onPress={()=>router.push('/ai')}/>
   </ChipGroup>
+  <WeatherCard key={building.id || 'weather'} buildingId={building.id || undefined}/>
  </SolvantaScreen>;
 }

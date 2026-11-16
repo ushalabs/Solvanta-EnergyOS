@@ -36,3 +36,9 @@ api_router.include_router(telemetry.router,prefix="/buildings",tags=["Simulated 
 
 from .endpoints import operations
 api_router.include_router(operations.router, prefix="/operations", tags=["Operations tools"])
+
+from .endpoints import weather
+api_router.include_router(weather.router, prefix="/weather", tags=["Weather"])
+
+from .endpoints import solar_sizing
+api_router.include_router(solar_sizing.router, prefix="/solar-sizing", tags=["Solar sizing"])
