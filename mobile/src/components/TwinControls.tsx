@@ -85,11 +85,13 @@ export function IconButton({ label, onPress, children }: { label: string; onPres
   const { tokens: t } = useTheme();
   return <TouchableOpacity activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={{ width: MIN_TARGET, height: MIN_TARGET, borderRadius: MIN_TARGET / 2, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: t.border, backgroundColor: t.surface }}>{children}</TouchableOpacity>;
 }
-export function ScreenHeader({ title, subtitle, onBack, backLabel = 'Back', right }: { title: string; subtitle?: string; onBack?: () => void; backLabel?: string; right?: React.ReactNode }) {
+/** `left` is for a logo or avatar; `subtitle` may be an element, for example a pressable building name. */
+export function ScreenHeader({ title, subtitle, onBack, backLabel = 'Back', left, right }: { title: string; subtitle?: React.ReactNode; onBack?: () => void; backLabel?: string; left?: React.ReactNode; right?: React.ReactNode }) {
   const { tokens: t } = useTheme();
-  return <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.md, marginBottom: 6 }}>
+  return <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.md, minHeight: MIN_TARGET, marginBottom: SPACING.md }}>
     {onBack && <IconButton label={backLabel} onPress={onBack}><ArrowLeft size={18} color={t.textPrimary} /></IconButton>}
-    <View style={{ flex: 1 }}><Text accessibilityRole="header" style={{ color: t.textPrimary, fontSize: TYPOGRAPHY.heading + 2, lineHeight: 30, fontWeight: '700' }}>{title}</Text>{subtitle && <Text style={{ color: t.textSecondary, fontSize: 13, lineHeight: 18 }}>{subtitle}</Text>}</View>
+    {left}
+    <View style={{ flex: 1 }}><Text accessibilityRole="header" style={{ color: t.textPrimary, fontSize: TYPOGRAPHY.screenTitle, lineHeight: 24, fontWeight: '600' }}>{title}</Text>{typeof subtitle === 'string' ? <Text style={{ color: t.textSecondary, fontSize: 13, lineHeight: 18 }}>{subtitle}</Text> : subtitle}</View>
     {right}
   </View>;
 }

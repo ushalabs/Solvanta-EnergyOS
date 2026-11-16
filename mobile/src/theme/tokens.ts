@@ -140,6 +140,13 @@ export const RADIUS = {
   pill: 99,
 };
 
+// Floating bottom dock. Screens use these to keep pinned content clear of it.
+export const DOCK = {
+  height: 64,
+  activeSize: 44,
+  minBottom: 12,
+};
+
 export const TYPOGRAPHY = {
   kpiNumber: 28,
   heading: 22,

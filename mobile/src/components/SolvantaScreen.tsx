@@ -1,16 +1,37 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ViewStyle } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
-import { RADIUS, SPACING } from '../theme/tokens';
+import { DOCK, RADIUS, SPACING } from '../theme/tokens';
 
 interface SolvantaScreenProps {
-  banner?: string;
+  /** Provenance label at the top. Pass null only when the screen labels each data block itself. */
+  banner?: string | null;
   children: ReactNode;
   scrollable?: boolean;
   style?: ViewStyle;
   contentContainerStyle?: ViewStyle;
+  /** Stays pinned at the bottom while the content scrolls, for one primary action. */
+  footer?: ReactNode;
+  /** Tab screens sit under the floating dock, so the footer must stay above it. Stack screens pass false. */
+  footerClearsDock?: boolean;
+}
+
+const DOCK_CLEARANCE = 110; // Scroll room for the floating navigation dock
+const FOOTER_GAP = 10;
+
+// Kept separate so the safe-area hook only runs on screens that pin a footer.
+function PinnedFooter({ children, clearsDock, onHeight }: { children: ReactNode; clearsDock: boolean; onHeight: (height: number) => void }) {
+  const insets = useSafeAreaInsets();
+  const bottom = Math.max(insets.bottom, DOCK.minBottom) + (clearsDock ? DOCK.height + FOOTER_GAP : 0);
+  return (
+    <View pointerEvents="box-none" style={[styles.footerWrapper, { bottom }]}>
+      <View testID="screen-footer" onLayout={e => onHeight(e.nativeEvent.layout.height)} style={styles.footer}>
+        {children}
+      </View>
+    </View>
+  );
 }
 
 export const SolvantaScreen: React.FC<SolvantaScreenProps> = ({
@@ -19,8 +40,12 @@ export const SolvantaScreen: React.FC<SolvantaScreenProps> = ({
   scrollable = true,
   style,
   contentContainerStyle,
+  footer,
+  footerClearsDock = true,
 }) => {
   const { tokens, isDark } = useTheme();
+  const [footerHeight, setFooterHeight] = useState(0);
+  const footerRoom = footer ? footerHeight + FOOTER_GAP : 0;
 
   return (
     <SafeAreaView
@@ -37,15 +62,18 @@ export const SolvantaScreen: React.FC<SolvantaScreenProps> = ({
           style={styles.container}
           contentContainerStyle={[
             styles.scrollContent,
+            { paddingBottom: DOCK_CLEARANCE + footerRoom },
             contentContainerStyle,
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={[styles.banner, { backgroundColor: tokens.amberTint }]}>
-            <View style={[styles.bannerDot, { backgroundColor: tokens.amberText }]} />
-            <Text style={[styles.bannerText, { color: tokens.amberText }]}>{banner}</Text>
-          </View>
+          {banner ? (
+            <View style={[styles.banner, { backgroundColor: tokens.amberTint }]}>
+              <View style={[styles.bannerDot, { backgroundColor: tokens.amberText }]} />
+              <Text style={[styles.bannerText, { color: tokens.amberText }]}>{banner}</Text>
+            </View>
+          ) : null}
           {children}
         </ScrollView>
       ) : (
@@ -53,6 +81,7 @@ export const SolvantaScreen: React.FC<SolvantaScreenProps> = ({
           {children}
         </View>
       )}
+      {footer ? <PinnedFooter clearsDock={footerClearsDock} onHeight={setFooterHeight}>{footer}</PinnedFooter> : null}
     </SafeAreaView>
   );
 };
@@ -70,7 +99,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     paddingHorizontal: SPACING.horizontalPadding,
     paddingTop: SPACING.md,
-    paddingBottom: 110, // Generous clearance for floating navigation dock
   },
   banner: {
     alignSelf: 'flex-start',
@@ -93,5 +121,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '600',
+  },
+  footerWrapper: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingHorizontal: SPACING.horizontalPadding,
+  },
+  footer: {
+    width: '100%',
+    maxWidth: 560 - SPACING.horizontalPadding * 2,
   },
 });
