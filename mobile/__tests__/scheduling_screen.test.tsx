@@ -419,17 +419,17 @@ describe('appliance rows and tags', () => {
   test('one row per appliance in start order, led by the time range with the name under it', async () => {
     await render();
     await solve();
-    expect(rows().map((r: any) => texts(r)[0])).toEqual(['00:00 – 24:00', '10:00 – 11:00, 13:00 – 14:00', '20:00 – 21:30']);
+    expect(rows().map((r: any) => texts(r)[0])).toEqual(['00:00 – 24:00', '10:00 – 11:00\n13:00 – 14:00', '20:00 – 21:30']);
     expect(rows().map((r: any) => texts(r)[1])).toEqual(['Fridge', 'Water pump', 'Washer']);
   });
 
-  test('duration, power and the allowed window are one small grey line', async () => {
+  test('duration and power, then the allowed window, are small grey lines, and a split run lists one range per line', async () => {
     await render();
     await solve();
     const pump = rows()[1];
-    const line = all('Text', pump).find((n: any) => /Allowed/.test(textOf(n)))!;
-    expect(textOf(line)).toBe('120 min · 0.75 kW · Allowed 06:00 – 22:00');
-    expect(flat(line.props.style)).toMatchObject({ color: darkTokens.textSecondary, fontSize: 12 });
+    const small = all('Text', pump).filter((n: any) => flat(n.props.style).fontSize === 12 && flat(n.props.style).color === darkTokens.textSecondary);
+    expect(small.map(textOf)).toEqual(['120 min · 0.75 kW', 'Allowed 06:00 – 22:00']);
+    expect(textOf(all('Text', pump)[0])).toBe('10:00 – 11:00\n13:00 – 14:00');
     expect(pump.props.accessibilityLabel).toBe('Water pump, 10:00 – 11:00, 13:00 – 14:00');
   });
 
@@ -473,12 +473,12 @@ describe('appliance rows and tags', () => {
     await solve();
     const [fridge, pump, washer] = rows();
     expect(texts(fridge)).toEqual(expect.arrayContaining(['CRITICAL', 'FIXED TIME']));
-    expect(texts(fridge).join(' ')).toMatch(/Allowed 00:00 – 24:00/);
+    expect(texts(fridge)).toContain('Allowed 00:00 – 24:00');
     expect(texts(fridge)).not.toContain('FLEXIBLE');
     expect(texts(pump)).toEqual(expect.arrayContaining(['MEDIUM', 'FLEXIBLE', 'SPLIT INTO 2']));
-    expect(texts(pump).join(' ')).toMatch(/Allowed 06:00 – 22:00/);
+    expect(texts(pump)).toContain('Allowed 06:00 – 22:00');
     expect(texts(washer)).toEqual(expect.arrayContaining(['LOW', 'FLEXIBLE']));
-    expect(texts(washer).join(' ')).toMatch(/Allowed 10:00 – 23:00/);
+    expect(texts(washer)).toContain('Allowed 10:00 – 23:00');
     expect(texts(washer).filter((x: string) => /SPLIT/.test(x))).toHaveLength(0);
   });
 
