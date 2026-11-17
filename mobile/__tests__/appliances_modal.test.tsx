@@ -394,13 +394,42 @@ describe('Appliances list layout', () => {
     expect(texts()).toContain('They do not physically turn appliances or electrical circuits on or off.');
   });
 
-  test('the building picker is hidden for one building and shown for several', async () => {
+  test('the building is one line in the header, and the picker opens from it', async () => {
+    jest.spyOn(api, 'getBuildings').mockResolvedValue([{ id: BUILDING, name: 'Test building', address: 'Lahore, Pakistan' }, { id: 'b2', name: 'Other' }] as any);
     await render(mix());
+    expect(texts()).toContain('Test building · Lahore');
     expect(texts()).not.toContain('Building digital twin');
-    await act(async () => tree.unmount());
-    jest.spyOn(api, 'getBuildings').mockResolvedValue([{ id: BUILDING, name: 'A' }, { id: 'b2', name: 'B' }] as any);
-    await render(mix());
+    const header = buttonIn(tree.root, 'Change building: Test building')!;
+    expect(header).toBeDefined();
+    expect(flatStyle(header.props.style).minHeight).toBeGreaterThanOrEqual(44);
+    expect(hosts('Icon', header)).toHaveLength(1);
+    await act(async () => { header.props.onPress(); });
     expect(texts()).toContain('Building digital twin');
+    expect(buttonIn(tree.root, 'Other')).toBeDefined();
+    await act(async () => { header.props.onPress(); });
+    expect(texts()).not.toContain('Building digital twin');
+  });
+
+  test('the picker still shows by itself when buildings cannot be loaded', async () => {
+    jest.spyOn(api, 'getBuildings').mockRejectedValue(new SolvantaApiError(401, { detail: 'Not authenticated' }));
+    await render();
+    expect(texts()).toContain('Not authenticated');
+    expect(buttonIn(tree.root, 'Open Settings / Sign In')).toBeDefined();
+  });
+
+  test('the provenance banner is one short line that still says nothing real is switched', async () => {
+    await render(mix());
+    expect(texts()).toContain('SCENARIO ONLY • no real appliances are switched');
+    const banner = hosts('Text').find((t: any) => flatText(t).startsWith('SCENARIO ONLY'))!;
+    expect(flatStyle(banner.props.style).fontSize).toBeLessThanOrEqual(11);
+  });
+
+  test('there is space between the scenario summary and the filter chips', async () => {
+    await render(mix());
+    const summary = hosts('Text').find((t: any) => flatText(t).startsWith('Scenario load'))!;
+    let wrapper: any = summary.parent;
+    while (wrapper && !(wrapper.type === 'View' && flatStyle(wrapper.props.style).marginBottom)) wrapper = wrapper.parent;
+    expect(flatStyle(wrapper.props.style).marginBottom).toBeGreaterThanOrEqual(12);
   });
 
   test('Delete appears only when editing an existing appliance, not when adding one', async () => {

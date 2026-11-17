@@ -34,6 +34,7 @@ function AppliancesWorkspace({building:picker}:{building:ReturnType<typeof useBu
   const [pendingDelete,setPendingDelete]=useState<Appliance | null>(null);
   const [filter,setFilter]=useState<Filter>('all');
   const [busy,setBusy]=useState(false);
+  const [choosing,setChoosing]=useState(false);
   const [message,setMessage]=useState('Select a building.');
   async function reload(id=building.id) {
     if (!id) return;
@@ -72,12 +73,14 @@ function AppliancesWorkspace({building:picker}:{building:ReturnType<typeof useBu
   // Delete lives inside the edit popup. Closing that popup first keeps only one popup open at a time.
   const askDelete=(a:Appliance)=>{setShowForm(false);setPendingDelete(a);};
   const visible=(list?.items||[]).filter(a=>matches(a,filter));
-  const showPicker=picker.buildings.length>1||!!picker.error||!picker.id;
-  return <SolvantaScreen banner="APPLIANCES - Saved twin and scenario selection" footer={<Action title="Add Appliance" disabled={!building.id} icon={<Plus size={18} color={building.id?t.onLime:t.textSecondary}/>} onPress={create}/>}>
-    <ScreenHeader title="Appliances"/>
+  const selected=picker.buildings.find(b=>b.id===picker.id);
+  const place=selected?.address?.split(',')[0].trim();
+  const showPicker=choosing||!!picker.error||!picker.id;
+  return <SolvantaScreen banner="SCENARIO ONLY • no real appliances are switched" footer={<Action title="Add Appliance" disabled={!building.id} icon={<Plus size={18} color={building.id?t.onLime:t.textSecondary}/>} onPress={create}/>}>
+    <ScreenHeader title="Appliances" subtitle={selected?`${selected.name}${place?` · ${place}`:''}`:'Choose a building'} onTitlePress={()=>setChoosing(!choosing)} titlePressLabel={selected?`Change building: ${selected.name}`:'Choose a building'}/>
     {showPicker&&<BuildingPicker state={picker}/>}
-    <Message>Switches select loads for a simulation scenario only. They do not physically turn appliances or electrical circuits on or off.</Message>
-    <Label tone="secondary" caption>Scenario load {kw(list?.summary.requested_kw)} kW · Critical {kw(list?.summary.critical_kw)} kW · {list?`${list.summary.selected_count} selected`:'— selected'}</Label>
+    <View style={{marginBottom:SPACING.sm}}><Label tone="secondary" caption>Switches select loads for a simulation scenario only. They do not physically turn appliances or electrical circuits on or off.</Label></View>
+    <View style={{marginBottom:SPACING.md}}><Label tone="secondary" caption>Scenario load {kw(list?.summary.requested_kw)} kW · Critical {kw(list?.summary.critical_kw)} kW · {list?`${list.summary.selected_count} selected`:'— selected'}</Label></View>
     <ChipGroup>{FILTERS.map(f=><Chip key={f.id} label={f.label} a11yLabel={f.spoken} selected={filter===f.id} onPress={()=>setFilter(f.id)}/>)}</ChipGroup>
     <View style={{gap:10}}>
       {visible.map(a=><View key={a.id} style={{flexDirection:'row',alignItems:'center',gap:SPACING.sm,minHeight:64,paddingLeft:12,paddingRight:14,borderRadius:RADIUS.card,borderWidth:1,borderColor:t.border,backgroundColor:t.surface}}>
