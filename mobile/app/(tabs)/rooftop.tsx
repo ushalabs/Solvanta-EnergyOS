@@ -51,6 +51,8 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
   const [arCap, setArCap] = useState<ARCapability | null>(null);
   const [saved, setSaved] = useState<Layout | null>(null);
   const [outdated, setOutdated] = useState(false);
+  // A brand-new roof has never been calculated, so the readout says that instead of Outdated.
+  const [calculatedOnce, setCalculatedOnce] = useState(false);
   const [unsaved, setUnsaved] = useState(false);
   const [expert, setExpert] = useState(false);
   const [checkingAR, setCheckingAR] = useState(false);
@@ -79,10 +81,10 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
   const areaSized = useRef(false);
   // Space left for the drawing between the readout and the toolbar. The canvas is fitted into it so it never overlaps either.
   const [area, setArea] = useState<{ w: number; h: number } | null>(null);
-  const apply = (r: RoofRecord) => { setRoof(r.geometry); setDistance(String(r.geometry.scale_distance_m)); setCoords(formatPoints(r.geometry.boundary)); setLayout(r.layout); setSaved(r.layout); setOutdated(false); setUnsaved(false); setNames(prev => r.geometry.obstacles.map((_, i) => prev[i] ?? '')); setShapes(prev => r.geometry.obstacles.map((_, i) => prev[i] ?? 'polygon')); };
+  const apply = (r: RoofRecord) => { setRoof(r.geometry); setDistance(String(r.geometry.scale_distance_m)); setCoords(formatPoints(r.geometry.boundary)); setLayout(r.layout); setSaved(r.layout); setCalculatedOnce(true); setOutdated(false); setUnsaved(false); setNames(prev => r.geometry.obstacles.map((_, i) => prev[i] ?? '')); setShapes(prev => r.geometry.obstacles.map((_, i) => prev[i] ?? 'polygon')); };
   useEffect(() => {
     let active = true;
-    setRoof(emptyRoof()); setNames([]); setShapes([]); setLayout(null); setSaved(null); setOutdated(false); setUnsaved(false); setCoords(''); setDistance(''); setDraft([]);
+    setRoof(emptyRoof()); setNames([]); setShapes([]); setLayout(null); setSaved(null); setCalculatedOnce(false); setOutdated(false); setUnsaved(false); setCoords(''); setDistance(''); setDraft([]);
     if (building.id) api.get<RoofRecord>(`/buildings/${building.id}/roof`).then(r => { if (active) { apply(r); setMessage('Loaded saved roof.'); } }).catch(e => { if (active) setMessage(e.status === 404 ? 'No saved roof. Draw a boundary to begin.' : e.message); });
     return () => { active = false; };
   }, [building.id]);
@@ -196,7 +198,7 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
       const badOne = payload.obstacles.findIndex(ring => obstacleProblem(ring, payload.boundary));
       if (badOne >= 0) throw clientError(`Obstacle ${badOne + 1}: ${obstacleProblem(payload.obstacles[badOne], payload.boundary)}`);
       if (save) { apply(await api.request<RoofRecord>(`/buildings/${building.id}/roof`, { method: 'PUT', body: JSON.stringify(payload) })); setMessage('Saved geometry and photo to this building.'); }
-      else { setLayout(await api.post<Layout>(`/buildings/${building.id}/roof/preview`, payload)); setRoof(payload); setOutdated(false); setUnsaved(true); setMessage('Calculated preview — not saved yet. Press Save Roof to keep it.'); }
+      else { setLayout(await api.post<Layout>(`/buildings/${building.id}/roof/preview`, payload)); setRoof(payload); setCalculatedOnce(true); setOutdated(false); setUnsaved(true); setMessage('Calculated preview — not saved yet. Press Save Roof to keep it.'); }
     } catch (e: any) { setMessage(e.client ? e.message : friendlyRoofError(e.message)); } finally { setBusy(false); }
   };
   const checkAR = async () => {
@@ -278,7 +280,7 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
       </MetricGrid>
       <Label tone="secondary" caption>Est. Daily is SIMULATED: a representative day, not live data.</Label>
       {pvOutdated && !outdated && <Label tone="secondary" caption>Est. Daily is outdated: the panel settings changed. Open Advanced and press Calculate PV Estimate.</Label>}
-      {outdated && <Label tone="secondary" caption>Outdated: the roof changed since the last calculation. Press Calculate Placement.</Label>}
+      {outdated && <Label tone="secondary" caption>{calculatedOnce ? 'Outdated: the roof changed since the last calculation. Press Calculate Placement.' : 'Not calculated yet. Press Calculate Placement.'}</Label>}
       <Card><CardHeader title="Panel Configuration" subtitle={pv.profile ? 'From the PV record or the last calculation' : 'No PV record yet. Open Advanced to calculate.'} />
         <View>{configRows.map(r => <TouchableOpacity key={r.name} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={`${r.name}: ${r.value}`} accessibilityHint="Opens the choices" hitSlop={{ top: 4, bottom: 4 }} onPress={() => setSelector(r.open)} style={{ flexDirection: 'row', alignItems: 'center', minHeight: 36, gap: 8 }}>
           <Text style={{ flex: 1, color: t.textSecondary, fontSize: 14 }}>{r.name}</Text>
@@ -330,7 +332,7 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
         </View>
         <View accessibilityLabel="Roof readout" style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.md, paddingHorizontal: SPACING.md, paddingBottom: 8 }}>
           {[['Roof area', liveRoofArea === null ? DASH : `${liveRoofArea.toFixed(1)} m²`], ['Usable area', layout ? `${layout.usable_area_m2.toFixed(1)} m²` : DASH], ['Panels', layout ? String(layout.panel_count) : DASH]].map(([k, v]) => <View key={k} style={{ flex: 1 }}><Text style={{ color: t.textSecondary, fontSize: 11, lineHeight: 14 }}>{k}</Text><Text style={{ color: t.textPrimary, fontSize: 15, lineHeight: 20, fontWeight: '700' }}>{v}</Text></View>)}
-          {outdated && <Text style={{ color: t.amberText, fontSize: 11, fontWeight: '700' }}>Outdated</Text>}
+          {!layout && <Text style={{ color: calculatedOnce ? t.amberText : t.textSecondary, fontSize: 11, fontWeight: '700' }}>{calculatedOnce ? 'Outdated' : 'Not calculated yet'}</Text>}
         </View>
         <View style={{ flex: 1, minHeight: 0, overflow: 'hidden', justifyContent: 'center', paddingHorizontal: 8 }} onLayout={e => { const { width: w, height: h } = e.nativeEvent.layout; if (w && h) setArea({ w, h }); sizeToArea(w - 16, h ? h - 16 : undefined); }}>
           <View style={fitWidth ? { width: fitWidth, alignSelf: 'center' } : undefined}><RoofCanvas roof={roof} layout={layout} draft={draft} mode={mode} metersPerUnit={mpu} obstacleNames={names} selectedObstacle={selected} fineGrid={snapOn} invalidObstacles={invalidObstacles} draftInvalid={!!draftProblem} a11yLabel={`Roof canvas, ${mode} mode: ${roof.boundary.length} roof vertices, ${roof.obstacles.length} obstacles, ${layout?.panel_count ?? 0} panels. Roof vertices can also be typed in the Advanced section.`} onEvent={onCanvas} /></View>

@@ -925,7 +925,9 @@ describe('Full-screen roof editor', () => {
     expect(editor()).toBeUndefined();
     expect(input(VERTICES).props.value).toBe('100,100; 900,100; 900,600');
     expect(previewCanvas().props.accessibilityLabel).toMatch(/3 roof vertices/);
-    expect(texts()).toMatch(/Outdated: the roof changed/);
+    // A brand-new roof was never calculated, so it is not called outdated.
+    expect(texts()).toMatch(/Not calculated yet\. Press Calculate Placement\./);
+    expect(texts()).not.toMatch(/Outdated/);
   });
 
   test('Cancel discards everything done in the editor', async () => {
@@ -1236,7 +1238,11 @@ describe('Professional editor tools', () => {
 
     test('the live bar shows dashes without a roof or scale', async () => {
       await render();
-      expect(textsIn(label('Roof readout')[0])).toBe('Roof area | — | Usable area | — | Panels | —');
+      expect(textsIn(label('Roof readout')[0])).toBe('Roof area | — | Usable area | — | Panels | — | Not calculated yet');
+      // Drawing a new roof is not "outdated": nothing was calculated yet.
+      await tapCanvas(30, 30); await tapCanvas(270, 30); await tapCanvas(270, 180);
+      expect(textsIn(label('Roof readout')[0])).toMatch(/Not calculated yet$/);
+      expect(textsIn(label('Roof readout')[0])).not.toMatch(/Outdated/);
     });
 
     test('the setback band is drawn only when there is a setback and a scale', async () => {
