@@ -281,7 +281,14 @@ describe('flow diagram', () => {
     await render();
     await layout();
     expect(lines()).toHaveLength(5);
-    for (const line of lines()) expect(line.props).toMatchObject({ strokeWidth: 2, stroke: darkTokens.limeMark, fill: 'none' });
+    for (const line of lines()) expect(line.props).toMatchObject({ strokeWidth: 1.5, stroke: darkTokens.flowLine, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' });
+    expect(darkTokens.flowLine).toBe('#6AE800');
+    expect(darkTokens.flowLine).not.toBe(darkTokens.lime);
+    // A wider, faint stroke under each core line gives the glow; the core itself stays thin.
+    const glows = byTestId('flow-glow');
+    expect(glows).toHaveLength(5);
+    glows.forEach((glow: any, i: number) => expect(glow.props).toMatchObject({ strokeWidth: 6, strokeOpacity: 0.25, stroke: darkTokens.flowLine, d: lines()[i].props.d }));
+    expect(byTestId('flow-dot').every((d: any) => d.props.fill === darkTokens.flowLine)).toBe(true);
     expect(lines()[0].props.d).toBe('M168 272 L168 374');
     expect(byTestId('flow-dot').map((d: any) => [d.props.cx, d.props.cy])).toEqual([[88, 364], [176, 332], [160, 416], [248, 384]]);
     expect(flat(byTestId('flow-hub')[0].props.style)).toMatchObject({ left: 146, top: 352, width: 44, height: 44, backgroundColor: darkTokens.lime });
@@ -316,6 +323,7 @@ describe('flow diagram', () => {
     await render();
     await layout();
     expect(pulses()).toHaveLength(5);
+    expect(pulses().every((p: any) => p.props.stroke === darkTokens.flowLine && p.props.strokeWidth === 1.5)).toBe(true);
     expect(mockWithRepeat).toHaveBeenCalled();
     // Solar is a source, so its pulse travels from the card to the hub.
     expect(pulses()[1].props.d).toBe('M88 364 L88 374 L168 374');

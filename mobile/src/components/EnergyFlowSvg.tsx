@@ -46,8 +46,13 @@ type NodeKey = 'solar' | 'grid' | 'battery' | 'home';
 const HUB_SIZE = 44;
 const COLUMN_GAP = 16;
 const ROW_GAP = 20;
-const LINE_WIDTH = 2;
-const DOT_RADIUS = 3.5;
+const LINE_WIDTH = 1.5;
+// A wider stroke under the core gives the soft glow of the path on the house image.
+const GLOW_WIDTH = 6;
+const GLOW_OPACITY = 0.25;
+// The core is slightly dimmer than the pulse, so the pulse shows in the same colour without being thicker.
+const CORE_OPACITY = 0.8;
+const DOT_RADIUS = 3;
 const PULSE_LENGTH = 18;
 const PULSE_MS = 2400;
 
@@ -64,7 +69,7 @@ function Pulse({ points, progress, color }: { points: Point[]; progress: SharedV
       testID="flow-pulse"
       d={pathD(points)}
       stroke={color}
-      strokeWidth={LINE_WIDTH + 1.5}
+      strokeWidth={LINE_WIDTH}
       strokeLinecap="round"
       strokeLinejoin="round"
       fill="none"
@@ -157,11 +162,25 @@ export const EnergyFlowSvg: React.FC<EnergyFlowSvgProps> = ({
         <Svg pointerEvents="none" width={size.width} height={size.height} style={styles.overlay}>
           {(['main', 'solar', 'grid', 'battery', 'home'] as const).map(key => (
             <Path
+              key={`${key}-glow`}
+              testID="flow-glow"
+              d={pathD(paths[key])}
+              stroke={tokens.flowLine}
+              strokeWidth={GLOW_WIDTH}
+              strokeOpacity={GLOW_OPACITY}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          ))}
+          {(['main', 'solar', 'grid', 'battery', 'home'] as const).map(key => (
+            <Path
               key={key}
               testID="flow-line"
               d={pathD(paths[key])}
-              stroke={tokens.limeMark}
+              stroke={tokens.flowLine}
               strokeWidth={LINE_WIDTH}
+              strokeOpacity={CORE_OPACITY}
               strokeLinecap="round"
               strokeLinejoin="round"
               fill="none"
@@ -169,14 +188,14 @@ export const EnergyFlowSvg: React.FC<EnergyFlowSvgProps> = ({
           ))}
           {(['solar', 'grid', 'battery', 'home'] as const).map(key => {
             const end = paths[key][paths[key].length - 1];
-            return <Circle key={key} testID="flow-dot" cx={end.x} cy={end.y} r={DOT_RADIUS} fill={tokens.limeMark} />;
+            return <Circle key={key} testID="flow-dot" cx={end.x} cy={end.y} r={DOT_RADIUS} fill={tokens.flowLine} />;
           })}
           {moving ? (
             <>
-              <Pulse points={paths.main} progress={progress} color={tokens.limeBright} />
+              <Pulse points={paths.main} progress={progress} color={tokens.flowLine} />
               {(['solar', 'grid', 'battery', 'home'] as const).map(key => {
                 const points = pulsePoints(key);
-                return points ? <Pulse key={key} points={points} progress={progress} color={tokens.limeBright} /> : null;
+                return points ? <Pulse key={key} points={points} progress={progress} color={tokens.flowLine} /> : null;
               })}
             </>
           ) : null}

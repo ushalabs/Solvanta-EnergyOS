@@ -36,6 +36,7 @@ export interface ColorTokens {
   greenTint: string;
   cyanTint: string;
   divider: string;
+  flowLine: string;             // Energy flow lines on Home, sampled from the house image's glowing path
   limeGlow: string;             // Soft glow behind lime buttons, the hub and the active dock item
 }
 
@@ -70,6 +71,7 @@ export const darkTokens: ColorTokens = {
   greenTint: 'rgba(52, 216, 176, 0.14)',
   cyanTint: 'rgba(92, 216, 255, 0.14)',
   divider: 'rgba(255, 255, 255, 0.08)',
+  flowLine: '#6AE800',
   limeGlow: 'rgba(184, 242, 58, 0.3)',
 };
 
@@ -104,6 +106,7 @@ export const lightTokens: ColorTokens = {
   greenTint: 'rgba(20, 131, 90, 0.10)',
   cyanTint: 'rgba(8, 126, 145, 0.10)',
   divider: 'rgba(26, 32, 25, 0.10)',
+  flowLine: '#6AE800', // The house image is the same in both themes, so the line matches it in both
   limeGlow: 'rgba(156, 204, 23, 0.3)',
 };
 
