@@ -11,6 +11,9 @@ jest.mock('react-native', () => {
   return {
     Text: host('Text'), View: host('View'), TextInput: host('TextInput'), TouchableOpacity: host('TouchableOpacity'),
     Pressable: host('Pressable'), ScrollView: host('ScrollView'), ActivityIndicator: host('ActivityIndicator'),
+    KeyboardAvoidingView: host('KeyboardAvoidingView'),
+    // Like the real Modal, children only exist while visible.
+    Modal: (props: any) => props.visible ? React.createElement('Modal', props, props.children) : null,
     StyleSheet: { create: (styles: any) => styles },
     Platform: { OS: 'android', select: (o: any) => o.android ?? o.default },
   };
@@ -706,5 +709,122 @@ describe('Roof canvas drawing', () => {
     expect(labelled('Usable width')[0].props.accessibilityLabel).toBe('Usable width 1.1 metres');
     await tapCanvas(150, 150);
     expect(labelled('Usable width')).toHaveLength(0);
+  });
+});
+
+describe('Panel Configuration selectors', () => {
+  const pvRecord = {
+    saved: true,
+    parameters: { module_wattage_w: 450, inverter_kw: 8, inverter_efficiency_pct: 96, tilt_deg: 20, azimuth_deg: 180, losses_pct: 14, latitude_deg: 31.52, cell_temperature_c: 25, temperature_coefficient_per_c: -0.004, string_specs: null, poa_w_m2: null },
+    profile: { panel_count: 6, dc_capacity_kwp: 2.7, inverter_kw: 8, dc_ac_ratio: 0.34, daily_energy_kwh: 12.34, timeline: [], warnings: [], source: 'SIMULATED', time_basis: 'Representative day' },
+  };
+  const withPv = () => getSpy.mockImplementation(async (path: string) => {
+    if (path.endsWith('/roof')) return roofResponse();
+    if (path.endsWith('/pv')) return pvRecord as any;
+    throw notFound();
+  });
+  const row = (name: string) => tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && new RegExp(`^${name}:`).test(n.props.accessibilityLabel ?? ''))[0];
+  const modalText = () => tree.root.findAll(n => (n.type as any) === 'Modal').flatMap(m => m.findAll(c => (c.type as any) === 'Text').map(c => [c.props.children].flat(Infinity).join(''))).join(' | ');
+  const field = (label: string) => tree.root.findAll(n => (n.type as any) === 'TextInput' && n.props.accessibilityLabel === label)[0];
+  const open = async (name: string) => { await act(async () => { row(name).props.onPress(); }); };
+  const pick = async (label: string) => { const b = tree.root.findAll(n => (n.type as any) === 'Modal')[0].findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === label)[0]; await act(async () => { b.props.onPress(); }); };
+
+  test('rows show dashes until data exists and keep their spoken names', async () => {
+    await render();
+    for (const name of ['Panel Type', 'Tilt Angle', 'Orientation']) expect(row(name).props.accessibilityLabel).toBe(`${name}: —`);
+  });
+
+  test('rows show saved values, with the orientation as a compass word', async () => {
+    withPv();
+    await render();
+    expect(row('Panel Type').props.accessibilityLabel).toBe('Panel Type: 450 W');
+    expect(row('Tilt Angle').props.accessibilityLabel).toBe('Tilt Angle: 20°');
+    expect(row('Orientation').props.accessibilityLabel).toBe('Orientation: South');
+  });
+
+  test('Panel Type offers 400 to 600 W and sets the module rating field', async () => {
+    withPv();
+    await render();
+    await open('Panel Type');
+    for (const w of [400, 450, 500, 550, 600]) expect(modalText()).toContain(`${w} W`);
+    await pick('600 W module');
+    expect(field('Module rating (W)').props.value).toBe('600');
+    expect(row('Panel Type').props.accessibilityLabel).toBe('Panel Type: 600 W');
+  });
+
+  test('Tilt steps by one degree between 0 and 45 and sets the tilt field', async () => {
+    withPv();
+    await render();
+    await open('Tilt Angle');
+    await pick('Increase tilt');
+    expect(field('Tilt (degrees)').props.value).toBe('21');
+    await pick('Decrease tilt'); await pick('Decrease tilt');
+    expect(field('Tilt (degrees)').props.value).toBe('19');
+    await pick('Tilt 40 degrees');
+    for (let i = 0; i < 8; i++) await pick('Increase tilt');
+    expect(field('Tilt (degrees)').props.value).toBe('45');
+    const plus = tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Increase tilt')[0];
+    expect(plus.props.disabled).toBe(true);
+    await pick('Tilt 10 degrees');
+    for (let i = 0; i < 12; i++) await pick('Decrease tilt');
+    expect(field('Tilt (degrees)').props.value).toBe('0');
+  });
+
+  test('Orientation offers eight compass choices and 180 is South', async () => {
+    withPv();
+    await render();
+    await open('Orientation');
+    for (const c of ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']) expect(modalText()).toContain(c);
+    await pick('Face East');
+    expect(field('Azimuth (degrees from north)').props.value).toBe('90');
+    expect(row('Orientation').props.accessibilityLabel).toBe('Orientation: East');
+    await pick('Face South');
+    expect(field('Azimuth (degrees from north)').props.value).toBe('180');
+  });
+
+  test('choices are at least 44px tall', async () => {
+    withPv();
+    await render();
+    await open('Panel Type');
+    const b = tree.root.findAll(n => (n.type as any) === 'Modal')[0].findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === '500 W module')[0];
+    const style = [b.props.style].flat(Infinity).reduce((a: any, x: any) => ({ ...a, ...x }), {});
+    expect((style.minHeight ?? 0) + (b.props.hitSlop?.top ?? 0) + (b.props.hitSlop?.bottom ?? 0)).toBeGreaterThanOrEqual(44);
+  });
+
+  test('changing a value marks Est. Daily as outdated until it is recalculated', async () => {
+    withPv();
+    await render();
+    expect(texts()).toMatch(/Est\. Daily \(SIMULATED\) \| 12\.3 \| +kWh/);
+    expect(texts()).not.toMatch(/Est\. Daily is outdated/);
+    await open('Panel Type');
+    await pick('500 W module');
+    expect(texts()).toMatch(/Est\. Daily \(SIMULATED\) \| —/);
+    expect(texts()).toMatch(/Est\. Daily is outdated/);
+    post.mockResolvedValue({ ...pvRecord.profile, daily_energy_kwh: 15.5 } as any);
+    await press('Calculate PV Estimate');
+    expect(texts()).not.toMatch(/Est\. Daily is outdated/);
+    expect(texts()).toMatch(/Est\. Daily \(SIMULATED\) \| 15\.5/);
+  });
+
+  test('the roof tiles are not marked outdated by a panel setting change', async () => {
+    withPv();
+    roofResponse = async () => savedRoof;
+    await render();
+    await open('Tilt Angle');
+    await pick('Increase tilt');
+    expect(texts()).not.toMatch(/Outdated: the roof changed/);
+    expect(texts()).toMatch(/Usable Area \| 30\.0/);
+  });
+
+  test('Panel Count only reports how many fit, with no count control', async () => {
+    roofResponse = async () => savedRoof;
+    await render();
+    expect(texts()).toMatch(/Panel Count \| 6 fit/);
+    expect(tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && /panel count|more panels|fewer panels/i.test(n.props.accessibilityLabel ?? ''))).toHaveLength(0);
+  });
+
+  test('Panel Count shows a dash before placement', async () => {
+    await render();
+    expect(texts()).toMatch(/Panel Count \| —/);
   });
 });

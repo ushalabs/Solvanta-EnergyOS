@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useImperativeHandle, useState } from 'react';
 import { View, Text } from 'react-native';
 import { Sun } from 'lucide-react-native';
 import { Card, CardHeader, Label, Message, Metric, MetricGrid, Field, FieldRow, Toggle, Action, ActionRow } from './TwinControls';
@@ -14,7 +14,10 @@ const stringLabels: Record<keyof typeof stringDefaults, string> = { modules_per_
 /** What the Rooftop summary shows. Values are null until a PV record has loaded or been calculated, so defaults are never presented as data. */
 export type PVSummary = { profile: PVProfile | null; wattageW: number | null; tiltDeg: number | null; azimuthDeg: number | null };
 
-export function PVDesigner({ buildingId, onSummary }: { buildingId: string; onSummary?: (summary: PVSummary) => void }) {
+/** Lets the Rooftop panel selectors set a field. A change clears the old estimate, like typing in the field does. */
+export type PVControl = { set: (key: 'module_wattage_w' | 'tilt_deg' | 'azimuth_deg', value: number) => void };
+
+export function PVDesigner({ buildingId, onSummary, controlRef }: { buildingId: string; onSummary?: (summary: PVSummary) => void; controlRef?: React.Ref<PVControl> }) {
   const { tokens: t } = useTheme();
   const [fields, setFields] = useState(defaults);
   const [strings, setStrings] = useState(stringDefaults);
@@ -45,6 +48,7 @@ export function PVDesigner({ buildingId, onSummary }: { buildingId: string; onSu
     return () => { active = false; };
   }, [buildingId]);
   const dirty = () => { setProfile(null); setMessage('Changed assumptions — calculate or save to refresh.'); };
+  useImperativeHandle(controlRef, () => ({ set: (key, value) => { setFields(f => ({ ...f, [key]: String(value) })); setKnown(true); dirty(); } }));
   async function calculate(save: boolean) {
     if (!buildingId || busy) return;
     setBusy(true);

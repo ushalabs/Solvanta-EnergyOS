@@ -5,13 +5,14 @@ import Svg, { Polygon, Rect, Circle, Image as SvgImage, Line } from 'react-nativ
 import * as ImagePicker from 'expo-image-picker';
 import { ImagePlus, Camera, Undo2, Check, Eraser, Calculator, Save, ScanLine, PencilRuler, ArrowUp } from 'lucide-react-native';
 import { SolvantaScreen } from '../../src/components/SolvantaScreen';
-import { Card, CardHeader, Label, Message, Metric, MetricGrid, Field, FieldRow, Action, ActionRow, BuildingHeader, useBuildings } from '../../src/components/TwinControls';
+import { Card, CardHeader, Label, Message, Metric, MetricGrid, Field, FieldRow, Action, ActionRow, Chip, ChipGroup, BuildingHeader, useBuildings } from '../../src/components/TwinControls';
 import { api } from '../../src/api/client';
 import { emptyRoof, RoofInput, RoofRecord, Layout, Point, parsePoints, formatPoints, tapToRoofPoint, screenPx, selfIntersects, defaultRectangle, panelGroups, usableWidthM, centroid } from '../../src/api/roof';
 import { compassPoint } from '../../src/api/pv';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { RADIUS, SPACING } from '../../src/theme/tokens';
-import { PVDesigner, PVSummary } from '../../src/components/PVDesigner';
+import { PVDesigner, PVSummary, PVControl } from '../../src/components/PVDesigner';
+import { ModalSheet } from '../../src/components/ModalSheet';
 import { PillSegmentedControl } from '../../src/components/PillSegmentedControl';
 import { ARCapabilityFallback } from '../../src/components/ARCapabilityFallback';
 import { AR_UNAVAILABLE_COPY } from '../../src/ar/arCapability';
@@ -23,6 +24,10 @@ type Tab = 'photo' | 'design' | 'ar';
 // Inactive sections stay mounted (so nothing is lost when switching tabs) and are only hidden.
 const shown = (on: boolean) => on ? undefined : { display: 'none' as const };
 const DASH = '—';
+const MODULE_RATINGS = [400, 450, 500, 550, 600];
+const COMPASS = [{ id: 'N', deg: 0 }, { id: 'NE', deg: 45 }, { id: 'E', deg: 90 }, { id: 'SE', deg: 135 }, { id: 'S', deg: 180 }, { id: 'SW', deg: 225 }, { id: 'W', deg: 270 }, { id: 'NW', deg: 315 }];
+const TILT_MIN = 0, TILT_MAX = 45, TILT_START = 25;
+type Selector = 'type' | 'tilt' | 'orientation';
 const GRID = [0.25, 0.5, 0.75];
 // Short buttons that still give a 44px touch area.
 const compact = { flex: 1, minHeight: 44, paddingVertical: 8, paddingHorizontal: 8 };
@@ -33,6 +38,13 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
   const [tab, setTab] = useState<Tab>('design');
   const [advanced, setAdvanced] = useState(false);
   const [pv, setPv] = useState<PVSummary>({ profile: null, wattageW: null, tiltDeg: null, azimuthDeg: null });
+  const [pvOutdated, setPvOutdated] = useState(false);
+  const [selector, setSelector] = useState<Selector | null>(null);
+  const pvControl = useRef<PVControl>(null);
+  const onSummary = (next: PVSummary) => { setPv(next); if (next.profile) setPvOutdated(false); };
+  const choose = (key: 'module_wattage_w' | 'tilt_deg' | 'azimuth_deg', value: number) => { pvControl.current?.set(key, value); setPvOutdated(true); };
+  const tiltNow = pv.tiltDeg ?? TILT_START;
+  const stepTilt = (by: number) => choose('tilt_deg', Math.min(TILT_MAX, Math.max(TILT_MIN, Math.round(tiltNow + by))));
   const [arCap, setArCap] = useState<ARCapability | null>(null);
   const [saved, setSaved] = useState<Layout | null>(null);
   const [outdated, setOutdated] = useState(false);
@@ -117,10 +129,10 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
   const dimension = layout && roof.scale_points.length === 2 && roof.boundary.length >= 3 ? usableWidthM(layout.panels, layout.meters_per_pixel) : null;
   const dimY = Math.min(canvasH - 18, toY(Math.max(...roof.boundary.map(p => p.y), 0)) + 8);
   const dailyKwh = pv.profile?.daily_energy_kwh;
-  const configRows = [
-    { name: 'Panel Type', value: pv.wattageW === null ? DASH : `${pv.wattageW} W` },
-    { name: 'Tilt Angle', value: pv.tiltDeg === null ? DASH : `${pv.tiltDeg}°` },
-    { name: 'Orientation', value: pv.azimuthDeg === null ? DASH : compassPoint(pv.azimuthDeg) },
+  const configRows: Array<{ name: string; value: string; open: Selector }> = [
+    { name: 'Panel Type', value: pv.wattageW === null ? DASH : `${pv.wattageW} W`, open: 'type' },
+    { name: 'Tilt Angle', value: pv.tiltDeg === null ? DASH : `${pv.tiltDeg}°`, open: 'tilt' },
+    { name: 'Orientation', value: pv.azimuthDeg === null ? DASH : compassPoint(pv.azimuthDeg), open: 'orientation' },
   ];
   const corners = roof.boundary.length;
   const outlineWarning = corners > 0 && corners < 3 ? 'The roof outline needs at least 3 corners. Tap more corners, or press Undo.' : corners >= 4 && selfIntersects(roof.boundary) ? 'The roof outline crosses itself, so the area may be wrong. Press Undo to remove the last corner, or fix the vertices in Advanced.' : null;
@@ -191,14 +203,17 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
       <MetricGrid>
         <Metric compact label="Usable Area" value={layout ? layout.usable_area_m2.toFixed(1) : DASH} unit={layout ? 'm²' : undefined} />
         <Metric compact label="Panels" value={layout ? layout.panel_count : DASH} tone="accent" />
-        <Metric compact label="Est. Daily (SIMULATED)" value={outdated || dailyKwh === undefined || !Number.isFinite(dailyKwh) ? DASH : dailyKwh.toFixed(1)} unit={outdated || dailyKwh === undefined ? undefined : 'kWh'} />
+        <Metric compact label="Est. Daily (SIMULATED)" value={outdated || pvOutdated || dailyKwh === undefined || !Number.isFinite(dailyKwh) ? DASH : dailyKwh.toFixed(1)} unit={outdated || pvOutdated || dailyKwh === undefined ? undefined : 'kWh'} />
       </MetricGrid>
+      {pvOutdated && !outdated && <Label tone="secondary" caption>Est. Daily is outdated: the panel settings changed. Open Advanced and press Calculate PV Estimate.</Label>}
       {outdated && <Label tone="secondary" caption>Outdated: the roof changed since the last calculation. Press Calculate Placement.</Label>}
       <Card><CardHeader title="Panel Configuration" subtitle={pv.profile ? 'From the PV record or the last calculation' : 'No PV record yet. Open Advanced to calculate.'} />
-        <View>{configRows.map(r => <TouchableOpacity key={r.name} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={`${r.name}: ${r.value}. Opens advanced settings`} hitSlop={{ top: 4, bottom: 4 }} onPress={() => setAdvanced(true)} style={{ flexDirection: 'row', alignItems: 'center', minHeight: 36, gap: 8 }}>
+        <View>{configRows.map(r => <TouchableOpacity key={r.name} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={`${r.name}: ${r.value}`} accessibilityHint="Opens the choices" hitSlop={{ top: 4, bottom: 4 }} onPress={() => setSelector(r.open)} style={{ flexDirection: 'row', alignItems: 'center', minHeight: 36, gap: 8 }}>
           <Text style={{ flex: 1, color: t.textSecondary, fontSize: 14 }}>{r.name}</Text>
           <Text style={{ color: t.textPrimary, fontSize: 14, fontWeight: '600' }}>{r.value}</Text>
-        </TouchableOpacity>)}</View>
+        </TouchableOpacity>)}
+          <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 36, gap: 8 }}><Text style={{ flex: 1, color: t.textSecondary, fontSize: 14 }}>Panel Count</Text><Text style={{ color: t.textPrimary, fontSize: 14, fontWeight: '600' }}>{layout ? `${layout.panel_count} fit` : DASH}</Text></View>
+        </View>
         <Action title={advanced ? 'Hide advanced settings' : 'Advanced settings'} variant="secondary" onPress={() => setAdvanced(!advanced)} />
       </Card>
       <Card><CardHeader title="Roof actions" subtitle="Physical scale comes only from your measured distance" />
@@ -218,7 +233,7 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
             <Field label="Roof vertices (x,y; x,y) — edit to correct" value={coords} onChange={v => { setCoords(v); outdate(); try { setRoof({ ...roof, boundary: parsePoints(v) }); } catch {} }} />
           </View>
         </Card>
-        <PVDesigner buildingId={building.id} onSummary={setPv} />
+        <PVDesigner buildingId={building.id} onSummary={onSummary} controlRef={pvControl} />
       </View>
     </View>
     <View style={shown(tab === 'ar')}>
@@ -235,6 +250,17 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
         {arCap !== null && arCap !== 'ready' && <ARCapabilityFallback capability={arCap} onContinue2D={() => { setArCap(null); setTab('design'); }} onRetry={arCap === 'check-failed' ? () => { setArCap(null); } : undefined} />}
       </Card>
     </View>
+    <ModalSheet visible={selector !== null} title={selector === 'type' ? 'Panel Type' : selector === 'tilt' ? 'Tilt Angle' : 'Orientation'} dismissOnBackdrop onRequestClose={() => setSelector(null)} footer={<Action title="Done" onPress={() => setSelector(null)} />}>
+      {selector === 'type' && <><Label tone="secondary" caption>Module rating. This sets the module rating field in Advanced.</Label><ChipGroup>{MODULE_RATINGS.map(w => <Chip key={w} label={`${w} W`} a11yLabel={`${w} W module`} selected={pv.wattageW === w} onPress={() => choose('module_wattage_w', w)} />)}</ChipGroup></>}
+      {selector === 'tilt' && <><Label tone="secondary" caption>Tilt from horizontal, 0 to 45 degrees. This sets the tilt field in Advanced.</Label>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.md }}>
+          <View style={{ flex: 1 }}><Action title="−" label="Decrease tilt" variant="secondary" disabled={tiltNow <= TILT_MIN} onPress={() => stepTilt(-1)} /></View>
+          <Text accessibilityLabel={`Tilt ${tiltNow} degrees`} style={{ minWidth: 72, textAlign: 'center', color: t.textPrimary, fontSize: 22, fontWeight: '700' }}>{tiltNow}°</Text>
+          <View style={{ flex: 1 }}><Action title="+" label="Increase tilt" variant="secondary" disabled={tiltNow >= TILT_MAX} onPress={() => stepTilt(1)} /></View>
+        </View>
+        <ChipGroup>{[10, 20, 30, 40].map(d => <Chip key={d} label={`${d}°`} a11yLabel={`Tilt ${d} degrees`} selected={pv.tiltDeg === d} onPress={() => choose('tilt_deg', d)} />)}</ChipGroup></>}
+      {selector === 'orientation' && <><Label tone="secondary" caption>The direction the panels face. 180 degrees is South. This sets the azimuth field in Advanced.</Label><ChipGroup>{COMPASS.map(c => <Chip key={c.id} label={c.id} a11yLabel={`Face ${compassPoint(c.deg)}`} selected={pv.azimuthDeg === c.deg} onPress={() => choose('azimuth_deg', c.deg)} />)}</ChipGroup></>}
+    </ModalSheet>
   </SolvantaScreen>;
 }
 
