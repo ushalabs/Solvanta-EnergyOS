@@ -391,7 +391,7 @@ describe('Appliances list layout', () => {
 
   test('the scenario-only notice stays on screen', async () => {
     await render(mix());
-    expect(texts()).toContain('They do not physically turn appliances or electrical circuits on or off.');
+    expect(texts()).toContain('Scenario only: nothing real is switched.');
   });
 
   test('the building is one line in the header, and the picker opens from it', async () => {
@@ -450,5 +450,59 @@ describe('Appliances list layout', () => {
     await press(modalWith('Edit appliance'), 'Delete Lights');
     await press(modalWith('Delete appliance?'), 'Delete');
     expect(deleteSpy).toHaveBeenCalledWith(`/buildings/${BUILDING}/appliances/l`);
+  });
+});
+
+describe('Appliances spacing and status', () => {
+  const items = () => [appliance('a', 'Lights'), appliance('b', 'Water pump')];
+  const climb = (node: any, test: (n: any) => boolean) => { let n = node; while (n && !test(n)) n = n.parent; return n; };
+  const withMargin = (node: any) => climb(node, n => n.type === 'View' && !!flatStyle(n.props.style).marginBottom);
+
+  test('the status message sits with the summary above the filters, not under the list', async () => {
+    await render(items());
+    const all: string[] = hosts('Text').map(flatText);
+    expect(all.indexOf('Synced with building digital twin.')).toBeGreaterThan(all.findIndex(t => t.startsWith('Scenario load')));
+    expect(all.indexOf('Synced with building digital twin.')).toBeLessThan(all.indexOf('All'));
+    // Nothing is rendered after the last appliance row except popups.
+    const after = all.slice(all.indexOf('Water pump'));
+    expect(after).not.toContain('Synced with building digital twin.');
+  });
+
+  test('other status messages appear in the same place', async () => {
+    await render(items());
+    await press(tree.root, 'Edit Lights');
+    await press(modalWith('Edit appliance'), 'Delete Lights');
+    await press(modalWith('Delete appliance?'), 'Delete');
+    const all: string[] = hosts('Text').map(flatText);
+    expect(all.indexOf('Appliance removed.')).toBeLessThan(all.indexOf('All'));
+  });
+
+  test('there is 12px between the filter chips and the first row', async () => {
+    await render(items());
+    const chip = hosts('TouchableOpacity').find((b: any) => b.props.accessibilityLabel === 'ALL')!;
+    expect(flatStyle(withMargin(chip).props.style).marginBottom).toBe(12);
+  });
+
+  test('rows are 12px apart', async () => {
+    await render(items());
+    const row = buttonIn(tree.root, 'Edit Lights')!;
+    const list = climb(row, n => n.type === 'View' && flatStyle(n.props.style).gap === 12);
+    expect(list).toBeTruthy();
+  });
+
+  test('the filter chips look 36px tall and keep a 44px touch area', async () => {
+    await render(items());
+    for (const spoken of ['ALL', 'CRITICAL', 'FLEXIBLE', 'OTHERS']) {
+      const chip = hosts('TouchableOpacity').find((b: any) => b.props.accessibilityLabel === spoken)!;
+      expect(flatStyle(chip.props.style).minHeight).toBe(36);
+      expect(chip.props.hitSlop).toEqual({ top: 4, bottom: 4 });
+      expect(36 + chip.props.hitSlop.top + chip.props.hitSlop.bottom).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  test('the notice is one short line that keeps the meaning', async () => {
+    await render(items());
+    expect(texts()).toContain('Scenario only: nothing real is switched.');
+    expect(texts()).not.toContain('They do not physically turn appliances');
   });
 });

@@ -79,10 +79,10 @@ function AppliancesWorkspace({building:picker}:{building:ReturnType<typeof useBu
   return <SolvantaScreen banner="SCENARIO ONLY • no real appliances are switched" footer={<Action title="Add Appliance" disabled={!building.id} icon={<Plus size={18} color={building.id?t.onLime:t.textSecondary}/>} onPress={create}/>}>
     <ScreenHeader title="Appliances" subtitle={selected?`${selected.name}${place?` · ${place}`:''}`:'Choose a building'} onTitlePress={()=>setChoosing(!choosing)} titlePressLabel={selected?`Change building: ${selected.name}`:'Choose a building'}/>
     {showPicker&&<BuildingPicker state={picker}/>}
-    <View style={{marginBottom:SPACING.sm}}><Label tone="secondary" caption>Switches select loads for a simulation scenario only. They do not physically turn appliances or electrical circuits on or off.</Label></View>
-    <View style={{marginBottom:SPACING.md}}><Label tone="secondary" caption>Scenario load {kw(list?.summary.requested_kw)} kW · Critical {kw(list?.summary.critical_kw)} kW · {list?`${list.summary.selected_count} selected`:'— selected'}</Label></View>
-    <ChipGroup>{FILTERS.map(f=><Chip key={f.id} label={f.label} a11yLabel={f.spoken} selected={filter===f.id} onPress={()=>setFilter(f.id)}/>)}</ChipGroup>
-    <View style={{gap:10}}>
+    <View style={{marginBottom:SPACING.sm}}><Label tone="secondary" caption>Scenario only: nothing real is switched.</Label></View>
+    <View style={{marginBottom:SPACING.md,gap:2}}><Label tone="secondary" caption>Scenario load {kw(list?.summary.requested_kw)} kW · Critical {kw(list?.summary.critical_kw)} kW · {list?`${list.summary.selected_count} selected`:'— selected'}</Label><Label tone="secondary" caption>{message}</Label></View>
+    <View style={{marginBottom:SPACING.md}}><ChipGroup>{FILTERS.map(f=><Chip key={f.id} compact label={f.label} a11yLabel={f.spoken} selected={filter===f.id} onPress={()=>setFilter(f.id)}/>)}</ChipGroup></View>
+    <View style={{gap:12}}>
       {visible.map(a=><View key={a.id} style={{flexDirection:'row',alignItems:'center',gap:SPACING.sm,minHeight:64,paddingLeft:12,paddingRight:14,borderRadius:RADIUS.card,borderWidth:1,borderColor:t.border,backgroundColor:t.surface}}>
         <TouchableOpacity activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={`Edit ${a.name}`} accessibilityHint="Opens this appliance to edit or delete it" onPress={()=>edit(a)} style={{flex:1,flexDirection:'row',alignItems:'center',gap:12,minHeight:64}}>
           <View style={{width:40,height:40,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:t.surfaceElevated}}><Plug size={20} color={t.textSecondary}/></View>
@@ -94,9 +94,8 @@ function AppliancesWorkspace({building:picker}:{building:ReturnType<typeof useBu
         <Toggle a11yLabel={`${a.name} scenario selection`} value={a.selected} onValueChange={()=>toggle(a)} disabled={busy}/>
       </View>)}
     </View>
-    {list && !list.items.length && <Message>No saved appliances. Add one to build this site's load twin.</Message>}
-    {list && !!list.items.length && !visible.length && <Message>No appliances match this filter.</Message>}
-    <Label tone="secondary" caption>{message}</Label>
+    {list && !list.items.length && <View style={{marginTop:SPACING.md}}><Message>No saved appliances. Add one to build this site's load twin.</Message></View>}
+    {list && !!list.items.length && !visible.length && <View style={{marginTop:SPACING.md}}><Message>No appliances match this filter.</Message></View>}
     <ConfirmDialog visible={!!pendingDelete} title="Delete appliance?" confirmLabel="Delete" confirmDisabled={busy} onCancel={()=>setPendingDelete(null)} onConfirm={()=>{const a=pendingDelete;setPendingDelete(null);if(a)remove(a);}}>
       <Text style={{fontWeight:'700'}}>{pendingDelete?.name}</Text> will be removed from this building's saved loads. This cannot be undone.
     </ConfirmDialog>

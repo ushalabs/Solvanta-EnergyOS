@@ -67,6 +67,14 @@ describe('control sizes follow docs/design-reference', () => {
     const cta = flat(touchable(await render(<LimeCTA title="Go" onPress={() => {}} />)).props.style);
     expect(cta).toMatchObject({ height: 50, borderRadius: 16 });
   });
+  test('the default chip is 44px and the compact chip is 36px with hit padding that restores 44px', async () => {
+    const normal = touchable(await render(<Chip label="X" onPress={() => {}} />));
+    expect(flat(normal.props.style).minHeight).toBe(44);
+    expect(normal.props.hitSlop).toBeUndefined();
+    const compact = touchable(await render(<Chip label="X" compact onPress={() => {}} />));
+    expect(flat(compact.props.style).minHeight).toBe(36);
+    expect(compact.props.hitSlop).toEqual({ top: 4, bottom: 4 });
+  });
   test('the toggle track is 44x26 and its touch area stays at least 44px', async () => {
     const button = touchable(await render(<Toggle a11yLabel="X" value onValueChange={() => {}} />));
     const track = flat(button.findAll(n => (n.type as any) === 'View')[0].props.style);
