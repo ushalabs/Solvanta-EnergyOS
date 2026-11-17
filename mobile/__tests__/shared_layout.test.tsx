@@ -61,15 +61,47 @@ describe('FloatingTabDock', () => {
     expect(hosts(tree, 'Icon').map(i => i.props.name)).toEqual(['House', 'LayoutGrid', 'ChartNoAxesColumn', 'MapPin', 'MessageCircle']);
   });
 
-  test('the active tab is a 44px lime circle with a glow; the others have no fill', async () => {
+  test.each(['index', 'appliances', 'simulation', 'rooftop', 'ai'] as const)('on the %s tab the active indicator is a 44px lime circle with a round glow', async current => {
+    const tree = await render(<FloatingTabDock currentTab={current} onSelectTab={() => {}} />);
+    const active = tree.root.findAll(n => n.props.testID === 'dock-active' && (n.type as any) === 'View');
+    const glow = tree.root.findAll(n => n.props.testID === 'dock-glow' && (n.type as any) === 'View');
+    expect(active).toHaveLength(1);
+    expect(glow).toHaveLength(1);
+    const circle = flat(active[0].props.style);
+    expect(circle).toMatchObject({ width: 44, height: 44, borderRadius: 22, backgroundColor: darkTokens.lime });
+    // Equal sides and a radius of half the side: a circle, never a rounded square.
+    expect(circle.borderRadius).toBe(circle.width / 2);
+    // Nothing on the circle can be clipped or redrawn as a square on Android.
+    expect(circle.boxShadow).toBeUndefined();
+    expect(circle.elevation).toBeUndefined();
+    expect(circle.shadowOpacity).toBeUndefined();
+    const ring = flat(glow[0].props.style);
+    expect(ring).toMatchObject({ width: 58, height: 58, borderRadius: 29, backgroundColor: darkTokens.limeGlow, position: 'absolute' });
+    expect(ring.boxShadow).toBeUndefined();
+    // The ring is centred on the circle.
+    expect(ring.left).toBe(-7);
+    expect(ring.top).toBe(-7);
+  });
+
+  test('only the selected tab has a fill; the others are plain icons', async () => {
     const tree = await render(<FloatingTabDock currentTab="rooftop" onSelectTab={() => {}} />);
     const tabs = hosts(tree, 'TouchableOpacity');
-    const circle = (i: number) => flat(tabs[i].findAll(n => (n.type as any) === 'View')[0].props.style);
-    expect(circle(3)).toMatchObject({ width: 44, height: 44, borderRadius: 22, backgroundColor: darkTokens.lime });
-    expect(circle(3).boxShadow).toContain(darkTokens.limeGlow);
-    expect(circle(0).backgroundColor).toBeUndefined();
+    const idle = tree.root.findAll(n => n.props.testID === 'dock-idle' && (n.type as any) === 'View');
+    expect(idle).toHaveLength(4);
+    for (const view of idle) expect(flat(view.props.style).backgroundColor).toBeUndefined();
     expect(tabs[3].findAll(n => (n.type as any) === 'Icon')[0].props.color).toBe(darkTokens.onLime);
     expect(tabs[0].findAll(n => (n.type as any) === 'Icon')[0].props.color).toBe(darkTokens.textSecondary);
+  });
+
+  test('moving to another tab swaps the element in that tab instead of restyling it', async () => {
+    let tree!: ReactTestRenderer;
+    await act(async () => { tree = create(<FloatingTabDock currentTab="index" onSelectTab={() => {}} />); });
+    const ids = (i: number) => hosts(tree, 'TouchableOpacity')[i].findAll(n => typeof n.props.testID === 'string' && n.props.testID.startsWith('dock-') && (n.type as any) === 'View').map(n => n.props.testID);
+    expect(ids(1)).toEqual(['dock-idle']);
+    expect(ids(0)).toEqual(['dock-glow', 'dock-active']);
+    await act(async () => { tree.update(<FloatingTabDock currentTab="appliances" onSelectTab={() => {}} />); });
+    expect(ids(1)).toEqual(['dock-glow', 'dock-active']);
+    expect(ids(0)).toEqual(['dock-idle']);
   });
 
   test('selection is exposed for native and web, and every tab is at least 44px', async () => {

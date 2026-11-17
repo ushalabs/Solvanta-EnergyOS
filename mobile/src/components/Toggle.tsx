@@ -11,7 +11,7 @@ interface ToggleProps {
   disabled?: boolean;
 }
 
-/** Two-state control whose whole row is the touch target. It only ever changes app state, never a device. */
+/** Two-state control whose whole row is the touch target. The track is 44x26 as in the reference. It only ever changes app state, never a device. */
 export const Toggle: React.FC<ToggleProps> = ({ value, onValueChange, label, a11yLabel, hint, disabled = false }) => {
   const { tokens: t } = useTheme();
   return (
@@ -42,10 +42,10 @@ export const Toggle: React.FC<ToggleProps> = ({ value, onValueChange, label, a11
       ) : null}
       <View
         style={{
-          width: 48,
-          height: 28,
-          padding: 3,
-          borderRadius: 14,
+          width: 44,
+          height: 26,
+          padding: 2,
+          borderRadius: 13,
           borderWidth: 1,
           borderColor: value ? t.lime : t.textSecondary,
           backgroundColor: value ? t.lime : t.surfaceElevated,

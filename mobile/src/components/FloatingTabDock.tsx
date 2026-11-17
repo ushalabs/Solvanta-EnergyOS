@@ -70,20 +70,29 @@ export const FloatingTabDock: React.FC<FloatingTabDockProps> = ({
               aria-selected={isSelected}
               accessibilityLabel={`${tab.label} tab`}
             >
-              <View
-                style={[
-                  styles.iconCircle,
-                  isSelected && {
-                    backgroundColor: tokens.lime,
-                    boxShadow: `0px 0px 16px ${tokens.limeGlow}`,
-                  },
-                ]}
-              >
-                <IconComponent
-                  size={22}
-                  color={isSelected ? tokens.onLime : tokens.textSecondary}
-                  strokeWidth={isSelected ? 2.4 : 1.8}
-                />
+              <View style={styles.slot}>
+                {/*
+                  The glow is its own circle and the active state is a different element, not a style added to
+                  a mounted view. On Android a boxShadow or background added after mount can draw as a square.
+                */}
+                {isSelected ? (
+                  <View
+                    pointerEvents="none"
+                    testID="dock-glow"
+                    style={[styles.glow, { backgroundColor: tokens.limeGlow }]}
+                  />
+                ) : null}
+                <View
+                  key={isSelected ? 'active' : 'idle'}
+                  testID={isSelected ? 'dock-active' : 'dock-idle'}
+                  style={[styles.iconCircle, isSelected && { backgroundColor: tokens.lime }]}
+                >
+                  <IconComponent
+                    size={22}
+                    color={isSelected ? tokens.onLime : tokens.textSecondary}
+                    strokeWidth={isSelected ? 2.4 : 1.8}
+                  />
+                </View>
               </View>
             </TouchableOpacity>
           );
@@ -120,6 +129,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
+  },
+  slot: {
+    width: DOCK.activeSize,
+    height: DOCK.activeSize,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glow: {
+    position: 'absolute',
+    left: -(DOCK.glowSize - DOCK.activeSize) / 2,
+    top: -(DOCK.glowSize - DOCK.activeSize) / 2,
+    width: DOCK.glowSize,
+    height: DOCK.glowSize,
+    borderRadius: DOCK.glowSize / 2,
   },
   iconCircle: {
     width: DOCK.activeSize,

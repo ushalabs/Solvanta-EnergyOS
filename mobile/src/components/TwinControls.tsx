@@ -10,6 +10,9 @@ import { Toggle } from './Toggle';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const MIN_TARGET = 44;
+/** Primary and secondary buttons, as in docs/design-reference/DESIGN_TOKENS.md. */
+export const BUTTON_HEIGHT = 50;
+const CHIP_COMPACT = 36;
 export type Tone = 'primary' | 'secondary' | 'accent' | 'warning' | 'danger' | 'success' | 'info';
 
 function useToneColor() {
@@ -59,15 +62,16 @@ export function Action({ title, onPress, disabled = false, selected = false, var
   const { tokens: t } = useTheme();
   const palette = disabled ? { background: t.surfaceElevated, foreground: t.textSecondary, border: t.border }
     : { primary: { background: t.lime, foreground: t.onLime, border: t.lime }, secondary: { background: t.surfaceElevated, foreground: t.textPrimary, border: selected ? t.limeMark : t.border }, danger: { background: 'transparent', foreground: t.redText, border: t.redText } }[variant];
-  return <TouchableOpacity activeOpacity={0.82} accessibilityRole="button" accessibilityLabel={label ?? title} accessibilityState={{ disabled, selected, busy: loading }} disabled={disabled} onPress={onPress} style={[{ flexDirection: 'row', gap: 8, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, minHeight: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.background, borderWidth: selected ? 2 : 1, borderColor: selected && variant === 'primary' ? t.textPrimary : palette.border }, style]}>{loading ? <ActivityIndicator size="small" color={palette.foreground} /> : icon}<Text style={{ flexShrink: 1, color: palette.foreground, fontSize: 14, lineHeight: 19, fontWeight: variant === 'primary' && !disabled ? '800' : '700', textAlign: 'center' }}>{title}</Text></TouchableOpacity>;
+  return <TouchableOpacity activeOpacity={0.82} accessibilityRole="button" accessibilityLabel={label ?? title} accessibilityState={{ disabled, selected, busy: loading }} disabled={disabled} onPress={onPress} style={[{ flexDirection: 'row', gap: 8, borderRadius: RADIUS.button, paddingHorizontal: 14, paddingVertical: 12, minHeight: BUTTON_HEIGHT, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.background, borderWidth: selected ? 2 : 1, borderColor: selected && variant === 'primary' ? t.textPrimary : palette.border }, style]}>{loading ? <ActivityIndicator size="small" color={palette.foreground} /> : icon}<Text style={{ flexShrink: 1, color: palette.foreground, fontSize: 14, lineHeight: 19, fontWeight: variant === 'primary' && !disabled ? '800' : '700', textAlign: 'center' }}>{title}</Text></TouchableOpacity>;
 }
 export function ActionRow({ children }: { children: React.ReactNode }) {
   return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm }}>{React.Children.map(children, child => child && <View style={{ flexGrow: 1, flexBasis: 130 }}>{child}</View>)}</View>;
 }
-export function Chip({ label, selected = false, onPress, disabled = false, a11yLabel }: { label: string; selected?: boolean; onPress: () => void; disabled?: boolean; a11yLabel?: string }) {
+/** `compact` draws a 36px chip and keeps a 44px touch area with hit padding. */
+export function Chip({ label, selected = false, onPress, disabled = false, a11yLabel, compact = false }: { label: string; selected?: boolean; onPress: () => void; disabled?: boolean; a11yLabel?: string; compact?: boolean }) {
   const { tokens: t } = useTheme();
   const foreground = selected ? t.onLime : disabled ? t.textSecondary : t.textPrimary;
-  return <TouchableOpacity activeOpacity={0.82} accessibilityRole="button" accessibilityLabel={a11yLabel ?? label} accessibilityState={{ selected, disabled }} aria-selected={selected} disabled={disabled} onPress={onPress} style={{ flexDirection: 'row', flexShrink: 1, alignItems: 'center', gap: 6, minHeight: MIN_TARGET, paddingHorizontal: 14, paddingVertical: 8, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: selected ? t.lime : t.border, backgroundColor: selected ? t.lime : t.surfaceElevated }}>{selected && <Check size={14} color={foreground} strokeWidth={3} />}<Text style={{ flexShrink: 1, color: foreground, fontSize: 13, lineHeight: 18, fontWeight: selected ? '800' : '600' }}>{label}</Text></TouchableOpacity>;
+  return <TouchableOpacity activeOpacity={0.82} accessibilityRole="button" accessibilityLabel={a11yLabel ?? label} accessibilityState={{ selected, disabled }} aria-selected={selected} disabled={disabled} onPress={onPress} hitSlop={compact ? { top: 4, bottom: 4 } : undefined} style={{ flexDirection: 'row', flexShrink: 1, alignItems: 'center', gap: 6, minHeight: compact ? CHIP_COMPACT : MIN_TARGET, paddingHorizontal: 14, paddingVertical: compact ? 4 : 8, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: selected ? t.lime : t.border, backgroundColor: selected ? t.lime : t.surfaceElevated }}>{selected && <Check size={14} color={foreground} strokeWidth={3} />}<Text style={{ flexShrink: 1, color: foreground, fontSize: 13, lineHeight: 18, fontWeight: selected ? '800' : '600' }}>{label}</Text></TouchableOpacity>;
 }
 export function ChipGroup({ children }: { children: React.ReactNode }) {
   return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm }}>{children}</View>;

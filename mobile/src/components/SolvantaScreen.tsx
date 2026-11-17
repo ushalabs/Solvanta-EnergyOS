@@ -104,11 +104,11 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 6,
-    borderRadius: RADIUS.md,
-    marginBottom: SPACING.md,
+    gap: 6,
+    paddingHorizontal: SPACING.sm + 2,
+    paddingVertical: 3,
+    borderRadius: RADIUS.pill,
+    marginBottom: SPACING.sm,
     maxWidth: '100%',
   },
   bannerDot: {
@@ -118,8 +118,8 @@ const styles = StyleSheet.create({
   },
   bannerText: {
     flexShrink: 1,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '600',
   },
   footerWrapper: {
