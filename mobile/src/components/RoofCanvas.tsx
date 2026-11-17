@@ -191,7 +191,7 @@ export function RoofCanvas({ roof, layout, draft, mode, metersPerUnit = null, in
       {roof.obstacles.map((ring, i) => { const c = centroid(ring); return <View key={`o${i}`} style={{ position: 'absolute', left: toX(c.x) - 40, top: toY(c.y) - 7, width: 80, alignItems: 'center' }}><Text numberOfLines={1} style={{ color: t.textPrimary, fontSize: 10, lineHeight: 14 }}>{name(i)}</Text></View>; })}
       {dimension && <View accessibilityLabel={`Usable width ${dimension.widthM.toFixed(1)} metres`} style={{ position: 'absolute', left: toX(dimension.x1), width: Math.max(1, toX(dimension.x2) - toX(dimension.x1)), top: dimY, alignItems: 'center' }}>
         <View style={{ position: 'absolute', left: 0, right: 0, top: 4, height: 1, backgroundColor: t.cyanText }} /><View style={{ position: 'absolute', left: 0, top: 0, width: 1, height: 9, backgroundColor: t.cyanText }} /><View style={{ position: 'absolute', right: 0, top: 0, width: 1, height: 9, backgroundColor: t.cyanText }} />
-        <Text style={{ marginTop: 8, color: t.cyanText, fontSize: 11, lineHeight: 14 }}>{dimension.widthM.toFixed(1)} m</Text>
+        <Text numberOfLines={1} style={{ marginTop: 8, width: 130, textAlign: 'center', color: t.cyanText, fontSize: 11, lineHeight: 14, backgroundColor: t.backgroundRaised, borderRadius: 4 }}>{dimension.widthM.toFixed(1)} m usable width</Text>
       </View>}
       {interactive && mode === 'roof' && roof.boundary.map((p, i) => <View key={`h${i}`} accessibilityLabel={`Roof corner ${i + 1}, drag to move`} style={{ position: 'absolute', left: toX(p.x) - 10, top: toY(p.y) - 10, width: 20, height: 20, borderRadius: 10 }} />)}
     </View>

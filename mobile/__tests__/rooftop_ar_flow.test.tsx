@@ -727,6 +727,10 @@ describe('Roof canvas drawing', () => {
     // One panel 73 roof units wide at 0.015 m per unit.
     expect(labelled('Usable width')).toHaveLength(1);
     expect(labelled('Usable width')[0].props.accessibilityLabel).toBe('Usable width 1.1 metres');
+    const text = labelled('Usable width')[0].findAll((n: any) => (n.type as any) === 'Text')[0];
+    expect(text.props.children.join('')).toBe('1.1 m usable width');
+    // A solid chip, so the words stay readable when the scale line passes behind them.
+    expect(text.props.style.backgroundColor).toBe(require('../src/theme/tokens').darkTokens.backgroundRaised);
     await tapCanvas(150, 150);
     expect(labelled('Usable width')).toHaveLength(0);
   });
