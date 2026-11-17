@@ -203,3 +203,17 @@ export function panelBlocks(panels: Rect[], tolerance: number): Array<{ bounds: 
   }
   return blocks;
 }
+
+/**
+ * Squares up the edge that will close the outline: when the line from `first` to `p` is within `maxDegrees`
+ * of vertical or horizontal, `p` moves onto that line. Only one coordinate changes, so an alignment already
+ * made with the previous corner is kept.
+ */
+export function alignToFirst(p: Point, first: Point, maxDegrees = 8): { point: Point; aligned: boolean } {
+  const dx = p.x - first.x, dy = p.y - first.y, len = Math.hypot(dx, dy);
+  if (!len) return { point: p, aligned: false };
+  const limit = Math.sin((maxDegrees * Math.PI) / 180);
+  if (Math.abs(dx) / len <= limit && dx !== 0) return { point: { x: first.x, y: p.y }, aligned: true };
+  if (Math.abs(dy) / len <= limit && dy !== 0) return { point: { x: p.x, y: first.y }, aligned: true };
+  return { point: p, aligned: false };
+}

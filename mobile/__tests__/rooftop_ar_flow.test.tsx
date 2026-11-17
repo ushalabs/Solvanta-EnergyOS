@@ -1139,6 +1139,14 @@ describe('Professional editor tools', () => {
       expect(label('Snapped to right angle')).toHaveLength(1);
     });
 
+    test('the edge back to the first corner is squared up too, so a box drawn by eye closes square', async () => {
+      await render();
+      await tapCanvas(30, 30); await tapCanvas(270, 30); await tapCanvas(270, 180);
+      await tapCanvas(36, 180);
+      expect(input(VERTICES).props.value).toBe('100,100; 900,100; 900,600; 100,600');
+      expect(label('Snapped to right angle')).toHaveLength(1);
+    });
+
     test('can be turned off from the toolbar', async () => {
       await render();
       await press('Snap to grid and right angles');

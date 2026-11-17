@@ -12,7 +12,7 @@ import { useTheme } from '../../src/theme/ThemeContext';
 import { SPACING } from '../../src/theme/tokens';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RoofCanvas, CanvasEvent } from '../../src/components/RoofCanvas';
-import { gridStep, metersPerUnit, polygonArea, snapPoint, SnapKind, insertCorner, removeCorner, ObstacleShape, rectangleRing, circleRing, ringCentre, placementPoint, dragShapeCorner, translateRing, History, emptyHistory, record, undo, redo } from '../../src/api/roofEdit';
+import { gridStep, metersPerUnit, polygonArea, snapPoint, SnapKind, insertCorner, removeCorner, ObstacleShape, rectangleRing, circleRing, ringCentre, placementPoint, alignToFirst, dragShapeCorner, translateRing, History, emptyHistory, record, undo, redo } from '../../src/api/roofEdit';
 import { PVDesigner, PVSummary, PVControl } from '../../src/components/PVDesigner';
 import { ModalSheet } from '../../src/components/ModalSheet';
 import { PillSegmentedControl } from '../../src/components/PillSegmentedControl';
@@ -112,7 +112,9 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
         if (e.corner) return;
         if (e.edge && e.edge.ring === 'roof') { commit({ ...current(), roof: { ...roof, boundary: insertCorner(roof.boundary, e.edge.index, e.edge.point) } }); setSnapNote(null); return; }
         const n = roof.boundary.length;
-        const p = snapped(e.point, roof.boundary[n - 1], roof.boundary[n - 2]);
+        let p = snapped(e.point, roof.boundary[n - 1], roof.boundary[n - 2]);
+        // From the third corner on, also square up the edge that will close the outline back to the first corner.
+        if (snapOn && n >= 2) { const a = alignToFirst(p, roof.boundary[0]); if (a.aligned) { p = a.point; setSnapNote('angle'); } }
         commit({ ...current(), roof: { ...roof, boundary: [...roof.boundary, p] } });
       } else if (mode === 'obstacle') {
         if (!draft.length) {

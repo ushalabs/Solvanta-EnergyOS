@@ -170,3 +170,18 @@ describe('panel blocks for outlines', () => {
     expect(panelBlocks(panels, 2).flatMap(b => b.panels)).toHaveLength(panels.length);
   });
 });
+
+import { alignToFirst } from '../src/api/roofEdit';
+describe('squaring the closing edge', () => {
+  const first = { x: 100, y: 100 };
+  test('a last corner almost below the first lines up with it', () => {
+    expect(alignToFirst({ x: 112, y: 600 }, first)).toEqual({ point: { x: 100, y: 600 }, aligned: true });
+  });
+  test('a last corner almost level with the first lines up with it', () => {
+    expect(alignToFirst({ x: 700, y: 92 }, first)).toEqual({ point: { x: 700, y: 100 }, aligned: true });
+  });
+  test('a clearly slanted closing edge is left alone, and an exact one is not reported', () => {
+    expect(alignToFirst({ x: 300, y: 500 }, first).aligned).toBe(false);
+    expect(alignToFirst({ x: 100, y: 500 }, first).aligned).toBe(false);
+  });
+});
