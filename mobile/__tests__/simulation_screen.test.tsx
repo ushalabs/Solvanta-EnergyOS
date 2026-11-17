@@ -190,7 +190,7 @@ describe('before a run', () => {
     const t = texts();
     expect(t.filter((x: string) => x === '—').length).toBeGreaterThanOrEqual(4);
     expect(t).toContain('62');
-    expect(t).toContain('Battery at start');
+    expect(t).toContain('Start battery');
     expect(t).toContain('Run a simulation to see the battery level.');
     expect(image()).toBeUndefined();
   });
@@ -205,7 +205,7 @@ describe('before a run', () => {
   test('without equipment data the starting charge is a dash', async () => {
     (api.getBuildingEquipment as jest.Mock).mockRejectedValue(notFound());
     await render();
-    expect(texts()).toContain('Battery at start');
+    expect(texts()).toContain('Start battery');
     expect(texts()).not.toContain('62');
   });
 
@@ -341,6 +341,20 @@ describe('extra tools', () => {
     await settle();
     expect(joined()).toMatch(/Loaded immutable saved run\./);
     expect(chartLines()).toHaveLength(1);
+  });
+});
+
+describe('outage stat tiles', () => {
+  const flat = (style: any) => [style].flat(Infinity).reduce((a: any, x: any) => ({ ...a, ...x }), {});
+  test('labels are short enough for one line and values sit at the bottom of equal tiles', async () => {
+    await render();
+    const labels = ['Start battery', 'PV Generation', 'Total Load'];
+    for (const label of labels) {
+      expect(label.length).toBeLessThanOrEqual(14);
+      const tileView = all('View').find((n: any) => (n.props.accessibilityLabel ?? '').startsWith(`${label}:`))!;
+      expect(flat(tileView.props.style).justifyContent).toBe('space-between');
+    }
+    expect(texts()).not.toContain('Battery at start');
   });
 });
 

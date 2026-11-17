@@ -74,7 +74,7 @@ function SimulationWorkspace({ picker }: { picker: ReturnType<typeof useBuilding
     { label: 'Not selected', value: count(activities.filter(a => !a.selected).length), tint: t.textSecondary },
   ];
   const stats = [
-    { label: 'Battery at start', value: startSoc === null ? DASH : startSoc.toFixed(0), unit: startSoc === null ? undefined : '%' },
+    { label: 'Start battery', value: startSoc === null ? DASH : startSoc.toFixed(0), unit: startSoc === null ? undefined : '%' },
     { label: 'PV Generation', value: run ? run.result.summary.pv_kwh.toFixed(1) : DASH, unit: run ? 'kWh' : undefined },
     { label: 'Total Load', value: run ? run.result.summary.load_kwh.toFixed(1) : DASH, unit: run ? 'kWh' : undefined },
   ];

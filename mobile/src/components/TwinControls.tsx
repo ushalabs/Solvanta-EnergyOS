@@ -90,7 +90,7 @@ export { Toggle };
 export function Metric({ label, value, unit, tone = 'primary', compact = false }: { label: string; value: string | number; unit?: string; tone?: Tone; compact?: boolean }) {
   const { tokens: t } = useTheme();
   const color = useToneColor();
-  return <View accessible accessibilityLabel={`${label}: ${value}${unit ? ` ${unit}` : ''}`} style={{ flexGrow: 1, flexBasis: compact ? 0 : 130, minWidth: compact ? 0 : undefined, padding: 12, gap: 2, borderRadius: RADIUS.md, backgroundColor: t.surfaceElevated }}><Text style={{ color: t.textSecondary, fontSize: TYPOGRAPHY.caption, lineHeight: 17 }}>{label}</Text><Text style={{ color: color(tone), fontSize: compact ? 19 : 22, lineHeight: compact ? 25 : 28, fontWeight: '700' }}>{value}{unit && <Text style={{ color: t.textSecondary, fontSize: 13, fontWeight: '600' }}> {unit}</Text>}</Text></View>;
+  return <View accessible accessibilityLabel={`${label}: ${value}${unit ? ` ${unit}` : ''}`} style={{ flexGrow: 1, flexBasis: compact ? 0 : 130, minWidth: compact ? 0 : undefined, justifyContent: compact ? 'space-between' : undefined, padding: 12, gap: 2, borderRadius: RADIUS.md, backgroundColor: t.surfaceElevated }}><Text style={{ color: t.textSecondary, fontSize: TYPOGRAPHY.caption, lineHeight: 17 }}>{label}</Text><Text style={{ color: color(tone), fontSize: compact ? 19 : 22, lineHeight: compact ? 25 : 28, fontWeight: '700' }}>{value}{unit && <Text style={{ color: t.textSecondary, fontSize: 13, fontWeight: '600' }}> {unit}</Text>}</Text></View>;
 }
 export function MetricGrid({ children }: { children: React.ReactNode }) {
   return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm }}>{children}</View>;
