@@ -541,6 +541,22 @@ describe('Rooftop guidance and state', () => {
     expect(texts()).not.toMatch(/Current mode/);
   });
 
+  test('a next-step line walks a first-time user from outline to scale to calculate', async () => {
+    await render();
+    expect(texts()).not.toMatch(/Next:|Ready:/);
+    await tapCanvas(30, 30); await tapCanvas(270, 30); await tapCanvas(270, 180);
+    expect(texts()).toMatch(/Next: tap Scale and mark a length you measured on the roof\./);
+    await press('Scale');
+    expect(texts()).toMatch(/Next: tap both ends of a length you measured\./);
+    await tapCanvas(30, 200); await tapCanvas(270, 200);
+    expect(texts()).toMatch(/Next: type the measured distance in metres\./);
+    await type('Measured scale distance (m)', '12');
+    expect(texts()).toMatch(/Ready: press Done, then Calculate Placement\./);
+    await press('Obstacle');
+    await tapCanvas(150, 60);
+    expect(texts()).toMatch(/Next: finish or undo the obstacle you are drawing\./);
+  });
+
   test('shows a corner count that follows taps', async () => {
     await render();
     expect(texts()).toMatch(/Corners: 0/);

@@ -247,6 +247,12 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
   const startRectangle = () => commit({ ...current(), roof: { ...roof, boundary: defaultRectangle(roof.width, roof.height) } });
   const mpu = metersPerUnit(roof, distance);
   const liveRoofArea = mpu && corners >= 3 && !roofProblem(roof.boundary) ? polygonArea(roof.boundary) * mpu * mpu : null;
+  // One line telling a first-time user what is still missing before a placement can be calculated.
+  const nextStep = corners < 3 || roofProblem(roof.boundary) ? null
+    : roof.scale_points.length < 2 ? (mode === 'scale' ? 'Next: tap both ends of a length you measured.' : 'Next: tap Scale and mark a length you measured on the roof.')
+    : !mpu ? (mode === 'scale' ? 'Next: type the measured distance in metres.' : 'Next: tap Scale and type the measured distance.')
+    : draft.length ? 'Next: finish or undo the obstacle you are drawing.'
+    : 'Ready: press Done, then Calculate Placement.';
   const scaleField = <Field label="Measured scale distance (m)" numeric value={distance} onChange={v => { setDistance(v); outdate(); }} />;
   const savedPanels = saved ? saved.panel_count : null;
   const arReason = checkingAR ? null : arCap === null ? 'Checking this device for AR…' : arCap !== 'ready' ? AR_UNAVAILABLE_COPY[arCap].title : !saved ? 'Save a roof layout first. AR shows the last saved layout.' : null;
@@ -339,6 +345,7 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
         </View>
         <ScrollView style={{ flexGrow: 0, maxHeight: '50%' }} contentContainerStyle={{ gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingTop: 8, paddingBottom: 4 }} keyboardShouldPersistTaps="handled">
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}><View style={{ flex: 1 }}><Label tone="secondary" caption>{hint}</Label></View><Label tone="secondary" caption>{count}</Label></View>
+          {nextStep && <Text accessibilityLabel={nextStep} style={{ color: t.limeText, fontSize: 13, lineHeight: 18, fontWeight: '600' }}>{nextStep}</Text>}
           <Label tone="secondary" caption>{gestureHint}</Label>
           {!!shapeNote && <Message tone="warning">{shapeNote}</Message>}
           {outlineWarning && <Message tone="warning">{outlineWarning}</Message>}
