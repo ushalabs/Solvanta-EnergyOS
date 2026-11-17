@@ -44,7 +44,7 @@ describe('appliance helpers', () => {
 describe('headline', () => {
   const base = { validated: true, demand_kwh: 4.256, entries: [{ appliance_id: '1', name: 'x', priority: 'low', rated_power_w: 1, segments: [] }] };
   test('optimal and feasible are ready, with only real figures', () => {
-    expect(scheduleHeadline({ ...base, status: 'OPTIMAL' })).toEqual({ title: 'Optimized schedule ready', subtitle: '1 appliance · 4.26 kWh requested · independently validated', ready: true });
+    expect(scheduleHeadline({ ...base, status: 'OPTIMAL' })).toEqual({ title: 'Optimized schedule ready', subtitle: '1 appliance · 4.26 kWh requested', ready: true });
     expect(scheduleHeadline({ ...base, status: 'FEASIBLE', validated: false }).subtitle).toBe('1 appliance · 4.26 kWh requested');
     expect(scheduleHeadline({ ...base, status: 'FEASIBLE' }).title).toBe('Feasible schedule ready');
   });

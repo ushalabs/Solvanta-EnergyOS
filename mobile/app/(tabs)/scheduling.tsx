@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { CalendarClock, History, Plug } from 'lucide-react-native';
+import { CalendarClock, History, Plug, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { SolvantaScreen } from '../../src/components/SolvantaScreen';
 import { Card, CardHeader, Label, Message, Field, Action, ListAction, BuildingHeader, useBuildings } from '../../src/components/TwinControls';
 import { PillSegmentedControl } from '../../src/components/PillSegmentedControl';
@@ -28,6 +28,7 @@ function SchedulingWorkspace({ picker }: { picker: ReturnType<typeof useBuilding
   const [scenario, setScenario] = useState<Scenario>('outage');
   const [customText, setCustomText] = useState('480-600');
   const [expert, setExpert] = useState(false);
+  const [how, setHow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Schedule | null>(null);
   const [history, setHistory] = useState<Schedule[]>([]);
@@ -74,10 +75,17 @@ function SchedulingWorkspace({ picker }: { picker: ReturnType<typeof useBuilding
       legend={[{ tone: 'solar', label: 'Solar (estimated)' }, { tone: 'grid', label: 'Grid' }, { tone: 'appliance', label: 'Appliance' }, ...(ranges && ranges.length ? [{ tone: 'outage' as const, label: 'Outage' }] : [])]} />
 
     {headline.ready
-      ? <NeonHeroCard badgeText="SIMULATED" title={headline.title} subtitle={headline.subtitle}>
-          {schedule!.supply_policy ? <Text style={{ color: t.onLime, fontSize: 12, lineHeight: 17, marginTop: 8 }}>{schedule!.supply_policy}</Text> : null}
-          {schedule!.objective_description ? <Text style={{ color: t.onLime, fontSize: 12, lineHeight: 17, marginTop: 4 }}>{schedule!.objective_description}</Text> : null}
-          {result!.id ? <Text style={{ color: t.onLime, fontSize: 12, lineHeight: 17, marginTop: 4 }}>Saved run {result!.id.slice(0, 8)}</Text> : null}
+      ? <NeonHeroCard icon={<CalendarClock size={22} color={t.limeBright} />} badgeText="SIMULATED" title={headline.title} subtitle={headline.subtitle}>
+          {result!.id ? <Text style={{ color: t.onLime, fontSize: 11, lineHeight: 15, marginTop: 6 }}>Saved run {result!.id.slice(0, 8)}</Text> : null}
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={`${how ? 'Hide' : 'Show'} how this was scheduled`} accessibilityState={{ expanded: how }} activeOpacity={0.8} onPress={() => setHow(!how)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, marginTop: 4 }}>
+            <Text style={{ color: t.onLime, fontSize: 13, lineHeight: 18, fontWeight: '700' }}>How this was scheduled</Text>
+            {how ? <ChevronUp size={16} color={t.onLime} /> : <ChevronDown size={16} color={t.onLime} />}
+          </TouchableOpacity>
+          <View style={how ? { gap: 4 } : { display: 'none' }}>
+            {schedule!.supply_policy ? <Text style={{ color: t.onLime, fontSize: 12, lineHeight: 17 }}>{schedule!.supply_policy}</Text> : null}
+            {schedule!.objective_description ? <Text style={{ color: t.onLime, fontSize: 12, lineHeight: 17 }}>{schedule!.objective_description}</Text> : null}
+            {schedule!.validated ? <Text style={{ color: t.onLime, fontSize: 12, lineHeight: 17 }}>Independently validated</Text> : null}
+          </View>
         </NeonHeroCard>
       : <Card><CardHeader title={headline.title} subtitle={headline.subtitle} icon={<CalendarClock size={18} color={t.limeText} />} />{schedule?.supply_policy ? <Label tone="secondary" caption>{schedule.supply_policy}</Label> : null}</Card>}
     {schedule?.reasons.map(r => <Message key={r} tone="warning">{r}</Message>)}

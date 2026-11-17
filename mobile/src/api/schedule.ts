@@ -43,6 +43,7 @@ export function scheduleHeadline(result: { status: string; validated: boolean; d
   const status = result.status.toUpperCase();
   const ready = status === 'OPTIMAL' || status === 'FEASIBLE';
   const title = status === 'OPTIMAL' ? 'Optimized schedule ready' : status === 'FEASIBLE' ? 'Feasible schedule ready' : 'No schedule saved';
-  const parts = [`${result.entries.length} ${result.entries.length === 1 ? 'appliance' : 'appliances'}`, Number.isFinite(result.demand_kwh) ? `${(result.demand_kwh as number).toFixed(2)} kWh requested` : null, result.validated ? 'independently validated' : null].filter(Boolean);
+  // One short line. Whether the schedule was independently validated is explained under How this was scheduled.
+  const parts = [`${result.entries.length} ${result.entries.length === 1 ? 'appliance' : 'appliances'}`, Number.isFinite(result.demand_kwh) ? `${(result.demand_kwh as number).toFixed(2)} kWh requested` : null].filter(Boolean);
   return { title, subtitle: ready ? parts.join(' · ') : 'See the conflict details below.', ready };
 }

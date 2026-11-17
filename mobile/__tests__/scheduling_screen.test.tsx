@@ -344,12 +344,52 @@ describe('optimized schedule card', () => {
     expect(all('Gradient')).toHaveLength(0);
   });
 
-  test('after an optimal solve it is the lime card, with only figures the solver returned', async () => {
+  test('after an optimal solve it is a short lime card: icon tile, SIMULATED chip, headline, one line and the run id', async () => {
     await render();
     await solve();
     expect(all('Gradient')).toHaveLength(1);
-    expect(texts(all('Gradient')[0])).toEqual(expect.arrayContaining(['SIMULATED', 'Optimized schedule ready', '3 appliances · 2.50 kWh requested · independently validated', 'PV plus available grid.', 'Minimise unmet energy.']));
-    expect(joined()).not.toMatch(/Save 2\.3|backup|1\.6 hours|Recommendation/i);
+    const card = all('Gradient')[0];
+    expect(all('View', card).filter((n: any) => n.props.testID === 'hero-icon')).toHaveLength(1);
+    expect(flat(all('View', card).find((n: any) => n.props.testID === 'hero-icon')!.props.style)).toMatchObject({ width: 44, height: 44, borderRadius: 22 });
+    expect(texts(card)).toEqual(expect.arrayContaining(['SIMULATED', 'Optimized schedule ready', '3 appliances · 2.50 kWh requested', 'Saved run sched123', 'How this was scheduled']));
+    expect(joined()).not.toMatch(/Save 2\.3|backup|1\.6 hours|AI Recommendation|Recommendation/i);
+    expect(texts(card).join(' ')).not.toMatch(/saving|saved? \d/i);
+  });
+
+  test('the headline line no longer carries the validation claim, which moves under How this was scheduled', async () => {
+    await render();
+    await solve();
+    expect(texts()).not.toContain('3 appliances · 2.50 kWh requested · independently validated');
+    expect(texts()).toContain('Independently validated');
+  });
+
+  test('the explanation is closed by default, wording unchanged, and opens and closes from a 44px toggle', async () => {
+    await render();
+    await solve();
+    const toggle = () => button('Show how this was scheduled') ?? button('Hide how this was scheduled');
+    expect(toggle()!.props.accessibilityState.expanded).toBe(false);
+    expect(flat(toggle()!.props.style).minHeight).toBeGreaterThanOrEqual(44);
+    const lines = ['PV plus available grid.', 'Minimise unmet energy.', 'Independently validated'];
+    for (const line of lines) expect(hidden(all('Text').find((n: any) => textOf(n) === line)!)).toBe(true);
+    await press('Show how this was scheduled');
+    for (const line of lines) expect(hidden(all('Text').find((n: any) => textOf(n) === line)!)).toBe(false);
+    expect(button('Hide how this was scheduled')!.props.accessibilityState.expanded).toBe(true);
+    await press('Hide how this was scheduled');
+    for (const line of lines) expect(hidden(all('Text').find((n: any) => textOf(n) === line)!)).toBe(true);
+  });
+
+  test('a schedule the solver did not validate does not claim it was', async () => {
+    post.mockResolvedValueOnce({ ...schedule, result: { ...schedule.result, validated: false } });
+    await render();
+    await solve();
+    expect(texts()).not.toContain('Independently validated');
+  });
+
+  test('without a saved id there is no run id line', async () => {
+    post.mockResolvedValueOnce({ ...schedule, id: null });
+    await render();
+    await solve();
+    expect(joined()).not.toMatch(/Saved run/);
   });
 
   test('a feasible but not optimal schedule is called feasible', async () => {
@@ -357,6 +397,7 @@ describe('optimized schedule card', () => {
     await render();
     await solve();
     expect(texts(all('Gradient')[0])).toEqual(expect.arrayContaining(['Feasible schedule ready', '3 appliances · 2.50 kWh requested']));
+    expect(texts()).not.toContain('Independently validated');
   });
 
   test('a failed solve is not lime: it says no schedule was saved and lists the conflicts', async () => {
