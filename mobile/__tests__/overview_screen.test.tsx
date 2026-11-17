@@ -291,7 +291,13 @@ describe('flow diagram', () => {
     expect(byTestId('flow-dot').every((d: any) => d.props.fill === darkTokens.flowLine)).toBe(true);
     expect(lines()[0].props.d).toBe('M168 272 L168 374');
     expect(byTestId('flow-dot').map((d: any) => [d.props.cx, d.props.cy])).toEqual([[88, 364], [176, 332], [160, 416], [248, 384]]);
-    expect(flat(byTestId('flow-hub')[0].props.style)).toMatchObject({ left: 146, top: 352, width: 44, height: 44, backgroundColor: darkTokens.lime });
+    expect(flat(byTestId('flow-hub')[0].props.style)).toMatchObject({ left: 146, top: 352, width: 44, height: 44, backgroundColor: darkTokens.flowLine });
+    expect(hosts('Icon', byTestId('flow-hub')[0])[0].props).toMatchObject({ name: 'Zap', color: darkTokens.onLime });
+    // The ring is centred on the hub, wider, faint, and drawn first so it sits behind it.
+    const ring = flat(byTestId('flow-hub-glow')[0].props.style);
+    expect(ring).toMatchObject({ left: 134, top: 340, width: 68, height: 68, borderRadius: 34, backgroundColor: darkTokens.flowLine, opacity: 0.25 });
+    const order = tree.root.findAll((n: any) => ['flow-hub-glow', 'flow-hub'].includes(n.props.testID) && typeof n.type === 'string').map((n: any) => n.props.testID);
+    expect(order).toEqual(['flow-hub-glow', 'flow-hub']);
   });
 
   test('follows a different measured layout instead of fixed coordinates', async () => {

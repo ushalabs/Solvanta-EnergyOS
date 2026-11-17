@@ -44,6 +44,9 @@ interface EnergyFlowSvgProps {
 type NodeKey = 'solar' | 'grid' | 'battery' | 'home';
 
 const HUB_SIZE = 44;
+// A wider, faint circle of the same colour behind the hub gives the soft ring of light.
+const HUB_GLOW_SIZE = 68;
+const HUB_GLOW_OPACITY = 0.25;
 const COLUMN_GAP = 16;
 const ROW_GAP = 20;
 const LINE_WIDTH = 1.5;
@@ -203,21 +206,36 @@ export const EnergyFlowSvg: React.FC<EnergyFlowSvgProps> = ({
       ) : null}
 
       {paths ? (
-        <View
-          pointerEvents="none"
-          testID="flow-hub"
-          style={[
-            styles.hub,
-            {
-              left: paths.hub.x - HUB_SIZE / 2,
-              top: paths.hub.y - HUB_SIZE / 2,
-              backgroundColor: tokens.lime,
-              boxShadow: `0px 0px 18px ${tokens.limeGlow}`,
-            },
-          ]}
-        >
-          <Zap size={20} color={tokens.onLime} strokeWidth={2.4} />
-        </View>
+        <>
+          <View
+            pointerEvents="none"
+            testID="flow-hub-glow"
+            style={{
+              position: 'absolute',
+              left: paths.hub.x - HUB_GLOW_SIZE / 2,
+              top: paths.hub.y - HUB_GLOW_SIZE / 2,
+              width: HUB_GLOW_SIZE,
+              height: HUB_GLOW_SIZE,
+              borderRadius: HUB_GLOW_SIZE / 2,
+              backgroundColor: tokens.flowLine,
+              opacity: HUB_GLOW_OPACITY,
+            }}
+          />
+          <View
+            pointerEvents="none"
+            testID="flow-hub"
+            style={[
+              styles.hub,
+              {
+                left: paths.hub.x - HUB_SIZE / 2,
+                top: paths.hub.y - HUB_SIZE / 2,
+                backgroundColor: tokens.flowLine,
+              },
+            ]}
+          >
+            <Zap size={20} color={tokens.onLime} strokeWidth={2.4} />
+          </View>
+        </>
       ) : null}
     </View>
   );
