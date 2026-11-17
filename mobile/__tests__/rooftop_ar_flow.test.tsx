@@ -1218,6 +1218,18 @@ describe('Professional editor tools', () => {
       expect(content().props.style).toMatchObject({ left: 0, top: 0, width: 300 });
     });
 
+    test('the zoom buttons sit under the canvas, so they never cover a roof corner', async () => {
+      await withRoof();
+      const inside = canvas().findAll((n: any) => n.props.accessibilityLabel === 'Zoom in' || n.props.accessibilityLabel === 'Reset view');
+      expect(inside).toHaveLength(0);
+      for (const name of ['Zoom in', 'Zoom out', 'Reset view']) {
+        const b = button(name);
+        expect(b.props.style.width).toBe(44);
+        expect(b.props.style.height).toBe(44);
+        expect(b.props.style.position).toBeUndefined();
+      }
+    });
+
     test('pinching zooms, up to 4x, and Reset view undoes it', async () => {
       await withRoof();
       const two = (d: number) => ({ nativeEvent: { pageX: 150 - d, pageY: 100, touches: [{ pageX: 150 - d, pageY: 100 }, { pageX: 150 + d, pageY: 100 }] } });

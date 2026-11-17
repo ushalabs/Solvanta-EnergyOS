@@ -160,7 +160,8 @@ export function RoofCanvas({ roof, layout, draft, mode, metersPerUnit = null, in
   const ringPoints = (ring: Point[]) => ring.map(p => `${p.x},${p.y}`).join(' ');
   const name = (i: number) => obstacleNames[i]?.trim() || 'Obstacle';
 
-  return <View accessible accessibilityRole="image" accessibilityLabel={a11yLabel} onLayout={e => setWidth(e.nativeEvent.layout.width)} style={{ height: canvasH, backgroundColor: t.backgroundRaised, borderRadius: RADIUS.card - 4, borderWidth: 1, borderColor: t.border, overflow: 'hidden' }} {...responder}>
+  return <View>
+  <View accessible accessibilityRole="image" accessibilityLabel={a11yLabel} onLayout={e => setWidth(e.nativeEvent.layout.width)} style={{ height: canvasH, backgroundColor: t.backgroundRaised, borderRadius: RADIUS.card - 4, borderWidth: 1, borderColor: t.border, overflow: 'hidden' }} {...responder}>
     <View pointerEvents="none" style={content}>
       {!roof.image_data && !fineGrid && COARSE_GRID.map(f => <React.Fragment key={f}><View style={{ position: 'absolute', left: 0, right: 0, top: `${f * 100}%`, height: 1, backgroundColor: t.border, opacity: 0.6 }} /><View style={{ position: 'absolute', top: 0, bottom: 0, left: `${f * 100}%`, width: 1, backgroundColor: t.border, opacity: 0.6 }} /></React.Fragment>)}
       {fine.map(x => <View key={`gx${x}`} style={{ position: 'absolute', top: 0, bottom: 0, left: toX(x), width: 1, backgroundColor: t.border, opacity: 0.35 }} />)}
@@ -196,7 +197,8 @@ export function RoofCanvas({ roof, layout, draft, mode, metersPerUnit = null, in
       {interactive && mode === 'roof' && roof.boundary.map((p, i) => <View key={`h${i}`} accessibilityLabel={`Roof corner ${i + 1}, drag to move`} style={{ position: 'absolute', left: toX(p.x) - 10, top: toY(p.y) - 10, width: 20, height: 20, borderRadius: 10 }} />)}
     </View>
     <View pointerEvents="none" accessibilityLabel="North arrow: the top of the canvas is assumed to be north" style={{ position: 'absolute', left: 8, top: 8, alignItems: 'center' }}><ArrowUp size={14} color={t.textSecondary} /><Text style={{ color: t.textSecondary, fontSize: 10, lineHeight: 12, fontWeight: '700' }}>N</Text></View>
-    {interactive && <View pointerEvents="box-none" accessibilityLabel={`Zoom ${Math.round(zoom * 100)} percent`} style={{ position: 'absolute', right: 6, top: 6, gap: 6 }}>
+  </View>
+  {interactive && <View accessibilityLabel={`Zoom ${Math.round(zoom * 100)} percent`} style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
       {[{ label: 'Zoom in', icon: <ZoomIn size={18} color={t.textPrimary} />, on: () => zoomAround(1.5), off: zoom >= MAX_ZOOM }, { label: 'Zoom out', icon: <ZoomOut size={18} color={t.textPrimary} />, on: () => zoomAround(1 / 1.5), off: zoom <= 1 }, { label: 'Reset view', icon: <Maximize size={18} color={t.textPrimary} />, on: () => setView(1, { x: 0, y: 0 }), off: zoom === 1 && pan.x === 0 && pan.y === 0 }].map(b =>
         <TouchableOpacity key={b.label} accessibilityRole="button" accessibilityLabel={b.label} accessibilityState={{ disabled: b.off }} disabled={b.off} onPress={b.on} style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, opacity: b.off ? 0.5 : 1 }}>{b.icon}</TouchableOpacity>)}
     </View>}
