@@ -24,7 +24,7 @@ jest.mock('../src/theme/ThemeContext', () => {
 
 import React from 'react';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
-import { Action, Chip, IconButton, Message, Metric, Tile, BuildingPicker } from '../src/components/TwinControls';
+import { Action, BuildingHeader, Chip, IconButton, Message, Metric, Tile, BuildingPicker } from '../src/components/TwinControls';
 import { Toggle } from '../src/components/Toggle';
 import { PillSegmentedControl } from '../src/components/PillSegmentedControl';
 import { LimeCTA } from '../src/components/LimeCTA';
@@ -82,6 +82,33 @@ describe('control sizes follow docs/design-reference', () => {
     expect(flat(button.props.style)).toMatchObject({ minHeight: 48, minWidth: 48 });
     const thumb = flat(button.findAll(n => (n.type as any) === 'View')[1].props.style);
     expect(thumb.width).toBeLessThanOrEqual(26 - 2 - 2 * 2);
+  });
+});
+
+describe('compact metric and building header', () => {
+  test('a compact metric shares a row: no fixed basis and a smaller figure', async () => {
+    const view = (await render(<Metric label="Panels" value={18} compact />)).root.findAll(n => (n.type as any) === 'View' && n.props.accessibilityLabel === 'Panels: 18')[0];
+    expect(flat(view.props.style)).toMatchObject({ flexGrow: 1, flexBasis: 0, minWidth: 0 });
+    const regular = (await render(<Metric label="Panels" value={18} />)).root.findAll(n => (n.type as any) === 'View' && n.props.accessibilityLabel === 'Panels: 18')[0];
+    expect(flat(regular.props.style).flexBasis).toBe(130);
+  });
+  const state = (over: object) => ({ buildings: [{ id: 'a', name: 'Alpha', address: 'Lahore, Pakistan' }], id: 'a', setId: jest.fn(), error: '', ...over });
+  const textsOf = (tree: ReactTestRenderer) => tree.root.findAll(n => (n.type as any) === 'Text').map((n: any) => [n.props.children].flat(Infinity).filter((c: any) => typeof c === 'string').join(''));
+  test('shows the building as one line and opens the picker from it', async () => {
+    const tree = await render(<BuildingHeader title="Rooftop Analysis" building={state({})} />);
+    expect(textsOf(tree)).toContain('Rooftop Analysis');
+    expect(textsOf(tree)).toContain('Alpha · Lahore');
+    expect(textsOf(tree)).not.toContain('Building digital twin');
+    const button = touchable(tree);
+    expect(button.props.accessibilityLabel).toBe('Change building: Alpha');
+    await act(async () => { button.props.onPress(); });
+    expect(textsOf(tree)).toContain('Building digital twin');
+    await act(async () => { button.props.onPress(); });
+    expect(textsOf(tree)).not.toContain('Building digital twin');
+  });
+  test('the picker shows by itself when there is no building or an error', async () => {
+    expect(textsOf(await render(<BuildingHeader title="X" building={state({ error: 'Not authenticated' })} />))).toContain('Building digital twin');
+    expect(textsOf(await render(<BuildingHeader title="X" building={state({ buildings: [], id: '' })} />))).toContain('Building digital twin');
   });
 });
 

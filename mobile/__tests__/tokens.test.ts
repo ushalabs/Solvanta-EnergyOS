@@ -14,6 +14,7 @@ describe('Solvanta mobile design tokens', () => {
     expect(darkTokens.limeDeep).toBe('#A9E42C');
     expect(darkTokens.limeGlow).toBe('rgba(184, 242, 58, 0.3)');
     expect(darkTokens.flowLine).toBe('#6AE800');
+    expect(darkTokens.panelFill).toBe('#16264F');
     expect(darkTokens.cyan).toBe('#5CD8FF');
     expect(darkTokens.amber).toBe('#FFC46B');
     expect(darkTokens.green).toBe('#34D8B0');
