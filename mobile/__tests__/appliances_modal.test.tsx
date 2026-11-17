@@ -32,6 +32,7 @@ import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import AppliancesScreen from '../app/(tabs)/appliances';
 import { api, SolvantaApiError } from '../src/api/client';
 import { Appliance, ApplianceList } from '../src/api/appliances';
+import { darkTokens } from '../src/theme/tokens';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -57,6 +58,10 @@ const input = (label: string) => hosts('TextInput').find((n: any) => n.props.acc
 const type = async (label: string, value: string) => { await act(async () => { input(label).props.onChangeText(value); }); };
 const flatStyle = (style: any): any => Array.isArray(style) ? Object.assign({}, ...style.map(flatStyle)) : style || {};
 
+const openDelete = async (name: string) => {
+  await press(tree.root, `Edit ${name}`);
+  await press(modalWith('Edit appliance'), `Delete ${name}`);
+};
 async function render(items: Appliance[] = [appliance('a1', 'Water pump'), appliance('a2', 'Air conditioner')]) {
   getSpy.mockImplementation(async (path: string) => {
     if (path.endsWith('/appliances')) return listOf(...items);
@@ -77,10 +82,16 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => tree.unmount()); jest.restoreAllMocks(); });
 
 describe('Delete confirmation', () => {
-  test('the row Delete button only opens the popup, naming the appliance', async () => {
+  test('Delete is not on the row; tapping the row opens the editor, and its Delete only opens the confirmation', async () => {
     await render();
     expect(modals()).toHaveLength(0);
-    await press(tree.root, 'Delete Water pump');
+    expect(buttonIn(tree.root, 'Delete Water pump')).toBeUndefined();
+    await press(tree.root, 'Edit Water pump');
+    expect(modals()).toHaveLength(1);
+    expect(deleteSpy).not.toHaveBeenCalled();
+    await press(modalWith('Edit appliance'), 'Delete Water pump');
+    expect(modalWith('Edit appliance')).toBeUndefined();
+    expect(modals()).toHaveLength(1);
     expect(deleteSpy).not.toHaveBeenCalled();
     const dialog = modalWith('Delete appliance?');
     expect(texts(dialog)).toContain('Water pump');
@@ -92,7 +103,7 @@ describe('Delete confirmation', () => {
 
   test('Cancel closes it and deletes nothing', async () => {
     await render();
-    await press(tree.root, 'Delete Water pump');
+    await openDelete('Water pump');
     await press(modalWith('Delete appliance?'), 'Cancel');
     expect(modals()).toHaveLength(0);
     expect(deleteSpy).not.toHaveBeenCalled();
@@ -101,7 +112,7 @@ describe('Delete confirmation', () => {
 
   test('tapping outside closes it and deletes nothing', async () => {
     await render();
-    await press(tree.root, 'Delete Water pump');
+    await openDelete('Water pump');
     const backdrop = hosts('View', modalWith('Delete appliance?')).find((p: any) => p.props.testID === 'modal-backdrop');
     expect(backdrop.props.onStartShouldSetResponder()).toBe(true);
     await act(async () => { backdrop.props.onResponderRelease(); });
@@ -111,7 +122,7 @@ describe('Delete confirmation', () => {
 
   test('the backdrop is not a keyboard or screen reader stop', async () => {
     await render();
-    await press(tree.root, 'Delete Water pump');
+    await openDelete('Water pump');
     const backdrop = hosts('View', modalWith('Delete appliance?')).find((p: any) => p.props.testID === 'modal-backdrop');
     expect(backdrop.props.accessible).toBeFalsy();
     expect(backdrop.props.onPress).toBeUndefined();
@@ -120,7 +131,7 @@ describe('Delete confirmation', () => {
 
   test('Android back or web Escape closes it and deletes nothing', async () => {
     await render();
-    await press(tree.root, 'Delete Water pump');
+    await openDelete('Water pump');
     await act(async () => { modalWith('Delete appliance?').props.onRequestClose(); });
     expect(modals()).toHaveLength(0);
     expect(deleteSpy).not.toHaveBeenCalled();
@@ -128,7 +139,7 @@ describe('Delete confirmation', () => {
 
   test('Delete removes exactly that appliance once and closes', async () => {
     await render();
-    await press(tree.root, 'Delete Air conditioner');
+    await openDelete('Air conditioner');
     await press(modalWith('Delete appliance?'), 'Delete');
     expect(deleteSpy).toHaveBeenCalledTimes(1);
     expect(deleteSpy).toHaveBeenCalledWith(`/buildings/${BUILDING}/appliances/a2`);
@@ -139,7 +150,7 @@ describe('Delete confirmation', () => {
   test('a failed delete closes the popup and shows the server error', async () => {
     deleteSpy.mockRejectedValueOnce(new SolvantaApiError(500, { detail: 'Database down' }));
     await render();
-    await press(tree.root, 'Delete Water pump');
+    await openDelete('Water pump');
     await press(modalWith('Delete appliance?'), 'Delete');
     expect(modals()).toHaveLength(0);
     expect(texts()).toContain('Database down');
@@ -152,7 +163,7 @@ describe('Delete confirmation', () => {
     await render();
     const toggle = hosts('TouchableOpacity').find((b: any) => b.props.accessibilityLabel === 'Water pump scenario selection');
     await act(async () => { toggle.props.onPress(); });
-    await press(tree.root, 'Delete Water pump');
+    await openDelete('Water pump');
     expect(buttonIn(modalWith('Delete appliance?'), 'Delete').props.disabled).toBe(true);
     await act(async () => { finish(listOf(appliance('a1', 'Water pump'))); });
   });
@@ -160,7 +171,7 @@ describe('Delete confirmation', () => {
   test('both buttons meet the touch target and the action uses the danger style', async () => {
     const { darkTokens } = require('../src/theme/tokens');
     await render();
-    await press(tree.root, 'Delete Water pump');
+    await openDelete('Water pump');
     const dialog = modalWith('Delete appliance?');
     for (const label of ['Cancel', 'Delete']) expect(flatStyle(buttonIn(dialog, label).props.style).minHeight).toBeGreaterThanOrEqual(44);
     expect(flatStyle(buttonIn(dialog, 'Delete').props.style).borderColor).toBe(darkTokens.redText);
@@ -287,5 +298,128 @@ describe('Add and edit modal', () => {
     await render();
     await press(tree.root, 'Add Appliance');
     for (const b of hosts('TouchableOpacity', modalWith('New appliance'))) expect(flatStyle(b.props.style).minHeight).toBeGreaterThanOrEqual(44);
+  });
+});
+
+describe('Appliances list layout', () => {
+  const mix = () => [
+    appliance('r', 'Refrigerator', { rated_power_w: 150, priority: 'critical', critical: true }),
+    appliance('p', 'Water pump', { rated_power_w: 750, flexible: true }),
+    appliance('l', 'Lights', { rated_power_w: 300, priority: 'medium' }),
+    appliance('a', 'Air conditioner', { rated_power_w: 1200, priority: 'low', flexible: true, selected: false }),
+  ];
+  const rowLabels = () => hosts('TouchableOpacity').map((b: any) => b.props.accessibilityLabel).filter((l: string) => l?.startsWith('Edit '));
+  const filterChip = (spoken: string) => hosts('TouchableOpacity').find((b: any) => b.props.accessibilityLabel === spoken)!;
+  const pressFilter = async (spoken: string) => { await act(async () => { filterChip(spoken).props.onPress(); }); };
+  const footerOf = () => tree.root.findAll((n: any) => n.props.testID === 'screen-footer' && n.type === 'View')[0];
+
+  test('one compact row per appliance with its power and real priority', async () => {
+    await render(mix());
+    expect(rowLabels()).toEqual(['Edit Refrigerator', 'Edit Water pump', 'Edit Lights', 'Edit Air conditioner']);
+    for (const line of ['150 W · Critical', '750 W · Medium · Flexible', '300 W · Medium', '1200 W · Low · Flexible']) expect(texts()).toContain(line);
+  });
+
+  test('rows carry no Edit or Delete buttons of their own; the row is the edit target', async () => {
+    await render(mix());
+    expect(hosts('Text').map(flatText)).not.toContain('Edit');
+    expect(buttonIn(tree.root, 'Delete Refrigerator')).toBeUndefined();
+    const row = buttonIn(tree.root, 'Edit Refrigerator')!;
+    expect(row.props.accessibilityHint).toMatch(/edit or delete/);
+    expect(flatStyle(row.props.style).minHeight).toBeGreaterThanOrEqual(44);
+  });
+
+  test('each row has a scenario toggle that saves the selection and says nothing was switched', async () => {
+    await render(mix());
+    const toggle = hosts('TouchableOpacity').find((b: any) => b.props.accessibilityLabel === 'Air conditioner scenario selection')!;
+    expect(toggle.props.accessibilityRole).toBe('switch');
+    expect(toggle.props['aria-checked']).toBe(false);
+    requestSpy.mockResolvedValueOnce(listOf(...mix()));
+    await act(async () => { toggle.props.onPress(); });
+    expect(requestSpy.mock.calls[0][0]).toBe(`/buildings/${BUILDING}/appliances/a/selection`);
+    expect(JSON.parse(requestSpy.mock.calls[0][1].body)).toEqual({ selected: true });
+    expect(texts()).toContain('Scenario selection saved. No physical switching occurred.');
+  });
+
+  test('filters: All, Critical, Flexible and Others', async () => {
+    await render(mix());
+    expect(hosts('TouchableOpacity').filter((b: any) => ['ALL', 'CRITICAL', 'FLEXIBLE', 'OTHERS'].includes(b.props.accessibilityLabel))).toHaveLength(4);
+    const chips = hosts('TouchableOpacity').filter((b: any) => ['ALL', 'CRITICAL', 'FLEXIBLE', 'OTHERS'].includes(b.props.accessibilityLabel));
+    expect(chips.map((c: any) => flatText(c))).toEqual(['All', 'Critical', 'Flexible', 'Others']);
+    await pressFilter('CRITICAL');
+    expect(rowLabels()).toEqual(['Edit Refrigerator']);
+    await pressFilter('FLEXIBLE');
+    expect(rowLabels()).toEqual(['Edit Water pump', 'Edit Air conditioner']);
+    await pressFilter('OTHERS');
+    expect(rowLabels()).toEqual(['Edit Lights']);
+    await pressFilter('ALL');
+    expect(rowLabels()).toHaveLength(4);
+  });
+
+  test('a filter with no matches says so instead of showing an empty list', async () => {
+    await render([appliance('r', 'Refrigerator', { priority: 'critical', critical: true })]);
+    await pressFilter('OTHERS');
+    expect(rowLabels()).toEqual([]);
+    expect(texts()).toContain('No appliances match this filter.');
+  });
+
+  test('Add Appliance is pinned in the footer slot and is 50px tall', async () => {
+    await render(mix());
+    const add = buttonIn(footerOf(), 'Add Appliance')!;
+    expect(add).toBeDefined();
+    expect(add.props.disabled).toBe(false);
+    expect(flatStyle(add.props.style).minHeight).toBe(50);
+  });
+
+  test('Add Appliance is disabled when there is no building', async () => {
+    jest.spyOn(api, 'getBuildings').mockResolvedValue([] as any);
+    await render();
+    expect(buttonIn(footerOf(), 'Add Appliance')!.props.disabled).toBe(true);
+  });
+
+  test('the summary shows dashes, not zeros, when the list could not load', async () => {
+    getSpy.mockImplementation(async () => { throw new SolvantaApiError(500, { detail: 'Database down' }); });
+    await act(async () => { tree = create(<AppliancesScreen />); });
+    await act(async () => { await Promise.resolve(); });
+    expect(texts()).toContain('Scenario load — kW · Critical — kW · — selected');
+    expect(texts()).toContain('Database down');
+  });
+
+  test('the summary reports the saved scenario load', async () => {
+    await render(mix());
+    expect(texts()).toContain('Scenario load 1.00 kW · Critical 0.00 kW · 4 selected');
+  });
+
+  test('the scenario-only notice stays on screen', async () => {
+    await render(mix());
+    expect(texts()).toContain('They do not physically turn appliances or electrical circuits on or off.');
+  });
+
+  test('the building picker is hidden for one building and shown for several', async () => {
+    await render(mix());
+    expect(texts()).not.toContain('Building digital twin');
+    await act(async () => tree.unmount());
+    jest.spyOn(api, 'getBuildings').mockResolvedValue([{ id: BUILDING, name: 'A' }, { id: 'b2', name: 'B' }] as any);
+    await render(mix());
+    expect(texts()).toContain('Building digital twin');
+  });
+
+  test('Delete appears only when editing an existing appliance, not when adding one', async () => {
+    await render(mix());
+    await press(tree.root, 'Add Appliance');
+    expect(hosts('TouchableOpacity', modalWith('New appliance')).some((b: any) => /^Delete /.test(b.props.accessibilityLabel))).toBe(false);
+    await press(modalWith('New appliance'), 'Cancel');
+    await press(tree.root, 'Edit Lights');
+    const del = buttonIn(modalWith('Edit appliance'), 'Delete Lights')!;
+    expect(del).toBeDefined();
+    expect(flatStyle(del.props.style).borderColor).toBe(darkTokens.redText);
+  });
+
+  test('editing then deleting a renamed appliance still deletes the saved one', async () => {
+    await render(mix());
+    await press(tree.root, 'Edit Lights');
+    await type('Appliance name', 'Hall lights');
+    await press(modalWith('Edit appliance'), 'Delete Lights');
+    await press(modalWith('Delete appliance?'), 'Delete');
+    expect(deleteSpy).toHaveBeenCalledWith(`/buildings/${BUILDING}/appliances/l`);
   });
 });
