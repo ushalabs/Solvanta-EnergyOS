@@ -139,6 +139,122 @@ describe('scenario control', () => {
   });
 });
 
+describe('custom outage rows', () => {
+  const outageRows = () => byId('outage-row');
+  const rowLabels = () => outageRows().map((r: any) => r.props.accessibilityLabel);
+  const raw = () => input(CUSTOM_FIELD)!.props.value;
+  const openCustom = async () => { await render(); await press('Custom'); };
+
+  test('Custom shows outage rows with From and To times instead of the minute-range field', async () => {
+    await openCustom();
+    expect(rowLabels()).toEqual(['Outage 1, from 08:00 to 10:00']);
+    expect(texts()).toEqual(expect.arrayContaining(['From', 'To']));
+    expect(hidden(input(CUSTOM_FIELD))).toBe(true);
+    expect(button('Add another outage')).toBeTruthy();
+    expect(button('Remove Outage 1')).toBeTruthy();
+  });
+
+  test('hour and minute steppers move a time, keep the raw field in step and update the plain-English line', async () => {
+    await openCustom();
+    await press('Outage 1 from hour up');
+    expect(rowLabels()).toEqual(['Outage 1, from 09:00 to 10:00']);
+    expect(raw()).toBe('540-600');
+    expect(joined()).toMatch(/Outage 09:00 – 10:00\./);
+    await press('Outage 1 to minute up');
+    expect(raw()).toBe('540-615');
+    await press('Outage 1 to hour down');
+    expect(raw()).toBe('540-555');
+    await press('Outage 1 from minute down');
+    expect(raw()).toBe('525-555');
+  });
+
+  test('moving From past To pushes To along, so a row is never empty', async () => {
+    await openCustom();
+    for (let i = 0; i < 3; i++) await press('Outage 1 from hour up');
+    expect(raw()).toBe('660-675');
+  });
+
+  test('a step that would leave the day is not offered', async () => {
+    await openCustom();
+    await act(async () => { input(CUSTOM_FIELD)!.props.onChangeText('0-60'); });
+    expect(button('Outage 1 from hour down')!.props.disabled).toBe(true);
+    expect(button('Outage 1 from minute down')!.props.disabled).toBe(true);
+    await act(async () => { input(CUSTOM_FIELD)!.props.onChangeText('1380-1440'); });
+    expect(button('Outage 1 to hour up')!.props.disabled).toBe(true);
+    expect(button('Add another outage')!.props.disabled).toBe(true);
+  });
+
+  test('Add another outage appends a one-hour row after the last, and both reach the request unchanged', async () => {
+    await openCustom();
+    await press('Add another outage');
+    expect(rowLabels()).toEqual(['Outage 1, from 08:00 to 10:00', 'Outage 2, from 10:00 to 11:00']);
+    expect(raw()).toBe('480-600, 600-660');
+    await solve();
+    expect(post).toHaveBeenCalledWith(`/buildings/${BUILDING}/schedules`, { outages: [{ start_min: 480, end_min: 600 }, { start_min: 600, end_min: 660 }], use_generator: false }, 30000);
+  });
+
+  test('each row has its own remove button, and with none left the grid is available all day', async () => {
+    await openCustom();
+    await press('Add another outage');
+    await press('Remove Outage 1');
+    expect(rowLabels()).toEqual(['Outage 1, from 10:00 to 11:00']);
+    expect(raw()).toBe('600-660');
+    await press('Remove Outage 1');
+    expect(rowLabels()).toEqual([]);
+    expect(raw()).toBe('');
+    expect(joined()).toMatch(/No outage rows: the grid is available all day\./);
+    expect(joined()).toMatch(/No outage ranges\./);
+    await solve();
+    expect(post.mock.calls[0][1]).toEqual({ outages: [], use_generator: false });
+  });
+
+  test('the Expert field is collapsed, and typing in it updates the rows', async () => {
+    await openCustom();
+    expect(button('Expert settings')).toBeTruthy();
+    expect(hidden(input(CUSTOM_FIELD))).toBe(true);
+    await press('Expert settings');
+    expect(hidden(input(CUSTOM_FIELD))).toBe(false);
+    expect(button('Hide expert settings')).toBeTruthy();
+    await act(async () => { input(CUSTOM_FIELD)!.props.onChangeText('0-60, 720-780'); });
+    expect(rowLabels()).toEqual(['Outage 1, from 00:00 to 01:00', 'Outage 2, from 12:00 to 13:00']);
+  });
+
+  test('raw text that cannot be shown as rows is flagged and the rows step aside, with no change to the request check', async () => {
+    await openCustom();
+    await act(async () => { input(CUSTOM_FIELD)!.props.onChangeText('nonsense'); });
+    expect(outageRows()).toHaveLength(0);
+    expect(joined()).toMatch(/These minute ranges cannot be shown as rows\. Fix them in Expert settings\./);
+    await solve();
+    expect(post).not.toHaveBeenCalled();
+    expect(joined()).toMatch(/Use start-end minutes/);
+  });
+
+  test('overlapping rows are warned about and the existing validation still stops the request', async () => {
+    await openCustom();
+    await act(async () => { input(CUSTOM_FIELD)!.props.onChangeText('480-600, 540-660'); });
+    expect(joined()).toMatch(/These outages overlap\./);
+    await solve();
+    expect(post).not.toHaveBeenCalled();
+    expect(joined()).toMatch(/Outages cannot overlap\./);
+  });
+
+  test('every step, add and remove button is a 44px target', async () => {
+    await openCustom();
+    const names = ['Outage 1 from hour down', 'Outage 1 from hour up', 'Outage 1 from minute down', 'Outage 1 from minute up', 'Outage 1 to hour down', 'Outage 1 to hour up', 'Outage 1 to minute down', 'Outage 1 to minute up', 'Remove Outage 1'];
+    for (const n of names) expect(flat(button(n)!.props.style)).toMatchObject({ width: 44, height: 44 });
+    expect(flat(button('Add another outage')!.props.style).minHeight).toBeGreaterThanOrEqual(44);
+  });
+
+  test('switching to Normal or Outage still ignores the custom rows', async () => {
+    await openCustom();
+    await press('Add another outage');
+    await press('Outage');
+    await solve();
+    expect(post.mock.calls[0][1]).toEqual({ outages: [{ start_min: 480, end_min: 600 }], use_generator: false });
+    expect(outageRows()).toHaveLength(0);
+  });
+});
+
 describe('pinned action', () => {
   test('Solve Schedule is the only button in the footer and keeps its spoken name', async () => {
     await render();

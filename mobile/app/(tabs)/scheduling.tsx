@@ -9,6 +9,8 @@ import { PriorityBadge, PriorityTier } from '../../src/components/PriorityBadge'
 import { ScheduleTimeline, TimelineLane } from '../../src/components/ScheduleTimeline';
 import { NeonHeroCard } from '../../src/components/NeonHeroCard';
 import { Collapsible } from '../../src/components/Collapsible';
+import { OutageRows } from '../../src/components/OutageRows';
+import { rowsToText, textToRows, hasOverlap } from '../../src/api/outageRows';
 import { api } from '../../src/api/client';
 import { Appliance, ApplianceList } from '../../src/api/appliances';
 import { PVRecord } from '../../src/api/pv';
@@ -25,6 +27,7 @@ function SchedulingWorkspace({ picker }: { picker: ReturnType<typeof useBuilding
   const building = { id: picker.id };
   const [scenario, setScenario] = useState<Scenario>('outage');
   const [customText, setCustomText] = useState('480-600');
+  const [expert, setExpert] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Schedule | null>(null);
   const [history, setHistory] = useState<Schedule[]>([]);
@@ -33,6 +36,8 @@ function SchedulingWorkspace({ picker }: { picker: ReturnType<typeof useBuilding
   const [appliances, setAppliances] = useState<Record<string, Appliance> | null | undefined>(undefined);
   const [message, setMessage] = useState('Select appliances in the Appliances tab, then schedule all selected loads.');
   const outages = scenarioOutages(scenario, customText);
+  // The rows and the expert field are two views of the same text, so they stay in step.
+  const customRows = textToRows(customText);
   useEffect(() => { let active = true; setResult(null); setHistory([]); if (building.id) api.get<Schedule[]>(`/buildings/${building.id}/schedules`).then(r => { if (active) setHistory(r); }).catch(e => { if (active) setMessage(e.message); }); return () => { active = false; }; }, [building.id]);
   useEffect(() => { let active = true; setPv(undefined); if (building.id) api.get<PVRecord>(`/buildings/${building.id}/pv`).then(r => { if (active) setPv(r.profile.timeline); }).catch(() => { if (active) setPv(null); }); else setPv(null); return () => { active = false; }; }, [building.id]);
   useEffect(() => { let active = true; setAppliances(undefined); if (building.id) api.get<ApplianceList>(`/buildings/${building.id}/appliances`).then(r => { if (active) setAppliances(Object.fromEntries(r.items.map(a => [a.id, a]))); }).catch(() => { if (active) setAppliances(null); }); else setAppliances(null); return () => { active = false; }; }, [building.id]);
@@ -56,7 +61,13 @@ function SchedulingWorkspace({ picker }: { picker: ReturnType<typeof useBuilding
   return <SolvantaScreen banner="SIMULATED • Constraint-aware appliance scheduling" footer={footer}>
     <BuildingHeader title="Scheduling" building={picker} onBack={() => router.replace('/simulation')} backLabel="Back to Simulation" />
     <PillSegmentedControl a11yLabel="Scenario" selectedId={scenario} onSelect={id => setScenario(id as Scenario)} options={[{ id: 'normal', label: 'Normal' }, { id: 'outage', label: 'Outage' }, { id: 'custom', label: 'Custom' }]} />
-    {scenario === 'custom' && <Field label="Outages (minute ranges, e.g. 480-600)" value={customText} onChange={setCustomText} />}
+    {scenario === 'custom' && <>
+      {customRows
+        ? <OutageRows rows={customRows} onChange={r => setCustomText(rowsToText(r))} problem={hasOverlap(customRows) ? 'These outages overlap. Move one so they do not share a minute.' : null} />
+        : <Message tone="warning">These minute ranges cannot be shown as rows. Fix them in Expert settings.</Message>}
+      <Action title={expert ? 'Hide expert settings' : 'Expert settings'} variant="secondary" onPress={() => setExpert(!expert)} />
+      <View style={expert ? { gap: SPACING.sm } : { display: 'none' }}><Field label="Outages (minute ranges, e.g. 480-600)" value={customText} onChange={setCustomText} /></View>
+    </>}
     <Label tone="secondary" caption>{outageText} Uses PV plus available grid. Battery and generator support are reserved for resilience optimization. All selected appliances must finish; fixed loads remain at their earliest start.</Label>
 
     <ScheduleTimeline title="24-HOUR SCHEDULE TIMELINE" sourceTag="SIMULATED" lanes={lanes} bands={(ranges ?? []).map(r => ({ from: r.start_min, to: r.end_min }))}
