@@ -65,11 +65,15 @@ function SimulationWorkspace({ picker }: { picker: ReturnType<typeof useBuilding
   const optimized = comparison ? socPoints(comparison.optimized.trace) : [];
   const chartNote = comparison ? 'Both lines come from the saved resilience comparison for this scenario.' : run ? 'Current plan is the saved run. Open Resilience comparison below and compare to add the optimized plan.' : undefined;
 
-  const activities = run && p ? loadActivity(run.snapshot.appliances || [], p.minute) : [];
+  // The counts are taken at the start of the first outage window when the scenario has one, otherwise at the start of the day.
+  const statusMinute = ranges && ranges.length ? ranges[0].start_min : 0;
+  const activities = run ? loadActivity(run.snapshot.appliances || [], statusMinute) : [];
   const haveActivity = !!run && activities.length > 0;
   const count = (n: number) => haveActivity ? String(n) : DASH;
+  const statusCaption = !run ? 'Counts appear after a run.' : !haveActivity ? 'This run has no appliance list, so there are no counts.'
+    : ranges && ranges.length ? `Counts are for the start of the outage window, ${clock(statusMinute)}.` : 'This scenario has no outage window, so counts are for the start of the day, 00:00.';
   const statusTiles = [
-    { label: 'Requested now', value: count(activities.filter(a => a.selected && a.active).length), tint: t.limeMark },
+    { label: 'Requested', value: count(activities.filter(a => a.selected && a.active).length), tint: t.limeMark },
     { label: 'Outside window', value: count(activities.filter(a => a.selected && !a.active).length), tint: t.amberText },
     { label: 'Not selected', value: count(activities.filter(a => !a.selected).length), tint: t.textSecondary },
   ];
@@ -103,11 +107,11 @@ function SimulationWorkspace({ picker }: { picker: ReturnType<typeof useBuilding
       bands={(ranges ?? []).map(r => ({ from: r.start_min, to: r.end_min }))} bandLabel="Outage" note={chartNote} caption={chartNote}
       emptyText="Run a simulation to see the battery level." />
     <Text accessibilityRole="header" style={{ color: t.textPrimary, fontSize: 15, fontWeight: '500', marginTop: 4 }}>Appliances Status</Text>
-    <View style={{ flexDirection: 'row', gap: SPACING.sm }}>{statusTiles.map(s => <View key={s.label} accessibilityLabel={`${s.label}: ${s.value}`} style={{ flex: 1, minHeight: 72, padding: 12, borderRadius: RADIUS.card, borderWidth: 1, borderColor: t.border, backgroundColor: t.surface, justifyContent: 'space-between' }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: s.tint }} /><Text style={{ color: s.tint, fontSize: 13, lineHeight: 18 }}>{s.label}</Text></View>
+    <View style={{ flexDirection: 'row', gap: SPACING.sm }}>{statusTiles.map(s => <View key={s.label} accessibilityLabel={`${s.label}: ${s.value}`} style={{ flex: 1, minHeight: 84, padding: 12, borderRadius: RADIUS.card, borderWidth: 1, borderColor: t.border, backgroundColor: t.surface, justifyContent: 'space-between' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}><View style={{ width: 8, height: 8, borderRadius: 4, marginTop: 5, backgroundColor: s.tint }} /><Text style={{ flex: 1, flexShrink: 1, color: s.tint, fontSize: 13, lineHeight: 18 }}>{s.label}</Text></View>
       <Text style={{ color: t.textPrimary, fontSize: 24, lineHeight: 30, fontWeight: '700' }}>{s.value}</Text>
     </View>)}</View>
-    <Label tone="secondary" caption>{p ? `Shown for ${clock(p.minute)} of the saved run. ` : ''}Paused and deferred are not tracked by the simulation, so they are not shown.</Label>
+    <Label tone="secondary" caption>{statusCaption} Paused and deferred are not tracked by the simulation, so they are not shown.</Label>
     <Message>{message}</Message>
 
     {run && p && <Collapsible title="Run details" subtitle="Totals and the interval stepper" icon={<ListChecks size={18} color={t.limeText} />}>

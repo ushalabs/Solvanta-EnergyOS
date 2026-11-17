@@ -59,9 +59,24 @@ describe('LineChart', () => {
     await render();
     expect(text()).toMatch(/Optimized Plan —/);
   });
-  test('draws the outage band', async () => {
+  test('draws the outage band in a visible tint, behind the lines', async () => {
     await render();
     expect(all('Rect')).toHaveLength(1);
+    expect(all('Rect')[0].props.fill).toBe(darkTokens.amberText);
+    expect(all('Rect')[0].props.fillOpacity).toBeGreaterThanOrEqual(0.12);
+    // The band is the first thing in the plot, so the lines are drawn over it.
+    const kids = all('Svg')[0].findAll(n => ['Rect', 'Path'].includes(n.type as string)).map(n => n.type);
+    expect(kids[0]).toBe('Rect');
+  });
+
+  test('the plot keeps room under the axis labels and the legend sits below the plot', async () => {
+    await render({ height: 180 });
+    const svg = all('Svg')[0];
+    expect(svg.props.height).toBe(180);
+    const labels = all('SvgText').filter(n => ['00:00', '12:00', '24:00'].includes(n.props.children));
+    for (const l of labels) expect(l.props.y).toBeLessThanOrEqual(180 - 4);
+    // The legend text comes after the plot in the tree.
+    expect(text().indexOf('Current Plan')).toBeGreaterThan(-1);
   });
   test('the accessible summary gives start, end and lowest point per series', async () => {
     await render();

@@ -60,7 +60,7 @@ export const LineChart: React.FC<LineChartProps> = ({ series, title, subtitle, b
       {hasData ? (
         <View accessible accessibilityRole="image" accessibilityLabel={summary} onLayout={e => setWidth(e.nativeEvent.layout.width)} style={{ height, marginTop: SPACING.md }}>
           <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
-            {bandRects(bands, xDomain, box).map((b, i) => <Rect key={`band${i}`} x={b.x} y={box.top} width={b.width} height={box.height} fill={tokens.amberTint} />)}
+            {bandRects(bands, xDomain, box).map((b, i) => <Rect key={`band${i}`} x={b.x} y={box.top} width={b.width} height={box.height} fill={tokens.amberText} fillOpacity={0.16} />)}
             {yTicks.map(t => { const y = project({ x: xDomain[0], y: t.value }, xDomain, yDomain, box).y; return <React.Fragment key={`y${t.value}`}><Line x1={box.left} x2={box.left + box.width} y1={y} y2={y} stroke={tokens.border} strokeWidth={1} /><SvgText {...FONT} x={box.left - 6} y={y + 4} fontSize={11} textAnchor="end" fill={tokens.textSecondary}>{t.label}</SvgText></React.Fragment>; })}
             {xTicks.map(t => { const x = project({ x: t.value, y: yDomain[0] }, xDomain, yDomain, box).x; return <SvgText {...FONT} key={`x${t.value}`} x={x} y={height - 5} fontSize={11} textAnchor={t.value <= xDomain[0] ? 'start' : t.value >= xDomain[1] ? 'end' : 'middle'} fill={tokens.textSecondary}>{t.label}</SvgText>; })}
             {series.filter(s => s.area && s.points.length > 1).map(s => <Path key={`area-${s.id}`} d={areaPath(s.points, xDomain, yDomain, box)} fill={colour(s.tone)} fillOpacity={0.12} stroke="none" />)}
@@ -72,7 +72,7 @@ export const LineChart: React.FC<LineChartProps> = ({ series, title, subtitle, b
       )}
       <View style={styles.legend}>
         {series.map(s => <View key={s.id} style={styles.legendItem}><View style={[styles.dot, { backgroundColor: colour(s.tone) }]} /><Text style={[styles.legendText, { color: s.points.length ? tokens.textPrimary : tokens.textSecondary }]}>{s.label}{s.points.length ? '' : ' —'}</Text></View>)}
-        {bands.length > 0 && bandLabel ? <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: tokens.amberText }]} /><Text style={[styles.legendText, { color: tokens.textPrimary }]}>{bandLabel}</Text></View> : null}
+        {bands.length > 0 && bandLabel ? <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: tokens.amberText, opacity: 0.6 }]} /><Text style={[styles.legendText, { color: tokens.textPrimary }]}>{bandLabel}</Text></View> : null}
       </View>
       {caption ? <Text style={[styles.caption, { color: tokens.textSecondary }]}>{caption}</Text> : null}
     </View>

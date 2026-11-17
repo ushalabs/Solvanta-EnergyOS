@@ -104,7 +104,7 @@ describe('scenario control', () => {
     await press('Normal');
     expect(texts()).toContain('Normal day');
     await press('Run & Save Simulation');
-    expect(all('Rect').filter((r: any) => r.props.fill === darkTokens.amberTint)).toHaveLength(0);
+    expect(all('Rect').filter((r: any) => r.props.fill === darkTokens.amberText)).toHaveLength(0);
     expect(post).toHaveBeenCalledWith(`/buildings/${BUILDING}/simulations`, { outages: [], use_generator: false });
   });
 
@@ -211,7 +211,7 @@ describe('before a run', () => {
 
   test('appliance status tiles are dashes and say what is not tracked', async () => {
     await render();
-    for (const label of ['Requested now', 'Outside window', 'Not selected']) expect(tile(label)).toBe(`${label}: —`);
+    for (const label of ['Requested', 'Outside window', 'Not selected']) expect(tile(label)).toBe(`${label}: —`);
     expect(joined()).toMatch(/Paused and deferred are not tracked/);
   });
 });
@@ -228,21 +228,51 @@ describe('after a run', () => {
     expect(image()!.props.accessibilityLabel).toMatch(/^Battery Level \(Simulated\), simulated\. Current Plan: starts at 80%, ends at 40%, lowest 40% at 23:45\. Optimized Plan: no data\./);
   });
 
-  test('counts appliances from the run snapshot at the first interval', async () => {
+  test('counts appliances from the run snapshot at the start of the outage window, and says so', async () => {
     await render();
     await press('Run & Save Simulation');
-    expect(tile('Requested now')).toBe('Requested now: 1');
+    // Outage 08:00: the fridge runs all day, the pump starts at 10:00, the oven is not selected.
+    expect(tile('Requested')).toBe('Requested: 1');
     expect(tile('Outside window')).toBe('Outside window: 1');
     expect(tile('Not selected')).toBe('Not selected: 1');
-    expect(joined()).toMatch(/Shown for 00:00 of the saved run/);
+    expect(joined()).toMatch(/Counts are for the start of the outage window, 08:00\./);
+    expect(joined()).not.toMatch(/Shown for/);
   });
 
-  test('the interval stepper moves the appliance status with the run', async () => {
+  test('the counts follow the outage window when the scenario changes', async () => {
+    await render();
+    await press('Custom');
+    await act(async () => { input(CUSTOM_FIELD)!.props.onChangeText('600-720'); });
+    await press('Run & Save Simulation');
+    expect(tile('Requested')).toBe('Requested: 2');
+    expect(joined()).toMatch(/Counts are for the start of the outage window, 10:00\./);
+  });
+
+  test('with no outage the caption says the counts are for the start of the day', async () => {
+    await render();
+    await press('Normal');
+    await press('Run & Save Simulation');
+    expect(joined()).toMatch(/This scenario has no outage window, so counts are for the start of the day, 00:00\./);
+    expect(tile('Requested')).toBe('Requested: 1');
+  });
+
+  test('a run without an appliance list has no counts and says so', async () => {
+    post.mockResolvedValueOnce({ ...savedRun, snapshot: { pv: { source: 'SIMULATED' } } });
     await render();
     await press('Run & Save Simulation');
-    for (let i = 0; i < 40; i++) await press('Next Interval');
-    expect(tile('Requested now')).toBe('Requested now: 2');
-    expect(joined()).toMatch(/Shown for 10:00 of the saved run/);
+    expect(tile('Requested')).toBe('Requested: —');
+    expect(joined()).toMatch(/This run has no appliance list, so there are no counts\./);
+  });
+
+  test('before a run the caption says counts come after a run', async () => {
+    await render();
+    expect(joined()).toMatch(/Counts appear after a run\./);
+  });
+
+  test('tile labels can wrap onto two lines instead of touching the tile edge', async () => {
+    await render();
+    const label = all('Text').find((n: any) => textOf(n) === 'Outside window')!;
+    expect([label.props.style].flat(Infinity).reduce((a: any, x: any) => ({ ...a, ...x }), {})).toMatchObject({ flex: 1, flexShrink: 1 });
   });
 
   test('the original result details are kept in a closed section', async () => {
@@ -286,7 +316,7 @@ describe('comparison on the chart', () => {
   test('draws the outage window and moves it with the scenario', async () => {
     await render();
     await press('Run & Save Simulation');
-    const bands = () => all('Rect').filter((r: any) => r.props.fill === darkTokens.amberTint);
+    const bands = () => all('Rect').filter((r: any) => r.props.fill === darkTokens.amberText);
     expect(bands()).toHaveLength(1);
     const before = bands()[0].props.x;
     await press('Custom');
