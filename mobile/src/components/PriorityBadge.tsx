@@ -8,10 +8,14 @@ export type PriorityTier = 'critical' | 'high' | 'medium' | 'low';
 interface PriorityBadgeProps {
   priority: PriorityTier;
   flexible?: boolean;
+  /** The appliance has no flexible window: it runs at its earliest start. */
+  fixed?: boolean;
   critical?: boolean;
+  /** Further neutral tags built from real fields, for example Split into 2. */
+  tags?: string[];
 }
 
-export const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority, flexible, critical }) => {
+export const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority, flexible, fixed, critical, tags }) => {
   const { tokens } = useTheme();
 
   let bg = tokens.surfaceElevated;
@@ -51,11 +55,21 @@ export const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority, flexible
           <Text style={[styles.text, { color: tokens.redText }]}>CRITICAL DEMAND</Text>
         </View>
       )}
+      {fixed && !flexible && (
+        <View style={[styles.badge, { backgroundColor: tokens.surfaceElevated }]}>
+          <Text style={[styles.text, { color: tokens.textSecondary }]}>FIXED TIME</Text>
+        </View>
+      )}
       {flexible && (
         <View style={[styles.badge, { backgroundColor: tokens.limeTint }]}>
           <Text style={[styles.text, { color: tokens.limeText }]}>FLEXIBLE</Text>
         </View>
       )}
+      {(tags ?? []).map(tag => (
+        <View key={tag} style={[styles.badge, { backgroundColor: tokens.surfaceElevated }]}>
+          <Text style={[styles.text, { color: tokens.textSecondary }]}>{tag.toUpperCase()}</Text>
+        </View>
+      ))}
     </View>
   );
 };
