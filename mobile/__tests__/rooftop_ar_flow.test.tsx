@@ -485,3 +485,135 @@ describe('Rooftop layout', () => {
     expect(rect.props.fill).toBe(require('../src/theme/tokens').darkTokens.panelFill);
   });
 });
+
+describe('Rooftop guidance and state', () => {
+  const footerNames = () => tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && ['Save Roof', 'Calculate Placement'].includes(n.props.accessibilityLabel)).map(n => n.props.accessibilityLabel);
+  const stepLine = () => tree.root.findAll(n => (n.type as any) === 'View' && n.props.accessibilityLabel === 'Roof steps')[0];
+  const currentStep = () => stepLine().findAll(n => (n.type as any) === 'Text' && n.props.accessibilityState?.selected).map(n => n.props.children).flat();
+  const fieldInside = (label: string) => tree.root.findAll(n => (n.type as any) === 'TextInput' && n.props.accessibilityLabel === label)[0];
+  const climbTo = (node: any, test: (n: any) => boolean) => { let n = node; while (n && !test(n)) n = n.parent; return n; };
+  const inHidden = (node: any) => !!climbTo(node, n => (n.type as any) === 'View' && n.props.style?.display === 'none');
+
+  test('the step line highlights the current step and each mode has one plain instruction', async () => {
+    await render();
+    expect(tree.root.findAll(n => (n.type as any) === 'Text' && /^[1-4] /.test(String(n.props.children))).map(n => n.props.children)).toEqual(['1 Roof outline', '2 Obstacles (optional)', '3 Scale', '4 Calculate']);
+    expect(currentStep()).toEqual(['1 Roof outline']);
+    expect(texts()).toMatch(/Tap each corner of the roof in order \(at least 3\)\./);
+    await press('Obstacle');
+    expect(currentStep()).toEqual(['2 Obstacles (optional)']);
+    expect(texts()).toMatch(/Tap the corners of something on the roof, then tap Finish\./);
+    await press('Scale');
+    expect(currentStep()).toEqual(['3 Scale']);
+    expect(texts()).toMatch(/Tap two points on a length you measured, then enter that distance in metres\./);
+    expect(texts()).not.toMatch(/Current mode/);
+  });
+
+  test('shows a corner count that follows taps', async () => {
+    await render();
+    expect(texts()).toMatch(/Corners: 0/);
+    await tapCanvas(30, 30);
+    expect(texts()).toMatch(/Corners: 1/);
+    await press('Scale');
+    expect(texts()).toMatch(/Scale points: 0 of 2/);
+  });
+
+  test('explains why Finish is disabled, in each mode', async () => {
+    await render();
+    expect(texts()).toMatch(/Finish is for obstacles\. Switch to Obstacle mode/);
+    await press('Obstacle');
+    expect(texts()).toMatch(/Finish needs at least 3 obstacle corners/);
+    await tapCanvas(10, 10); await tapCanvas(60, 10); await tapCanvas(60, 60);
+    expect(texts()).not.toMatch(/Finish needs at least 3/);
+  });
+
+  test('warns, without blocking, about fewer than 3 corners and about a crossing outline', async () => {
+    await render();
+    expect(texts()).not.toMatch(/needs at least 3 corners/);
+    await tapCanvas(30, 30);
+    expect(texts()).toMatch(/needs at least 3 corners\. Tap more corners, or press Undo/);
+    await tapCanvas(270, 200); await tapCanvas(270, 30);
+    expect(texts()).not.toMatch(/crosses itself/);
+    await tapCanvas(30, 200);
+    expect(texts()).toMatch(/outline crosses itself/);
+    expect(input(VERTICES).props.value.split(';').length).toBe(4);
+    await press('Undo Last Point');
+    expect(texts()).not.toMatch(/crosses itself/);
+  });
+
+  test('an empty canvas offers a starting rectangle that can still be edited', async () => {
+    await render();
+    await press('Start with a rectangle');
+    expect(input(VERTICES).props.value.split(';').length).toBe(4);
+    expect(texts()).toMatch(/Corners: 4/);
+    expect(texts()).not.toMatch(/Start with a rectangle/);
+    expect(texts()).not.toMatch(/crosses itself/);
+    await press('Undo Last Point');
+    expect(texts()).toMatch(/Corners: 3/);
+  });
+
+  test('the scale distance field sits under the canvas in Scale mode and is not duplicated', async () => {
+    await render();
+    const count = () => tree.root.findAll(n => (n.type as any) === 'TextInput' && n.props.accessibilityLabel === 'Measured scale distance (m)').length;
+    expect(count()).toBe(1);
+    expect(inHidden(fieldInside('Measured scale distance (m)'))).toBe(true);
+    await press('Scale');
+    expect(count()).toBe(1);
+    expect(inHidden(fieldInside('Measured scale distance (m)'))).toBe(false);
+    await type('Measured scale distance (m)', '12');
+    await press('Obstacle');
+    expect(fieldInside('Measured scale distance (m)').props.value).toBe('12');
+  });
+
+  test('Advanced groups its fields and keeps the raw vertices and PV extras in collapsed Expert groups', async () => {
+    await render();
+    expect(texts()).toMatch(/Roof settings/);
+    expect(texts()).toMatch(/Panel size/);
+    expect(inHidden(input(VERTICES))).toBe(true);
+    const pvExtra = tree.root.findAll(n => (n.type as any) === 'TextInput' && /plane-of-array/.test(n.props.accessibilityLabel ?? ''))[0];
+    expect(pvExtra).toBeTruthy();
+    expect(inHidden(pvExtra)).toBe(true);
+    const moduleRating = fieldInside('Module rating (W)');
+    expect(moduleRating).toBeTruthy();
+    expect(texts()).toMatch(/Expert settings/);
+  });
+
+  test('after the roof changes all three tiles are dashes with an Outdated note, then recover on calculate', async () => {
+    roofResponse = async () => savedRoof;
+    await render();
+    expect(texts()).not.toMatch(/Outdated/);
+    await tapCanvas(150, 150);
+    expect(texts()).toMatch(/Outdated: the roof changed/);
+    expect(texts()).toMatch(/Usable Area \| — \| Panels \| — \| Est\. Daily \(SIMULATED\) \| —/);
+    await press('Calculate Placement');
+    expect(texts()).not.toMatch(/Outdated/);
+    expect(texts()).toMatch(/Usable Area \| 30\.0/);
+  });
+
+  test('typing a new scale distance also marks the tiles outdated', async () => {
+    roofResponse = async () => savedRoof;
+    await render();
+    await press('Scale');
+    await type('Measured scale distance (m)', '13');
+    expect(texts()).toMatch(/Outdated/);
+  });
+
+  test('after Calculate Placement the pinned button becomes Save Roof, and saving returns it', async () => {
+    roofResponse = async () => savedRoof;
+    await render();
+    await tapCanvas(150, 150);
+    expect(footerNames().sort()).toEqual(['Calculate Placement', 'Save Roof']);
+    await press('Calculate Placement');
+    expect(footerNames()).toEqual(['Save Roof']);
+    expect(texts()).toMatch(/Press Save Roof to keep it/);
+    expect(currentStep()).toEqual(['4 Calculate']);
+    await press('Save Roof');
+    expect(put).toHaveBeenCalled();
+    expect(footerNames().sort()).toEqual(['Calculate Placement', 'Save Roof']);
+  });
+
+  test('the unsaved note says what to press first', async () => {
+    await render();
+    await tapCanvas(30, 30);
+    expect(texts()).toMatch(/Press Calculate Placement first, then Save Roof/);
+  });
+});
