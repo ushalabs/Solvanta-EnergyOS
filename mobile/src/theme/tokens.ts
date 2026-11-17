@@ -147,6 +147,7 @@ export const RADIUS = {
 export const DOCK = {
   height: 64,
   activeSize: 44,
+  glowSize: 58,
   minBottom: 12,
 };
 
