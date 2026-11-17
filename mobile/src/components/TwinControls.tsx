@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { createContext, useCallback, useContext, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleProp, ViewStyle } from 'react-native';
 import { useFocusEffect, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,12 +19,21 @@ function useToneColor() {
   const { tokens: t } = useTheme();
   return (tone: Tone) => ({ primary: t.textPrimary, secondary: t.textSecondary, accent: t.limeText, warning: t.amberText, danger: t.redText, success: t.greenText, info: t.cyanText })[tone];
 }
+/**
+ * Inside an expanded Collapsible the section header already is the card's header and frame, so a Card draws no
+ * frame of its own and a CardHeader shows only its subtitle and badge. Nested cards keep their look.
+ */
+const EmbeddedContext = createContext(false);
+export const EmbeddedCards = EmbeddedContext.Provider;
 export function Card({ children, nested = false, style }: { children: React.ReactNode; nested?: boolean; style?: StyleProp<ViewStyle> }) {
   const { tokens: t } = useTheme();
+  const embedded = useContext(EmbeddedContext);
+  if (embedded && !nested) return <View style={[{ gap: SPACING.md }, style]}>{children}</View>;
   return <View style={[{ padding: nested ? 14 : SPACING.cardPadding, gap: SPACING.md, borderRadius: nested ? 16 : RADIUS.card, borderWidth: 1, borderColor: t.border, backgroundColor: nested ? t.backgroundRaised : t.surface, marginVertical: nested ? 0 : 6 }, style]}>{children}</View>;
 }
 export function CardHeader({ title, subtitle, icon, badge }: { title: string; subtitle?: string; icon?: React.ReactNode; badge?: string }) {
   const { tokens: t } = useTheme();
+  if (useContext(EmbeddedContext)) return subtitle || badge ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>{subtitle ? <Text style={{ flex: 1, color: t.textSecondary, fontSize: 13, lineHeight: 18 }}>{subtitle}</Text> : <View style={{ flex: 1 }} />}{badge && <Badge label={badge} />}</View> : null;
   return <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
     {icon && <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: t.limeTint }}>{icon}</View>}
     <View style={{ flex: 1 }}><Text accessibilityRole="header" style={{ color: t.textPrimary, fontSize: TYPOGRAPHY.sectionTitle, fontWeight: '700', lineHeight: 21 }}>{title}</Text>{subtitle && <Text style={{ color: t.textSecondary, fontSize: TYPOGRAPHY.caption, lineHeight: 17, marginTop: 1 }}>{subtitle}</Text>}</View>
@@ -81,7 +90,7 @@ export { Toggle };
 export function Metric({ label, value, unit, tone = 'primary', compact = false }: { label: string; value: string | number; unit?: string; tone?: Tone; compact?: boolean }) {
   const { tokens: t } = useTheme();
   const color = useToneColor();
-  return <View accessible accessibilityLabel={`${label}: ${value}${unit ? ` ${unit}` : ''}`} style={{ flexGrow: 1, flexBasis: compact ? 0 : 130, minWidth: compact ? 0 : undefined, padding: 12, gap: 2, borderRadius: RADIUS.md, backgroundColor: t.surfaceElevated }}><Text style={{ color: t.textSecondary, fontSize: TYPOGRAPHY.caption, lineHeight: 17 }}>{label}</Text><Text style={{ color: color(tone), fontSize: compact ? 19 : 22, lineHeight: compact ? 25 : 28, fontWeight: '700' }}>{value}{unit && <Text style={{ color: t.textSecondary, fontSize: 13, fontWeight: '600' }}> {unit}</Text>}</Text></View>;
+  return <View accessible accessibilityLabel={`${label}: ${value}${unit ? ` ${unit}` : ''}`} style={{ flexGrow: 1, flexBasis: compact ? 0 : 130, minWidth: compact ? 0 : undefined, justifyContent: compact ? 'space-between' : undefined, padding: 12, gap: 2, borderRadius: RADIUS.md, backgroundColor: t.surfaceElevated }}><Text style={{ color: t.textSecondary, fontSize: TYPOGRAPHY.caption, lineHeight: 17 }}>{label}</Text><Text style={{ color: color(tone), fontSize: compact ? 19 : 22, lineHeight: compact ? 25 : 28, fontWeight: '700' }}>{value}{unit && <Text style={{ color: t.textSecondary, fontSize: 13, fontWeight: '600' }}> {unit}</Text>}</Text></View>;
 }
 export function MetricGrid({ children }: { children: React.ReactNode }) {
   return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm }}>{children}</View>;
