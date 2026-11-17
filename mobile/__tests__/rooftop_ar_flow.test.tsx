@@ -1119,6 +1119,17 @@ describe('Invalid geometry is not sent to the API', () => {
     expect(texts()).not.toMatch(/Value error/);
   });
 
+  test('a blocked or failed calculation shows as a warning under the preview; ordinary notes stay neutral', async () => {
+    roofResponse = async () => ({ ...savedRoof, geometry: { ...savedRoof.geometry, obstacles: [[{ x: 100, y: 500 }, { x: 200, y: 500 }, { x: 200, y: 600 }]] } });
+    await renderPreview();
+    const statusTone = () => { const icon = tree.root.findAll(n => (n.type as any) === 'View' && n.props.accessibilityLiveRegion === 'polite')[0]; return icon.props.style.backgroundColor; };
+    const { darkTokens } = require('../src/theme/tokens');
+    expect(statusTone()).toBe(darkTokens.surfaceElevated);
+    await press('Calculate Placement');
+    expect(texts()).toMatch(/Obstacle 1: The obstacle must stay inside the roof/);
+    expect(statusTone()).toBe(darkTokens.amberTint);
+  });
+
   test('the status message is shown under the preview so a failed save is not hidden', async () => {
     roofResponse = async () => savedRoof;
     await renderPreview();

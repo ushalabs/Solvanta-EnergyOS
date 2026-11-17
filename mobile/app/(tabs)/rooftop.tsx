@@ -53,6 +53,8 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
   const [outdated, setOutdated] = useState(false);
   // A brand-new roof has never been calculated, so the readout says that instead of Outdated.
   const [calculatedOnce, setCalculatedOnce] = useState(false);
+  // The text of the last failed Calculate or Save, so the status under the preview can look like a problem, not a note.
+  const [problem, setProblem] = useState('');
   const [unsaved, setUnsaved] = useState(false);
   const [expert, setExpert] = useState(false);
   const [checkingAR, setCheckingAR] = useState(false);
@@ -199,7 +201,7 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
       if (badOne >= 0) throw clientError(`Obstacle ${badOne + 1}: ${obstacleProblem(payload.obstacles[badOne], payload.boundary)}`);
       if (save) { apply(await api.request<RoofRecord>(`/buildings/${building.id}/roof`, { method: 'PUT', body: JSON.stringify(payload) })); setMessage('Saved geometry and photo to this building.'); }
       else { setLayout(await api.post<Layout>(`/buildings/${building.id}/roof/preview`, payload)); setRoof(payload); setCalculatedOnce(true); setOutdated(false); setUnsaved(true); setMessage('Calculated preview — not saved yet. Press Save Roof to keep it.'); }
-    } catch (e: any) { setMessage(e.client ? e.message : friendlyRoofError(e.message)); } finally { setBusy(false); }
+    } catch (e: any) { const text = e.client ? e.message : friendlyRoofError(e.message); setProblem(text); setMessage(text); } finally { setBusy(false); }
   };
   const checkAR = async () => {
     setCheckingAR(true);
@@ -276,7 +278,7 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
     <View style={shown(tab === 'design')}>
       <Card><CardHeader title="Roof layout" subtitle="Preview of the roof. Open the editor to draw." icon={<PencilRuler size={18} color={t.limeText} />} />
         {!editing && <RoofCanvas roof={roof} layout={layout} draft={[]} mode={mode} metersPerUnit={mpu} obstacleNames={names} invalidObstacles={invalidObstacles} a11yLabel={`Roof preview: ${roof.boundary.length} roof vertices, ${roof.obstacles.length} obstacles, ${layout?.panel_count ?? 0} panels.`} />}
-        <Message>{message}</Message>
+        <Message tone={message === problem ? 'warning' : 'info'}>{message}</Message>
         <Action title="Edit roof layout" icon={<PencilRuler size={16} color={t.onLime} />} onPress={openEditor} />
       </Card>
       <MetricGrid>
