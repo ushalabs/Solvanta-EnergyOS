@@ -80,3 +80,49 @@ export function usableWidthM(panels: PanelRect[], metersPerPixel: number): { wid
 }
 /** Centre of a ring, for placing its label. */
 export const centroid = (ring: Point[]): Point => ({ x: ring.reduce((n, p) => n + p.x, 0) / ring.length, y: ring.reduce((n, p) => n + p.y, 0) / ring.length });
+
+const area2 = (ring: Point[]) => ring.reduce((n, p, i) => { const q = ring[(i + 1) % ring.length]; return n + (p.x * q.y - q.x * p.y); }, 0);
+/** Ray casting. Points on an edge count as inside. */
+function pointInPolygon(p: Point, ring: Point[]): boolean {
+  for (let i = 0; i < ring.length; i++) { const a = ring[i], b = ring[(i + 1) % ring.length]; if (cross(a, b, p) === 0 && onSegment(a, b, p)) return true; }
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const a = ring[i], b = ring[j];
+    if ((a.y > p.y) !== (b.y > p.y) && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
+  }
+  return inside;
+}
+const properCross = (a: Point, b: Point, c: Point, d: Point) => {
+  const d1 = cross(a, b, c), d2 = cross(a, b, d), d3 = cross(c, d, a), d4 = cross(c, d, b);
+  return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+};
+
+/** Why the roof outline cannot be sent to the API, or null when it is fine. The server rejects crossing or empty outlines. */
+export function roofProblem(boundary: Point[]): string | null {
+  if (boundary.length < 3) return 'The roof needs at least 3 corners.';
+  if (selfIntersects(boundary)) return 'The roof outline crosses itself. Undo the last corner or fix the vertices.';
+  if (Math.abs(area2(boundary)) < 1e-6) return 'The roof outline has no area. Tap corners that are not in a line.';
+  return null;
+}
+/** Why an obstacle cannot be accepted, or null. Mirrors the server: at least 3 corners, no crossing, fully inside the roof. */
+export function obstacleProblem(ring: Point[], boundary: Point[]): string | null {
+  if (ring.length < 3) return 'An obstacle needs at least 3 corners.';
+  if (selfIntersects(ring)) return 'The obstacle crosses itself. Press Undo and tap the corners in order.';
+  if (Math.abs(area2(ring)) < 1e-6) return 'The obstacle has no area. Tap corners that are not in a line.';
+  if (boundary.length < 3) return 'Draw the roof outline first. Obstacles must stay inside it.';
+  const inside = ring.every(p => pointInPolygon(p, boundary));
+  const crossesEdge = ring.some((p, i) => { const q = ring[(i + 1) % ring.length]; return boundary.some((r, j) => properCross(p, q, r, boundary[(j + 1) % boundary.length])); });
+  if (!inside || crossesEdge) return 'The obstacle must stay inside the roof.';
+  return null;
+}
+/** Turns a raw API validation message into a short plain one. Never shows "body: Value error, ...". */
+export function friendlyRoofError(raw: string): string {
+  const text = String(raw ?? '');
+  if (/obstacle/i.test(text) && /(inside the roof|valid polygon|vertices)/i.test(text)) return 'Obstacle must stay inside the roof and not cross itself.';
+  if (/roof must be a simple polygon|min_length|at least 3/i.test(text)) return 'The roof outline must have at least 3 corners, not cross itself, and enclose an area.';
+  if (/inside the image canvas/i.test(text)) return 'Keep every point inside the drawing area.';
+  if (/calibrated canvas/i.test(text)) return 'The measured distance makes the drawing larger than 200 m. Check the scale points and distance.';
+  if (/scale points must be/i.test(text)) return 'Pick two scale points that are further apart.';
+  if (/Value error|^(body|input)\b/i.test(text)) return text.replace(/^[\w.\[\]]+:\s*/, '').replace(/^Value error,\s*/i, '');
+  return text;
+}

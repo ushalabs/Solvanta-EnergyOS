@@ -40,3 +40,48 @@ describe('panel drawing helpers', () => {
   });
   test('centroid of a square', () => { expect(centroid([{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }])).toEqual({ x: 5, y: 5 }); });
 });
+
+import { roofProblem, obstacleProblem, friendlyRoofError } from '../src/api/roof';
+describe('geometry validation', () => {
+  const roof = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }];
+  const tri = [{ x: 10, y: 10 }, { x: 40, y: 10 }, { x: 40, y: 40 }];
+  test('a good roof passes and bad ones say why', () => {
+    expect(roofProblem(roof)).toBeNull();
+    expect(roofProblem(roof.slice(0, 2))).toMatch(/at least 3 corners/);
+    expect(roofProblem([{ x: 0, y: 0 }, { x: 10, y: 10 }, { x: 10, y: 0 }, { x: 0, y: 10 }])).toMatch(/crosses itself/);
+    expect(roofProblem([{ x: 0, y: 0 }, { x: 5, y: 5 }, { x: 10, y: 10 }])).toMatch(/no area/);
+  });
+  test('an obstacle inside the roof is accepted', () => { expect(obstacleProblem(tri, roof)).toBeNull(); });
+  test('fewer than 3 corners is refused', () => { expect(obstacleProblem(tri.slice(0, 2), roof)).toMatch(/at least 3 corners/); });
+  test('the bow-tie obstacle is refused', () => {
+    expect(obstacleProblem([{ x: 10, y: 10 }, { x: 40, y: 40 }, { x: 40, y: 10 }, { x: 10, y: 40 }], roof)).toMatch(/crosses itself/);
+  });
+  test('an obstacle partly or fully outside the roof is refused', () => {
+    expect(obstacleProblem([{ x: 90, y: 90 }, { x: 140, y: 90 }, { x: 140, y: 140 }], roof)).toMatch(/inside the roof/);
+    expect(obstacleProblem([{ x: 200, y: 200 }, { x: 240, y: 200 }, { x: 240, y: 240 }], roof)).toMatch(/inside the roof/);
+  });
+  test('an obstacle that spans a notch of a concave roof is refused', () => {
+    const lShape = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 40 }, { x: 40, y: 40 }, { x: 40, y: 100 }, { x: 0, y: 100 }];
+    expect(obstacleProblem([{ x: 10, y: 10 }, { x: 90, y: 90 }, { x: 10, y: 90 }], lShape)).toMatch(/inside the roof/);
+    expect(obstacleProblem([{ x: 5, y: 5 }, { x: 30, y: 5 }, { x: 30, y: 30 }], lShape)).toBeNull();
+  });
+  test('an obstacle with no roof drawn asks for the roof first', () => { expect(obstacleProblem(tri, [])).toMatch(/Draw the roof outline first/); });
+  test('an obstacle touching the roof edge is allowed, as the server allows it', () => {
+    expect(obstacleProblem([{ x: 0, y: 0 }, { x: 30, y: 0 }, { x: 30, y: 30 }], roof)).toBeNull();
+  });
+});
+describe('friendlyRoofError', () => {
+  test('hides the raw validation prefix and explains obstacle errors', () => {
+    expect(friendlyRoofError('body: Value error, Obstacle must be a valid polygon inside the roof')).toBe('Obstacle must stay inside the roof and not cross itself.');
+    expect(friendlyRoofError('body.obstacles: Value error, Obstacles need 3–64 vertices')).toBe('Obstacle must stay inside the roof and not cross itself.');
+  });
+  test('other known server messages are rephrased', () => {
+    expect(friendlyRoofError('body: Value error, Roof must be a simple polygon with positive area')).toMatch(/not cross itself/);
+    expect(friendlyRoofError('body: Value error, All points must lie inside the image canvas')).toMatch(/inside the drawing area/);
+    expect(friendlyRoofError('body.boundary: List should have at least 3 items after validation, not 2')).toMatch(/at least 3 corners/);
+  });
+  test('unknown validation text loses the prefix, and ordinary messages pass through', () => {
+    expect(friendlyRoofError('body: Value error, Something else')).toBe('Something else');
+    expect(friendlyRoofError('Network failure connecting to x')).toBe('Network failure connecting to x');
+  });
+});
