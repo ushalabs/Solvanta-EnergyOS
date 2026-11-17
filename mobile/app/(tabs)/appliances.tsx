@@ -74,7 +74,6 @@ function AppliancesWorkspace({building:picker}:{building:ReturnType<typeof useBu
   const visible=(list?.items||[]).filter(a=>matches(a,filter));
   return <SolvantaScreen banner="SCENARIO ONLY • no real appliances are switched" footer={<Action title="Add Appliance" disabled={!building.id} icon={<Plus size={18} color={building.id?t.onLime:t.textSecondary}/>} onPress={create}/>}>
     <BuildingHeader title="Appliances" building={picker}/>
-    <View style={{marginBottom:SPACING.sm}}><Label tone="secondary" caption>Scenario only: nothing real is switched.</Label></View>
     <View style={{marginBottom:SPACING.md,gap:2}}><Label tone="secondary" caption>Scenario load {kw(list?.summary.requested_kw)} kW · Critical {kw(list?.summary.critical_kw)} kW · {list?`${list.summary.selected_count} selected`:'— selected'}</Label><Label tone="secondary" caption>{message}</Label></View>
     <View style={{marginBottom:SPACING.md}}><ChipGroup>{FILTERS.map(f=><Chip key={f.id} compact label={f.label} a11yLabel={f.spoken} selected={filter===f.id} onPress={()=>setFilter(f.id)}/>)}</ChipGroup></View>
     <View style={{gap:12}}>

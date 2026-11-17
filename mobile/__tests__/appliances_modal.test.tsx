@@ -389,9 +389,10 @@ describe('Appliances list layout', () => {
     expect(texts()).toContain('Scenario load 1.00 kW · Critical 0.00 kW · 4 selected');
   });
 
-  test('the scenario-only notice stays on screen', async () => {
+  test('the scenario-only notice stays on screen, once, in the banner', async () => {
     await render(mix());
-    expect(texts()).toContain('Scenario only: nothing real is switched.');
+    expect(texts()).toContain('SCENARIO ONLY • no real appliances are switched');
+    expect(String(texts())).not.toMatch(/nothing real is switched/i);
   });
 
   test('the building is one line in the header, and the picker opens from it', async () => {
@@ -502,7 +503,7 @@ describe('Appliances spacing and status', () => {
 
   test('the notice is one short line that keeps the meaning', async () => {
     await render(items());
-    expect(texts()).toContain('Scenario only: nothing real is switched.');
+    expect(texts()).toContain('SCENARIO ONLY • no real appliances are switched');
     expect(texts()).not.toContain('They do not physically turn appliances');
   });
 });
