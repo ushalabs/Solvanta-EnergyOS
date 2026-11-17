@@ -75,8 +75,8 @@ function SimulationWorkspace({ picker }: { picker: ReturnType<typeof useBuilding
   ];
   const stats = [
     { label: 'Battery at start', value: startSoc === null ? DASH : startSoc.toFixed(0), unit: startSoc === null ? undefined : '%' },
-    { label: 'PV Generation (24 h)', value: run ? run.result.summary.pv_kwh.toFixed(1) : DASH, unit: run ? 'kWh' : undefined },
-    { label: 'Total Load (24 h)', value: run ? run.result.summary.load_kwh.toFixed(1) : DASH, unit: run ? 'kWh' : undefined },
+    { label: 'PV Generation', value: run ? run.result.summary.pv_kwh.toFixed(1) : DASH, unit: run ? 'kWh' : undefined },
+    { label: 'Total Load', value: run ? run.result.summary.load_kwh.toFixed(1) : DASH, unit: run ? 'kWh' : undefined },
   ];
   const footer = <Action title="Run Simulation" label="Run & Save Simulation" disabled={busy || !building.id} loading={busy} icon={<Play size={18} color={busy || !building.id ? t.textSecondary : t.onLime} />} onPress={execute} />;
 
@@ -92,7 +92,7 @@ function SimulationWorkspace({ picker }: { picker: ReturnType<typeof useBuilding
         </View>
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="Edit outage times" activeOpacity={0.8} onPress={() => setScenario('custom')} style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: t.surfaceElevated }}><Pencil size={16} color={t.textSecondary} /></TouchableOpacity>
       </View>
-      <View style={{ flexDirection: 'row', gap: SPACING.sm }}>{stats.map(s => <View key={s.label} style={{ flex: 1 }}><Metric compact label={s.label} value={s.value} unit={s.unit} /></View>)}</View>
+      <MetricGrid>{stats.map(s => <Metric key={s.label} compact label={s.label} value={s.value} unit={s.unit} />)}</MetricGrid>
       <Label tone="secondary" caption>SIMULATED values for a representative day. PV and load cover 24 hours, not only the outage.</Label>
       {scenario === 'custom' && <Field label="Outages: minute ranges (0–1440), separated by commas" value={customText} onChange={setCustomText} hint="Example: 480-600 means 08:00–10:00. Blank means grid available all day." />}
       <Toggle label="Use configured generator" value={generator} onValueChange={setGenerator} />

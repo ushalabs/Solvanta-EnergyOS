@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text } from 'react-native';
+import { Platform, StyleSheet, View, Text } from 'react-native';
 import Svg, { Line, Path, Rect, Text as SvgText } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';
 import { SPACING, RADIUS } from '../theme/tokens';
@@ -36,6 +36,8 @@ export interface LineChartProps {
   unit?: string;
 }
 
+// SVG text on the web falls back to a serif face unless told otherwise; on a phone the system font is already used.
+const FONT = Platform.OS === 'web' ? { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' } : {};
 const LEFT = 38, RIGHT = 8, TOP = 8, BOTTOM = 22;
 
 /** A line chart in the style of EnergyBarChart: same card, title and badge, same token colours. */
@@ -59,8 +61,8 @@ export const LineChart: React.FC<LineChartProps> = ({ series, title, subtitle, b
         <View accessible accessibilityRole="image" accessibilityLabel={summary} onLayout={e => setWidth(e.nativeEvent.layout.width)} style={{ height, marginTop: SPACING.md }}>
           <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
             {bandRects(bands, xDomain, box).map((b, i) => <Rect key={`band${i}`} x={b.x} y={box.top} width={b.width} height={box.height} fill={tokens.amberTint} />)}
-            {yTicks.map(t => { const y = project({ x: xDomain[0], y: t.value }, xDomain, yDomain, box).y; return <React.Fragment key={`y${t.value}`}><Line x1={box.left} x2={box.left + box.width} y1={y} y2={y} stroke={tokens.border} strokeWidth={1} /><SvgText x={box.left - 6} y={y + 4} fontSize={11} textAnchor="end" fill={tokens.textSecondary}>{t.label}</SvgText></React.Fragment>; })}
-            {xTicks.map(t => { const x = project({ x: t.value, y: yDomain[0] }, xDomain, yDomain, box).x; return <SvgText key={`x${t.value}`} x={x} y={height - 5} fontSize={11} textAnchor={t.value <= xDomain[0] ? 'start' : t.value >= xDomain[1] ? 'end' : 'middle'} fill={tokens.textSecondary}>{t.label}</SvgText>; })}
+            {yTicks.map(t => { const y = project({ x: xDomain[0], y: t.value }, xDomain, yDomain, box).y; return <React.Fragment key={`y${t.value}`}><Line x1={box.left} x2={box.left + box.width} y1={y} y2={y} stroke={tokens.border} strokeWidth={1} /><SvgText {...FONT} x={box.left - 6} y={y + 4} fontSize={11} textAnchor="end" fill={tokens.textSecondary}>{t.label}</SvgText></React.Fragment>; })}
+            {xTicks.map(t => { const x = project({ x: t.value, y: yDomain[0] }, xDomain, yDomain, box).x; return <SvgText {...FONT} key={`x${t.value}`} x={x} y={height - 5} fontSize={11} textAnchor={t.value <= xDomain[0] ? 'start' : t.value >= xDomain[1] ? 'end' : 'middle'} fill={tokens.textSecondary}>{t.label}</SvgText>; })}
             {series.filter(s => s.area && s.points.length > 1).map(s => <Path key={`area-${s.id}`} d={areaPath(s.points, xDomain, yDomain, box)} fill={colour(s.tone)} fillOpacity={0.12} stroke="none" />)}
             {series.filter(s => s.points.length).map(s => <Path key={s.id} d={linePath(s.points, xDomain, yDomain, box)} fill="none" stroke={colour(s.tone)} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />)}
           </Svg>
