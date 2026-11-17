@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { Play, CalendarClock, ChevronLeft, ChevronRight, History, Zap, Pencil } from 'lucide-react-native';
+import { Play, CalendarClock, ChevronLeft, ChevronRight, History, Zap, Pencil, ListChecks, RadioTower, Workflow, ClipboardCheck, ShieldCheck, TrendingUp } from 'lucide-react-native';
 import { SolvantaScreen } from '../../src/components/SolvantaScreen';
 import { SocGauge } from '../../src/components/SocGauge';
 import { Card, CardHeader, Label, Message, Metric, MetricGrid, Field, Toggle, Action, ActionRow, ListAction, BuildingHeader, useBuildings } from '../../src/components/TwinControls';
@@ -110,7 +110,7 @@ function SimulationWorkspace({ picker }: { picker: ReturnType<typeof useBuilding
     <Label tone="secondary" caption>{p ? `Shown for ${clock(p.minute)} of the saved run. ` : ''}Paused and deferred are not tracked by the simulation, so they are not shown.</Label>
     <Message>{message}</Message>
 
-    {run && p && <Collapsible title="Run details" subtitle={`Run ${run.id.slice(0, 8)} · ${run.snapshot.pv.source}`}>
+    {run && p && <Collapsible title="Run details" subtitle="Totals and the interval stepper" icon={<ListChecks size={18} color={t.limeText} />}>
       <Card><CardHeader title="Simulation result" subtitle={`Run ${run.id.slice(0, 8)} · ${run.snapshot.pv.source}`} />
         <MetricGrid><Metric label="Requested" value={run.result.summary.load_kwh.toFixed(2)} unit="kWh" /><Metric label="Unmet" value={run.result.summary.unmet_kwh.toFixed(2)} unit="kWh" tone={run.result.summary.unmet_kwh > 0 ? 'warning' : 'primary'} /><Metric label="Critical unmet" value={run.result.summary.unserved_critical_kwh.toFixed(2)} unit="kWh" tone={run.result.summary.unserved_critical_kwh > 0 ? 'danger' : 'success'} /><Metric label="Grid import" value={run.result.summary.grid_import_kwh.toFixed(2)} unit="kWh" /><Metric label="Generator fuel" value={run.result.summary.generator_fuel_l.toFixed(2)} unit="L" /><Metric label="Curtailed" value={run.result.summary.curtailed_kwh.toFixed(2)} unit="kWh" /></MetricGrid>
         <SocGauge socPct={p.soc_pct} caption={`Battery · ${p.battery_end_kwh.toFixed(3)} kWh`} />
@@ -120,13 +120,13 @@ function SimulationWorkspace({ picker }: { picker: ReturnType<typeof useBuilding
         {run.result.assumptions.map(a => <Label key={a} tone="secondary" caption>{a}</Label>)}
       </Card>
     </Collapsible>}
-    {run && <Collapsible title="Digital twin replay" subtitle="Step through the saved run"><TwinReplay run={run} /></Collapsible>}
-    <Collapsible title="Telemetry" subtitle="Compare the run with readings"><TelemetryCard key={run?.id || building.id} buildingId={building.id} runId={run?.id} /></Collapsible>
-    <Collapsible title="Automation" subtitle="Rules and approvals"><AutomationCard buildingId={building.id} /></Collapsible>
-    <Collapsible title="Plans" subtitle="Saved operating plans"><PlanCard buildingId={building.id} outages={outages} useGenerator={generator} /></Collapsible>
-    <Collapsible title="Resilience comparison" subtitle="Current plan versus optimized plan"><ResilienceCard key={`resilience-${building.id}-${outages}-${generator}`} buildingId={building.id} outages={outages} useGenerator={generator} onTraces={setComparison} /></Collapsible>
-    <Collapsible title="Forecast" subtitle="Forecast scenarios"><ForecastCard key={`forecast-${building.id}-${outages}-${generator}`} buildingId={building.id} outages={outages} useGenerator={generator} /></Collapsible>
-    <Collapsible title="Saved runs" subtitle="Latest 20"><Card><CardHeader title="Saved runs" subtitle="Latest 20" icon={<History size={18} color={t.limeText} />} />{history.map(r => <ListAction key={r.id} disabled={busy} title={`${new Date(r.created_at).toLocaleString()} · ${r.id.slice(0, 8)}`} onPress={() => open(r.id)} />)}</Card></Collapsible>
+    {run && <Collapsible title="Digital twin replay" subtitle="Step through the saved run" icon={<Play size={18} color={t.limeText} />}><TwinReplay run={run} /></Collapsible>}
+    <Collapsible title="Telemetry" subtitle="Compare the run with readings" icon={<RadioTower size={18} color={t.limeText} />}><TelemetryCard key={run?.id || building.id} buildingId={building.id} runId={run?.id} /></Collapsible>
+    <Collapsible title="Automation" subtitle="Rules and approvals" icon={<Workflow size={18} color={t.limeText} />}><AutomationCard buildingId={building.id} /></Collapsible>
+    <Collapsible title="Plans" subtitle="Saved operating plans" icon={<ClipboardCheck size={18} color={t.limeText} />}><PlanCard buildingId={building.id} outages={outages} useGenerator={generator} /></Collapsible>
+    <Collapsible title="Resilience comparison" subtitle="Current plan versus optimized plan" icon={<ShieldCheck size={18} color={t.limeText} />}><ResilienceCard key={`resilience-${building.id}-${outages}-${generator}`} buildingId={building.id} outages={outages} useGenerator={generator} onTraces={setComparison} /></Collapsible>
+    <Collapsible title="Forecast" subtitle="Project the next representative day" icon={<TrendingUp size={18} color={t.limeText} />}><ForecastCard key={`forecast-${building.id}-${outages}-${generator}`} buildingId={building.id} outages={outages} useGenerator={generator} /></Collapsible>
+    <Collapsible title="Saved runs" subtitle="Latest 20" icon={<History size={18} color={t.limeText} />}><View style={{ gap: SPACING.sm }}>{history.length ? history.map(r => <ListAction key={r.id} disabled={busy} title={`${new Date(r.created_at).toLocaleString()} · ${r.id.slice(0, 8)}`} onPress={() => open(r.id)} />) : <Label tone="secondary" caption>No saved runs yet.</Label>}</View></Collapsible>
     <Action title="Open Scheduling" variant="secondary" icon={<CalendarClock size={16} color={t.textPrimary} />} onPress={() => router.push('/scheduling')} />
   </SolvantaScreen>;
 }

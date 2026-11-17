@@ -305,15 +305,15 @@ describe('extra tools', () => {
       expect(b).toBeTruthy();
       expect(b.props.accessibilityState.expanded).toBe(false);
     }
-    const heading = all('Text').find((n: any) => textOf(n) === 'Outage resilience comparison')!;
-    expect(heading).toBeTruthy();
-    expect(hidden(heading)).toBe(true);
+    const action = all('TouchableOpacity').find((n: any) => n.props.accessibilityLabel === 'Compare & Save Resilience')!;
+    expect(action).toBeTruthy();
+    expect(hidden(action)).toBe(true);
   });
 
   test('opening a section shows it, and closing hides it again, keeping its state', async () => {
     await render();
     await press('Show Resilience comparison');
-    const heading = () => all('Text').find((n: any) => textOf(n) === 'Outage resilience comparison')!;
+    const heading = () => all('TouchableOpacity').find((n: any) => n.props.accessibilityLabel === 'Compare & Save Resilience')!;
     expect(hidden(heading())).toBe(false);
     expect(button('Hide Resilience comparison')!.props.accessibilityState.expanded).toBe(true);
     await press('Hide Resilience comparison');
@@ -341,6 +341,41 @@ describe('extra tools', () => {
     await settle();
     expect(joined()).toMatch(/Loaded immutable saved run\./);
     expect(chartLines()).toHaveLength(1);
+  });
+});
+
+describe('section headers', () => {
+  const sections: Array<[string, string]> = [['Telemetry', 'Simulated telemetry & incidents'], ['Automation', 'Automation notices'], ['Plans', 'Configuration alternatives & approval'], ['Resilience comparison', 'Outage resilience comparison'], ['Forecast', '24-hour baseline forecast']];
+
+  test('an open section has one title: the card inside draws no second title and no second frame', async () => {
+    await render();
+    for (const [name, cardTitle] of sections) {
+      await press(`Show ${name}`);
+      // The card's own title is not drawn, the section header carries it.
+      expect(texts()).not.toContain(cardTitle);
+      expect(all('Text').filter((n: any) => textOf(n) === name)).toHaveLength(1);
+    }
+    expect(all('Text').filter((n: any) => textOf(n) === 'Saved runs')).toHaveLength(1);
+  });
+
+  test('the card subtitle that carries a warning is still shown under the header', async () => {
+    await render();
+    await press('Show Telemetry');
+    expect(joined()).toMatch(/No physical inverter or smart meter is connected\./);
+  });
+
+  test('the open section is one framed block: the header and its content share a single border', async () => {
+    await render();
+    await press('Show Resilience comparison');
+    const framed = all('View').filter((n: any) => n.props.style?.borderWidth === 1 && n.props.style?.borderRadius === 18 && all('TouchableOpacity', n).some((b: any) => b.props.accessibilityLabel === 'Hide Resilience comparison'));
+    expect(framed).toHaveLength(1);
+    const inner = framed[0].findAll((n: any) => (n.type as any) === 'View' && n !== framed[0] && n.props.style?.borderWidth === 1 && n.props.style?.borderRadius === 18);
+    expect(inner).toHaveLength(0);
+  });
+
+  test('every section header has an icon and keeps its spoken name', async () => {
+    await render();
+    for (const [name] of sections) expect(all('Icon', button(`Show ${name}`)).length).toBeGreaterThan(0);
   });
 });
 
