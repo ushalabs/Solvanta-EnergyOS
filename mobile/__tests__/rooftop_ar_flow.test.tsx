@@ -1313,3 +1313,19 @@ describe('Professional editor tools', () => {
     });
   });
 });
+
+describe('Panel orientation', () => {
+  const value = (label: string) => tree.root.findAll(n => (n.type as any) === 'TextInput' && n.props.accessibilityLabel === label)[0].props.value;
+  test('Landscape swaps the panel width and height fields, and Portrait swaps them back', async () => {
+    roofResponse = async () => savedRoof;
+    await renderPreview();
+    expect([value('Panel width (m)'), value('Panel height (m)')]).toEqual(['1.1', '2']);
+    await press('Landscape');
+    expect([value('Panel width (m)'), value('Panel height (m)')]).toEqual(['2', '1.1']);
+    expect(texts()).toMatch(/Outdated: the roof changed/);
+    await press('Landscape');
+    expect([value('Panel width (m)'), value('Panel height (m)')]).toEqual(['2', '1.1']);
+    await press('Portrait');
+    expect([value('Panel width (m)'), value('Panel height (m)')]).toEqual(['1.1', '2']);
+  });
+});

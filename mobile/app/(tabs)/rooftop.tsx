@@ -274,6 +274,7 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
           <Text style={{ color: t.textPrimary, fontSize: 14, fontWeight: '600' }}>{r.value}</Text>
         </TouchableOpacity>)}
         </View>
+        <PillSegmentedControl a11yLabel="Panel orientation" selectedId={roof.panel_height_m >= roof.panel_width_m ? 'portrait' : 'landscape'} onSelect={id => { const portrait = roof.panel_height_m >= roof.panel_width_m; if ((id === 'portrait') !== portrait) change({ ...roof, panel_width_m: roof.panel_height_m, panel_height_m: roof.panel_width_m }); }} options={[{ id: 'portrait', label: 'Portrait' }, { id: 'landscape', label: 'Landscape' }]} />
         <Action title={advanced ? 'Hide advanced settings' : 'Advanced settings'} variant="secondary" onPress={() => setAdvanced(!advanced)} />
       </Card>
       <Card><CardHeader title="Roof actions" subtitle="Physical scale comes only from your measured distance" />
