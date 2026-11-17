@@ -2,12 +2,12 @@ import React,{useState,useEffect} from 'react';
 import {View,Text} from 'react-native';
 import {router} from 'expo-router';
 import {CalendarClock,History} from 'lucide-react-native';
-import {SolvantaScreen} from '../src/components/SolvantaScreen';
-import {Card,CardHeader,Label,Message,Badge,Field,Action,ListAction,ScreenHeader,BuildingPicker,useBuildings} from '../src/components/TwinControls';
-import {PriorityBadge,PriorityTier} from '../src/components/PriorityBadge';
-import {api} from '../src/api/client';
-import {parseOutages} from '../src/api/simulation';
-import {useTheme} from '../src/theme/ThemeContext';
+import {SolvantaScreen} from '../../src/components/SolvantaScreen';
+import {Card,CardHeader,Label,Message,Badge,Field,Action,ListAction,ScreenHeader,BuildingPicker,useBuildings} from '../../src/components/TwinControls';
+import {PriorityBadge,PriorityTier} from '../../src/components/PriorityBadge';
+import {api} from '../../src/api/client';
+import {parseOutages} from '../../src/api/simulation';
+import {useTheme} from '../../src/theme/ThemeContext';
 type Schedule={id:string|null;created_at?:string;result:{status:string;validated:boolean;reasons:string[];supply_policy:string;objective_description?:string;demand_kwh?:number;entries:Array<{appliance_id:string;name:string;priority:string;rated_power_w:number;segments:Array<{start_min:number;end_min:number}>}>}};
 const clock=(m:number)=>`${Math.floor(m/60).toString().padStart(2,'0')}:${(m%60).toString().padStart(2,'0')}`;
 export default function Scheduling(){
