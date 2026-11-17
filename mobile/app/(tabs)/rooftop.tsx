@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { ImagePlus, Camera, Undo2, Redo2, Square, CircleDot, Magnet, Check, Eraser, Calculator, Save, ScanLine, PencilRuler } from 'lucide-react-native';
@@ -77,6 +77,8 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
   type Snapshot = { roof: RoofInput; coords: string; distance: string; layout: Layout | null; draft: Point[]; outdated: boolean; unsaved: boolean; message: string; mode: 'roof' | 'obstacle' | 'scale'; names: string[]; shapes: ObstacleShape[] };
   const snapshot = useRef<Snapshot | null>(null);
   const areaSized = useRef(false);
+  // Space left for the drawing between the readout and the toolbar. The canvas is fitted into it so it never overlaps either.
+  const [area, setArea] = useState<{ w: number; h: number } | null>(null);
   const apply = (r: RoofRecord) => { setRoof(r.geometry); setDistance(String(r.geometry.scale_distance_m)); setCoords(formatPoints(r.geometry.boundary)); setLayout(r.layout); setSaved(r.layout); setOutdated(false); setUnsaved(false); setNames(prev => r.geometry.obstacles.map((_, i) => prev[i] ?? '')); setShapes(prev => r.geometry.obstacles.map((_, i) => prev[i] ?? 'polygon')); };
   useEffect(() => {
     let active = true;
@@ -232,6 +234,8 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
     if (height !== roof.height) setRoof(r => ({ ...r, height }));
   };
   const scaleInEditor = editing && mode === 'scale';
+  // 52px is the zoom button row under the canvas.
+  const fitWidth = area ? Math.max(120, Math.min(area.w - 16, (area.h - 16 - 52) * roof.width / roof.height)) : undefined;
   const startRectangle = () => commit({ ...current(), roof: { ...roof, boundary: defaultRectangle(roof.width, roof.height) } });
   const mpu = metersPerUnit(roof, distance);
   const liveRoofArea = mpu && corners >= 3 && !roofProblem(roof.boundary) ? polygonArea(roof.boundary) * mpu * mpu : null;
@@ -322,10 +326,10 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
           {[['Roof area', liveRoofArea === null ? DASH : `${liveRoofArea.toFixed(1)} m²`], ['Usable area', layout ? `${layout.usable_area_m2.toFixed(1)} m²` : DASH], ['Panels', layout ? String(layout.panel_count) : DASH]].map(([k, v]) => <View key={k} style={{ flex: 1 }}><Text style={{ color: t.textSecondary, fontSize: 11, lineHeight: 14 }}>{k}</Text><Text style={{ color: t.textPrimary, fontSize: 15, lineHeight: 20, fontWeight: '700' }}>{v}</Text></View>)}
           {outdated && <Text style={{ color: t.amberText, fontSize: 11, fontWeight: '700' }}>Outdated</Text>}
         </View>
-        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 8 }} onLayout={e => sizeToArea(e.nativeEvent.layout.width - 16, e.nativeEvent.layout.height ? e.nativeEvent.layout.height - 16 : undefined)}>
-          <RoofCanvas roof={roof} layout={layout} draft={draft} mode={mode} metersPerUnit={mpu} obstacleNames={names} selectedObstacle={selected} fineGrid={snapOn} invalidObstacles={invalidObstacles} draftInvalid={!!draftProblem} a11yLabel={`Roof canvas, ${mode} mode: ${roof.boundary.length} roof vertices, ${roof.obstacles.length} obstacles, ${layout?.panel_count ?? 0} panels. Roof vertices can also be typed in the Advanced section.`} onEvent={onCanvas} />
+        <View style={{ flex: 1, minHeight: 0, overflow: 'hidden', justifyContent: 'center', paddingHorizontal: 8 }} onLayout={e => { const { width: w, height: h } = e.nativeEvent.layout; if (w && h) setArea({ w, h }); sizeToArea(w - 16, h ? h - 16 : undefined); }}>
+          <View style={fitWidth ? { width: fitWidth, alignSelf: 'center' } : undefined}><RoofCanvas roof={roof} layout={layout} draft={draft} mode={mode} metersPerUnit={mpu} obstacleNames={names} selectedObstacle={selected} fineGrid={snapOn} invalidObstacles={invalidObstacles} draftInvalid={!!draftProblem} a11yLabel={`Roof canvas, ${mode} mode: ${roof.boundary.length} roof vertices, ${roof.obstacles.length} obstacles, ${layout?.panel_count ?? 0} panels. Roof vertices can also be typed in the Advanced section.`} onEvent={onCanvas} /></View>
         </View>
-        <View style={{ gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingTop: 8 }}>
+        <ScrollView style={{ flexGrow: 0, maxHeight: '50%' }} contentContainerStyle={{ gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingTop: 8, paddingBottom: 4 }} keyboardShouldPersistTaps="handled">
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}><View style={{ flex: 1 }}><Label tone="secondary" caption>{hint}</Label></View><Label tone="secondary" caption>{count}</Label></View>
           <Label tone="secondary" caption>{gestureHint}</Label>
           {!!shapeNote && <Message tone="warning">{shapeNote}</Message>}
@@ -355,7 +359,7 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
           </View>
           {mode === 'obstacle' && finishReason && !draftProblem && <Label tone="secondary" caption>{finishReason}</Label>}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>{legend.map(l => <View key={l.name} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: l.color }} /><Text style={{ color: t.textSecondary, fontSize: 12 }}>{l.name}</Text></View>)}</View>
-        </View>
+        </ScrollView>
       </View>
     </Modal>
     <ModalSheet visible={selector !== null} title={selector === 'type' ? 'Panel Type' : selector === 'tilt' ? 'Tilt Angle' : 'Orientation'} dismissOnBackdrop onRequestClose={() => setSelector(null)} footer={<Action title="Done" onPress={() => setSelector(null)} />}>

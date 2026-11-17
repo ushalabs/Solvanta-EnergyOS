@@ -947,6 +947,26 @@ describe('Full-screen roof editor', () => {
     expect(input(VERTICES).props.value).toBe('100,100; 900,100; 900,600');
   });
 
+  test('the canvas is fitted into the space left by the toolbar, and the toolbar scrolls instead of pushing it', async () => {
+    roofResponse = async () => savedRoof;
+    await renderPreview();
+    await press('Edit roof layout');
+    const area = tree.root.findAll(n => (n.type as any) === 'View' && typeof n.props.onLayout === 'function' && n.props.style?.flex === 1 && n.props.style?.justifyContent === 'center')[0];
+    expect(area.props.style).toMatchObject({ minHeight: 0, overflow: 'hidden' });
+    // A short area: 376 wide, 300 tall. The 1000 x 700 roof must fit 300 - 16 - 52 = 232px of height.
+    await act(async () => { area.props.onLayout({ nativeEvent: { layout: { width: 376, height: 300 } } }); });
+    const fit = () => { let n: any = canvas(); while (n && n.props.style?.alignSelf !== 'center') n = n.parent; return n.props.style; };
+    const style = fit();
+    expect(style.width).toBeCloseTo(232 * 1000 / 700, 0);
+    expect(style.alignSelf).toBe('center');
+    // A roomy area is limited by width instead.
+    await act(async () => { area.props.onLayout({ nativeEvent: { layout: { width: 376, height: 900 } } }); });
+    expect(fit().width).toBe(360);
+    const toolbar = tree.root.findAll(n => (n.type as any) === 'ScrollView' && n.props.style?.maxHeight === '50%');
+    expect(toolbar).toHaveLength(1);
+    expect(toolbar[0].findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Undo Last Point')).toHaveLength(1);
+  });
+
   test('the scale distance field is in the editor in Scale mode', async () => {
     await renderPreview();
     await press('Edit roof layout');
