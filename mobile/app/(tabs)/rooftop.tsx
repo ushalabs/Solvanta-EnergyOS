@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import Svg, { Polygon, Rect, Circle, Image as SvgImage, Line } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
-import { ImagePlus, Camera, Undo2, Check, Eraser, Calculator, Save, ScanLine, PencilRuler } from 'lucide-react-native';
+import { ImagePlus, Camera, Undo2, Check, Eraser, Calculator, Save, ScanLine, PencilRuler, ArrowUp } from 'lucide-react-native';
 import { SolvantaScreen } from '../../src/components/SolvantaScreen';
 import { Card, CardHeader, Label, Message, Metric, MetricGrid, Field, FieldRow, Action, ActionRow, BuildingHeader, useBuildings } from '../../src/components/TwinControls';
 import { api } from '../../src/api/client';
-import { emptyRoof, RoofInput, RoofRecord, Layout, Point, parsePoints, formatPoints, tapToRoofPoint, screenPx, selfIntersects, defaultRectangle } from '../../src/api/roof';
+import { emptyRoof, RoofInput, RoofRecord, Layout, Point, parsePoints, formatPoints, tapToRoofPoint, screenPx, selfIntersects, defaultRectangle, panelGroups, usableWidthM, centroid } from '../../src/api/roof';
 import { compassPoint } from '../../src/api/pv';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { RADIUS, SPACING } from '../../src/theme/tokens';
@@ -102,7 +102,20 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
     if (capability !== 'ready') { setTab('ar'); return; }
     router.push({ pathname: '/rooftop-ar', params: { buildingId: building.id } });
   };
-  const legend = [{ color: t.limeMark, name: 'Roof / panels' }, { color: t.redText, name: 'Obstacle' }, { color: t.cyanText, name: 'Scale' }];
+  const legend = [{ color: t.limeMark, name: 'Roof / panels' }, { color: t.textSecondary, name: 'Obstacle' }, { color: t.cyanText, name: 'Scale' }];
+  // Dragging a corner handle moves that corner. Handles are 20px with 12px of hit slop on each side, a 44px touch area.
+  const drag = useRef<{ px: number; py: number; orig: Point } | null>(null);
+  const canvasH = width * roof.height / roof.width;
+  const toX = (x: number) => x / roof.width * width, toY = (y: number) => y / roof.height * canvasH;
+  const moveCorner = (i: number, e: any) => {
+    const d = drag.current; if (!d || width <= 0) return;
+    const p = tapToRoofPoint(toX(d.orig.x) + (e.nativeEvent.pageX - d.px), toY(d.orig.y) + (e.nativeEvent.pageY - d.py), width, roof.width, roof.height);
+    const boundary = roof.boundary.map((q, j) => j === i ? p : q);
+    change({ ...roof, boundary }); setCoords(formatPoints(boundary));
+  };
+  const groups = layout ? panelGroups(layout.panels, (roof.gap_m / (layout.meters_per_pixel || 1)) * 1.5 + 1) : [];
+  const dimension = layout && roof.scale_points.length === 2 && roof.boundary.length >= 3 ? usableWidthM(layout.panels, layout.meters_per_pixel) : null;
+  const dimY = Math.min(canvasH - 18, toY(Math.max(...roof.boundary.map(p => p.y), 0)) + 8);
   const dailyKwh = pv.profile?.daily_energy_kwh;
   const configRows = [
     { name: 'Panel Type', value: pv.wattageW === null ? DASH : `${pv.wattageW} W` },
@@ -145,15 +158,23 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
           {!roof.image_data && GRID.map(f => <React.Fragment key={f}><View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: `${f * 100}%`, height: 1, backgroundColor: t.border, opacity: 0.6 }} /><View pointerEvents="none" style={{ position: 'absolute', top: 0, bottom: 0, left: `${f * 100}%`, width: 1, backgroundColor: t.border, opacity: 0.6 }} /></React.Fragment>)}
           <Svg pointerEvents="none" width="100%" height="100%" viewBox={`0 0 ${roof.width} ${roof.height}`}>
             {roof.image_data && <SvgImage href={{ uri: roof.image_data }} width={roof.width} height={roof.height} />}
-            <Polygon points={roof.boundary.map(p => `${p.x},${p.y}`).join(' ')} fill={t.surfaceElevated} fillOpacity={roof.image_data ? 0.35 : 0.9} stroke={t.textSecondary} strokeWidth={screenPx(2.5, width, roof.width)} />
-            {roof.boundary.map((p, i) => <Circle key={`v${i}`} cx={p.x} cy={p.y} r={screenPx(5, width, roof.width)} fill={t.limeMark} />)}
-            {roof.obstacles.map((ring, i) => <Polygon key={i} points={ring.map(p => `${p.x},${p.y}`).join(' ')} fill={t.redTint} stroke={t.redText} strokeWidth={screenPx(2, width, roof.width)} />)}
-            {draft.length > 0 && <Polygon points={draft.map(p => `${p.x},${p.y}`).join(' ')} fill={t.redTint} stroke={t.redText} strokeWidth={screenPx(2, width, roof.width)} />}
+            {roof.boundary.length >= 3 && <Polygon points={roof.boundary.map(p => `${p.x},${p.y}`).join(' ')} fill={t.surfaceElevated} fillOpacity={roof.image_data ? 0.35 : 0.9} stroke={t.textSecondary} strokeWidth={screenPx(2.5, width, roof.width)} strokeLinejoin="round" />}
+            {roof.boundary.map((p, i) => <Circle key={`v${i}`} cx={p.x} cy={p.y} r={screenPx(6, width, roof.width)} fill={t.surfaceElevated} stroke={t.limeMark} strokeWidth={screenPx(2, width, roof.width)} />)}
+            {roof.obstacles.map((ring, i) => <Polygon key={i} points={ring.map(p => `${p.x},${p.y}`).join(' ')} fill={t.textSecondary} fillOpacity={0.35} stroke={t.textSecondary} strokeWidth={screenPx(2, width, roof.width)} strokeLinejoin="round" />)}
+            {draft.length > 0 && <Polygon points={draft.map(p => `${p.x},${p.y}`).join(' ')} fill={t.redTint} stroke={t.redText} strokeWidth={screenPx(2, width, roof.width)} strokeLinejoin="round" />}
             {draft.map((p, i) => <Circle key={`d${i}`} cx={p.x} cy={p.y} r={screenPx(5, width, roof.width)} fill={t.redText} />)}
-            {layout?.panels.map((p, i) => <Rect key={i} {...p} fill={t.panelFill} stroke={t.limeMark} strokeWidth={screenPx(1, width, roof.width)} />)}
+            {layout?.panels.map((p, i) => <Rect key={i} {...p} fill={t.panelFill} stroke={t.limeMark} strokeOpacity={0.55} strokeWidth={screenPx(0.5, width, roof.width)} />)}
+            {groups.map((g, i) => { const pad = screenPx(1, width, roof.width); return <Polygon key={`g${i}`} points={[[g.bounds.x - pad, g.bounds.y - pad], [g.bounds.x + g.bounds.width + pad, g.bounds.y - pad], [g.bounds.x + g.bounds.width + pad, g.bounds.y + g.bounds.height + pad], [g.bounds.x - pad, g.bounds.y + g.bounds.height + pad]].map(q => q.join(',')).join(' ')} fill="none" stroke={t.limeMark} strokeWidth={screenPx(1.5, width, roof.width)} strokeLinejoin="round" />; })}
             {roof.scale_points.map((p, i) => <Circle key={i} cx={p.x} cy={p.y} r={screenPx(7, width, roof.width)} fill={t.cyanText} />)}
             {roof.scale_points.length === 2 && <Line x1={roof.scale_points[0].x} y1={roof.scale_points[0].y} x2={roof.scale_points[1].x} y2={roof.scale_points[1].y} stroke={t.cyanText} strokeWidth={screenPx(2.5, width, roof.width)} />}
           </Svg>
+          {roof.obstacles.map((ring, i) => { const c = centroid(ring); return <View key={`o${i}`} pointerEvents="none" style={{ position: 'absolute', left: toX(c.x) - 30, top: toY(c.y) - 7, width: 60, alignItems: 'center' }}><Text style={{ color: t.textPrimary, fontSize: 10, lineHeight: 14 }}>Obstacle</Text></View>; })}
+          {dimension && <View pointerEvents="none" accessibilityLabel={`Usable width ${dimension.widthM.toFixed(1)} metres`} style={{ position: 'absolute', left: toX(dimension.x1), width: Math.max(1, toX(dimension.x2) - toX(dimension.x1)), top: dimY, alignItems: 'center' }}>
+            <View style={{ position: 'absolute', left: 0, right: 0, top: 4, height: 1, backgroundColor: t.cyanText }} /><View style={{ position: 'absolute', left: 0, top: 0, width: 1, height: 9, backgroundColor: t.cyanText }} /><View style={{ position: 'absolute', right: 0, top: 0, width: 1, height: 9, backgroundColor: t.cyanText }} />
+            <Text style={{ marginTop: 8, color: t.cyanText, fontSize: 11, lineHeight: 14 }}>{dimension.widthM.toFixed(1)} m</Text>
+          </View>}
+          <View pointerEvents="none" accessibilityLabel="North arrow: the top of the canvas is assumed to be north" style={{ position: 'absolute', left: 8, top: 8, alignItems: 'center' }}><ArrowUp size={14} color={t.textSecondary} /><Text style={{ color: t.textSecondary, fontSize: 10, lineHeight: 12, fontWeight: '700' }}>N</Text></View>
+          {mode === 'roof' && roof.boundary.map((p, i) => <View key={`h${i}`} accessibilityLabel={`Roof corner ${i + 1}, drag to move`} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={{ position: 'absolute', left: toX(p.x) - 10, top: toY(p.y) - 10, width: 20, height: 20, borderRadius: 10 }} onStartShouldSetResponder={() => true} onResponderGrant={(e: any) => { drag.current = { px: e.nativeEvent.pageX, py: e.nativeEvent.pageY, orig: { ...p } }; }} onResponderMove={(e: any) => moveCorner(i, e)} onResponderRelease={() => { drag.current = null; }} onResponderTerminate={() => { drag.current = null; }} />)}
         </View>
         <Label tone="secondary" caption>{count}</Label>
         {outlineWarning && <Message tone="warning">{outlineWarning}</Message>}

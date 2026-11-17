@@ -54,3 +54,29 @@ export function defaultRectangle(width: number, height: number): Point[] {
   const l = Math.round(width * 0.15), r = Math.round(width * 0.85), t = Math.round(height * 0.17), b = Math.round(height * 0.83);
   return [{ x: l, y: t }, { x: r, y: t }, { x: r, y: b }, { x: l, y: b }];
 }
+
+export type PanelRect = { x: number; y: number; width: number; height: number };
+/**
+ * Group placed panels that touch (or sit within `tolerance` of) each other, so each contiguous block can be outlined.
+ * Only changes how placement is drawn; the panels themselves are not altered.
+ */
+export function panelGroups(panels: PanelRect[], tolerance: number): Array<{ bounds: PanelRect; panels: PanelRect[] }> {
+  const parent = panels.map((_, i) => i);
+  const find = (i: number): number => parent[i] === i ? i : (parent[i] = find(parent[i]));
+  const near = (a: PanelRect, b: PanelRect) => a.x <= b.x + b.width + tolerance && b.x <= a.x + a.width + tolerance && a.y <= b.y + b.height + tolerance && b.y <= a.y + a.height + tolerance;
+  for (let i = 0; i < panels.length; i++) for (let j = i + 1; j < panels.length; j++) if (near(panels[i], panels[j])) parent[find(i)] = find(j);
+  const groups = new Map<number, PanelRect[]>();
+  panels.forEach((p, i) => { const k = find(i); groups.set(k, [...(groups.get(k) ?? []), p]); });
+  return [...groups.values()].map(list => {
+    const x = Math.min(...list.map(p => p.x)), y = Math.min(...list.map(p => p.y));
+    return { panels: list, bounds: { x, y, width: Math.max(...list.map(p => p.x + p.width)) - x, height: Math.max(...list.map(p => p.y + p.height)) - y } };
+  });
+}
+/** Usable width in metres: the horizontal extent of the placed panels. Null without placement or a scale. */
+export function usableWidthM(panels: PanelRect[], metersPerPixel: number): { widthM: number; x1: number; x2: number } | null {
+  if (!panels.length || !(metersPerPixel > 0)) return null;
+  const x1 = Math.min(...panels.map(p => p.x)), x2 = Math.max(...panels.map(p => p.x + p.width));
+  return { widthM: (x2 - x1) * metersPerPixel, x1, x2 };
+}
+/** Centre of a ring, for placing its label. */
+export const centroid = (ring: Point[]): Point => ({ x: ring.reduce((n, p) => n + p.x, 0) / ring.length, y: ring.reduce((n, p) => n + p.y, 0) / ring.length });

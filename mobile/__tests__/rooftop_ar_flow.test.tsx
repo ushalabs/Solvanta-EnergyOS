@@ -617,3 +617,94 @@ describe('Rooftop guidance and state', () => {
     expect(texts()).toMatch(/Press Calculate Placement first, then Save Roof/);
   });
 });
+
+describe('Roof canvas drawing', () => {
+  const polygons = () => tree.root.findAll(n => (n.type as any) === 'Polygon');
+  const outline = () => polygons().find(n => n.props.fill === require('../src/theme/tokens').darkTokens.surfaceElevated);
+  const handles = () => tree.root.findAll(n => (n.type as any) === 'View' && /^Roof corner/.test(n.props.accessibilityLabel ?? ''));
+  const labelled = (text: string) => tree.root.findAll(n => (n.type as any) === 'View' && (n.props.accessibilityLabel ?? '').startsWith(text));
+
+  test('1 or 2 corners draw handles only, 3 or more draw a closed filled outline', async () => {
+    await render();
+    await tapCanvas(30, 30); await tapCanvas(270, 30);
+    expect(outline()).toBeUndefined();
+    expect(handles()).toHaveLength(2);
+    await tapCanvas(270, 200);
+    const shape = outline()!;
+    expect(shape).toBeTruthy();
+    expect(shape.props.strokeLinejoin).toBe('round');
+    expect(shape.props.points.split(' ')).toHaveLength(3);
+  });
+
+  test('corner handles give a 44px touch area and moving one updates the vertices', async () => {
+    await render();
+    await tapCanvas(30, 30); await tapCanvas(270, 30); await tapCanvas(270, 200);
+    const h = handles()[0];
+    expect(20 + h.props.hitSlop.left + h.props.hitSlop.right).toBeGreaterThanOrEqual(44);
+    expect(20 + h.props.hitSlop.top + h.props.hitSlop.bottom).toBeGreaterThanOrEqual(44);
+    await act(async () => { h.props.onResponderGrant({ nativeEvent: { pageX: 100, pageY: 100 } }); });
+    await act(async () => { handles()[0].props.onResponderMove({ nativeEvent: { pageX: 130, pageY: 120 } }); });
+    await act(async () => { handles()[0].props.onResponderRelease(); });
+    // 300px canvas on a 1000 roof: 30px right and 20px down is 100 and 67 roof units.
+    expect(input(VERTICES).props.value).toBe('200,167; 900,100; 900,667');
+    expect(texts()).toMatch(/Outdated|Unsaved geometry changes/);
+  });
+
+  test('handles only show in Roof mode, so taps in other modes reach the canvas', async () => {
+    await render();
+    await tapCanvas(30, 30);
+    expect(handles()).toHaveLength(1);
+    await press('Obstacle');
+    expect(handles()).toHaveLength(0);
+  });
+
+  test('placed panels are cells with a thin border, and each contiguous group gets one lime outline', async () => {
+    roofResponse = async () => savedRoof;
+    await render();
+    const cells = tree.root.findAll(n => (n.type as any) === 'Rect');
+    expect(cells).toHaveLength(1);
+    expect(cells[0].props.fill).toBe(require('../src/theme/tokens').darkTokens.panelFill);
+    const lime = require('../src/theme/tokens').darkTokens.limeMark;
+    const outlines = polygons().filter(p => p.props.fill === 'none' && p.props.stroke === lime);
+    expect(outlines).toHaveLength(1);
+    expect(cells[0].props.strokeWidth).toBeLessThan(outlines[0].props.strokeWidth);
+  });
+
+  test('two separate blocks of panels get two outlines', async () => {
+    roofResponse = async () => ({ ...savedRoof, layout: { ...savedRoof.layout, panels: [{ x: 100, y: 100, width: 50, height: 90 }, { x: 155, y: 100, width: 50, height: 90 }, { x: 700, y: 400, width: 50, height: 90 }] } });
+    await render();
+    expect(polygons().filter(p => p.props.fill === 'none')).toHaveLength(2);
+  });
+
+  test('obstacles are drawn as muted rounded shapes labelled Obstacle', async () => {
+    await render();
+    await press('Obstacle');
+    await tapCanvas(100, 100); await tapCanvas(150, 100); await tapCanvas(150, 140);
+    await press('Finish Obstacle');
+    const shape = polygons().find(p => p.props.strokeLinejoin === 'round' && p.props.fillOpacity === 0.35)!;
+    expect(shape).toBeTruthy();
+    const labels = tree.root.findAll(n => (n.type as any) === 'View' && n.props.pointerEvents === 'none').flatMap(v => v.findAll(c => (c.type as any) === 'Text').map(c => c.props.children));
+    expect(labels).toContain('Obstacle');
+  });
+
+  test('a north arrow sits in the top left and says it is an assumption', async () => {
+    await render();
+    const arrow = labelled('North arrow')[0];
+    expect(arrow.props.style.left).toBe(8);
+    expect(arrow.props.style.top).toBe(8);
+    expect(arrow.props.accessibilityLabel).toMatch(/assumed/);
+  });
+
+  test('the usable width line shows only with placement data and a scale', async () => {
+    await render();
+    expect(labelled('Usable width')).toHaveLength(0);
+    await act(async () => { tree.unmount(); });
+    roofResponse = async () => savedRoof;
+    await render();
+    // One panel 73 roof units wide at 0.015 m per unit.
+    expect(labelled('Usable width')).toHaveLength(1);
+    expect(labelled('Usable width')[0].props.accessibilityLabel).toBe('Usable width 1.1 metres');
+    await tapCanvas(150, 150);
+    expect(labelled('Usable width')).toHaveLength(0);
+  });
+});
