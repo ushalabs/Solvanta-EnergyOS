@@ -175,11 +175,11 @@ export function RoofCanvas({ roof, layout, draft, mode, metersPerUnit = null, in
         {roof.image_data && <SvgImage href={{ uri: roof.image_data }} width={roof.width} height={roof.height} />}
         {roof.boundary.length >= 3 && <Polygon points={ringPoints(roof.boundary)} fill={t.surfaceElevated} fillOpacity={roof.image_data ? 0.35 : 0.9} stroke={t.textSecondary} strokeWidth={sp(2.5)} strokeLinejoin="round" />}
         {strips.map((s, i) => <Polygon key={`sb${i}`} points={ringPoints(s)} fill="url(#setbackHatch)" fillOpacity={0.9} stroke="none" />)}
-        {roof.boundary.map((p, i) => <Circle key={`v${i}`} cx={p.x} cy={p.y} r={sp(6)} fill={t.surfaceElevated} stroke={t.limeMark} strokeWidth={sp(2)} />)}
+        {interactive && roof.boundary.map((p, i) => <Circle key={`v${i}`} cx={p.x} cy={p.y} r={sp(6)} fill={t.surfaceElevated} stroke={t.limeMark} strokeWidth={sp(2)} />)}
         {roof.obstacles.map((ring, i) => invalidObstacles.includes(i)
           ? <Polygon key={i} points={ringPoints(ring)} fill={t.redTint} stroke={t.redText} strokeWidth={sp(2.5)} strokeLinejoin="round" />
           : <Polygon key={i} points={ringPoints(ring)} fill={t.textSecondary} fillOpacity={0.35} stroke={selectedObstacle === i ? t.limeMark : t.textSecondary} strokeWidth={sp(selectedObstacle === i ? 2.5 : 2)} strokeLinejoin="round" />)}
-        {mode === 'obstacle' && roof.obstacles.map((ring, i) => ring.map((p, j) => <Circle key={`oc${i}-${j}`} cx={p.x} cy={p.y} r={sp(4)} fill={t.surfaceElevated} stroke={invalidObstacles.includes(i) ? t.redText : t.textPrimary} strokeWidth={sp(1.5)} />))}
+        {interactive && mode === 'obstacle' && roof.obstacles.map((ring, i) => ring.map((p, j) => <Circle key={`oc${i}-${j}`} cx={p.x} cy={p.y} r={sp(4)} fill={t.surfaceElevated} stroke={invalidObstacles.includes(i) ? t.redText : t.textPrimary} strokeWidth={sp(1.5)} />))}
         {draft.length >= 3 && <Polygon points={ringPoints(draft)} fill={draftInvalid ? t.redTint : t.textSecondary} fillOpacity={draftInvalid ? 1 : 0.2} stroke={draftInvalid ? t.redText : t.limeMark} strokeWidth={sp(2.5)} strokeLinejoin="round" />}
         {draft.map((p, i) => <Circle key={`d${i}`} cx={p.x} cy={p.y} r={sp(5)} fill={draftInvalid ? t.redText : t.limeMark} />)}
         {layout?.panels.map((p, i) => <Rect key={i} {...p} fill={t.panelFill} stroke={t.limeMark} strokeOpacity={0.45} strokeWidth={sp(0.5)} />)}

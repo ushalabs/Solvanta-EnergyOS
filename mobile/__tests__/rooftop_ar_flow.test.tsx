@@ -922,6 +922,20 @@ describe('Full-screen roof editor', () => {
     expect(tree.root.findAll(n => (n.type as any) === 'Rect')).toHaveLength(1);
   });
 
+  test('the preview shows the finished drawing without editing handles, whatever mode the editor was left in', async () => {
+    roofResponse = async () => ({ ...savedRoof, geometry: { ...savedRoof.geometry, obstacles: [[{ x: 500, y: 150 }, { x: 700, y: 150 }, { x: 700, y: 300 }]] } });
+    await renderPreview();
+    await press('Edit roof layout');
+    await press('Obstacle');
+    // In the editor: 3 roof corners, 3 obstacle corners and 2 scale points.
+    expect(tree.root.findAll(n => (n.type as any) === 'Circle')).toHaveLength(8);
+    await press('Done editing roof');
+    // In the preview only the two scale points remain.
+    const circles = tree.root.findAll(n => (n.type as any) === 'Circle');
+    expect(circles).toHaveLength(2);
+    expect(circles.every(c => c.props.fill === require('../src/theme/tokens').darkTokens.cyanText)).toBe(true);
+  });
+
   test('Edit roof layout opens the editor with the mode switch, toolbar, Done and Cancel', async () => {
     await renderPreview();
     await press('Edit roof layout');
