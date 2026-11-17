@@ -264,8 +264,9 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
       <MetricGrid>
         <Metric compact label="Usable Area" value={layout ? layout.usable_area_m2.toFixed(1) : DASH} unit={layout ? 'm²' : undefined} />
         <Metric compact label="Panels" value={layout ? layout.panel_count : DASH} unit={layout ? 'fit' : undefined} tone="accent" />
-        <Metric compact label="Est. Daily (SIMULATED)" value={outdated || pvOutdated || dailyKwh === undefined || !Number.isFinite(dailyKwh) ? DASH : dailyKwh.toFixed(1)} unit={outdated || pvOutdated || dailyKwh === undefined ? undefined : 'kWh'} />
+        <Metric compact label="Est. Daily" value={outdated || pvOutdated || dailyKwh === undefined || !Number.isFinite(dailyKwh) ? DASH : dailyKwh.toFixed(1)} unit={outdated || pvOutdated || dailyKwh === undefined ? undefined : 'kWh'} />
       </MetricGrid>
+      <Label tone="secondary" caption>Est. Daily is SIMULATED: a representative day, not live data.</Label>
       {pvOutdated && !outdated && <Label tone="secondary" caption>Est. Daily is outdated: the panel settings changed. Open Advanced and press Calculate PV Estimate.</Label>}
       {outdated && <Label tone="secondary" caption>Outdated: the roof changed since the last calculation. Press Calculate Placement.</Label>}
       <Card><CardHeader title="Panel Configuration" subtitle={pv.profile ? 'From the PV record or the last calculation' : 'No PV record yet. Open Advanced to calculate.'} />

@@ -609,7 +609,7 @@ describe('Rooftop guidance and state', () => {
     expect(texts()).not.toMatch(/Outdated/);
     await tapCanvas(150, 150);
     expect(texts()).toMatch(/Outdated: the roof changed/);
-    expect(texts()).toMatch(/Usable Area \| — \| Panels \| — \| Est\. Daily \(SIMULATED\) \| —/);
+    expect(texts()).toMatch(/Usable Area \| — \| Panels \| — \| Est\. Daily \| —/);
     await press('Calculate Placement');
     expect(texts()).not.toMatch(/Outdated/);
     expect(texts()).toMatch(/Usable Area \| 30\.0/);
@@ -814,16 +814,16 @@ describe('Panel Configuration selectors', () => {
   test('changing a value marks Est. Daily as outdated until it is recalculated', async () => {
     withPv();
     await renderPreview();
-    expect(texts()).toMatch(/Est\. Daily \(SIMULATED\) \| 12\.3 \| +kWh/);
+    expect(texts()).toMatch(/Est\. Daily \| 12\.3 \| +kWh/);
     expect(texts()).not.toMatch(/Est\. Daily is outdated/);
     await open('Panel Type');
     await pick('500 W module');
-    expect(texts()).toMatch(/Est\. Daily \(SIMULATED\) \| —/);
+    expect(texts()).toMatch(/Est\. Daily \| —/);
     expect(texts()).toMatch(/Est\. Daily is outdated/);
     post.mockResolvedValue({ ...pvRecord.profile, daily_energy_kwh: 15.5 } as any);
     await press('Calculate PV Estimate');
     expect(texts()).not.toMatch(/Est\. Daily is outdated/);
-    expect(texts()).toMatch(/Est\. Daily \(SIMULATED\) \| 15\.5/);
+    expect(texts()).toMatch(/Est\. Daily \| 15\.5/);
   });
 
   test('the roof tiles are not marked outdated by a panel setting change', async () => {
@@ -834,6 +834,17 @@ describe('Panel Configuration selectors', () => {
     await pick('Increase tilt');
     expect(texts()).not.toMatch(/Outdated: the roof changed/);
     expect(texts()).toMatch(/Usable Area \| 30\.0/);
+  });
+
+  test('the Est. Daily tile has a short label so the three tiles line up, and the SIMULATED label sits just under them', async () => {
+    withPv();
+    await renderPreview();
+    const labels = tree.root.findAll(n => (n.type as any) === 'Text').map(n => [n.props.children].flat(Infinity).join(''));
+    expect(labels).toContain('Est. Daily');
+    expect(labels).not.toContain('Est. Daily (SIMULATED)');
+    const note = labels.findIndex(t => /Est\. Daily is SIMULATED/.test(t));
+    expect(note).toBeGreaterThan(labels.indexOf('Est. Daily'));
+    expect(note).toBeLessThan(labels.indexOf('Panel Configuration'));
   });
 
   test('there is no Panel Count row or count control; the Panels tile says how many fit', async () => {
