@@ -33,6 +33,7 @@ import Scheduling from '../app/(tabs)/scheduling';
 import { api, SolvantaApiError } from '../src/api/client';
 import { darkTokens } from '../src/theme/tokens';
 
+declare const __dirname: string;
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 const BUILDING = 'b1';
@@ -413,23 +414,71 @@ describe('optimized schedule card', () => {
 });
 
 describe('appliance rows and tags', () => {
-  test('one row per appliance in start order, with times, minutes and power', async () => {
+  const pills = (row: any) => all('View', row).filter((n: any) => n.props.testID === 'badge-pill');
+
+  test('one row per appliance in start order, led by the time range with the name under it', async () => {
     await render();
     await solve();
-    expect(rows().map((r: any) => texts(r)[0])).toEqual(['Fridge', 'Water pump', 'Washer']);
+    expect(rows().map((r: any) => texts(r)[0])).toEqual(['00:00 – 24:00', '10:00 – 11:00, 13:00 – 14:00', '20:00 – 21:30']);
+    expect(rows().map((r: any) => texts(r)[1])).toEqual(['Fridge', 'Water pump', 'Washer']);
+  });
+
+  test('duration, power and the allowed window are one small grey line', async () => {
+    await render();
+    await solve();
     const pump = rows()[1];
-    expect(texts(pump).join(' ')).toMatch(/10:00 – 11:00, 13:00 – 14:00 · 120 min · 0\.75 kW/);
+    const line = all('Text', pump).find((n: any) => /Allowed/.test(textOf(n)))!;
+    expect(textOf(line)).toBe('120 min · 0.75 kW · Allowed 06:00 – 22:00');
+    expect(flat(line.props.style)).toMatchObject({ color: darkTokens.textSecondary, fontSize: 12 });
     expect(pump.props.accessibilityLabel).toBe('Water pump, 10:00 – 11:00, 13:00 – 14:00');
+  });
+
+  test('tags are outlined pills in the text colour, with the existing CRITICAL and FLEXIBLE colours', async () => {
+    await render();
+    await solve();
+    const [fridge, pump] = rows();
+    const critical = pills(fridge).find((p: any) => texts(p)[0] === 'CRITICAL')!;
+    expect(flat(critical.props.style)).toMatchObject({ backgroundColor: 'transparent', borderWidth: 1, borderColor: darkTokens.redText });
+    expect(all('Text', critical)[0].props.style).toEqual(expect.arrayContaining([expect.objectContaining({ color: darkTokens.redText })]));
+    const flexible = pills(pump).find((p: any) => texts(p)[0] === 'FLEXIBLE')!;
+    expect(flat(flexible.props.style)).toMatchObject({ backgroundColor: 'transparent', borderWidth: 1, borderColor: darkTokens.limeText });
+    const medium = pills(pump).find((p: any) => texts(p)[0] === 'MEDIUM')!;
+    expect(flat(medium.props.style).borderColor).toBe(darkTokens.textSecondary);
+  });
+
+  test('the pills are stacked at the right edge of the row, after the text', async () => {
+    await render();
+    await solve();
+    const row = rows()[1];
+    const stack = all('View', row).find((n: any) => flat(n.props.style).flexDirection === 'column' && flat(n.props.style).alignItems === 'flex-end')!;
+    expect(stack).toBeTruthy();
+    expect(pills(stack)).toHaveLength(3);
+    const children = row.children.map((c: any) => c.props?.style ? flat(c.props.style) : {});
+    expect(children[children.length - 1]).toBeDefined();
+  });
+
+  test('every row uses the same icon tile, whatever the appliance is called', async () => {
+    await render();
+    await solve();
+    const tiles = rows().map((r: any) => all('Icon', r).map((i: any) => i.props));
+    expect(tiles.every((t: any[]) => t.length === 1)).toBe(true);
+    expect(new Set(tiles.map((t: any[]) => JSON.stringify(t[0]))).size).toBe(1);
+    const source = require('fs').readFileSync(require('path').join(__dirname, '../app/(tabs)/scheduling.tsx'), 'utf8');
+    expect(source.match(/<Plug /g)).toHaveLength(1);
+    expect(source).not.toMatch(/Refrigerator|Fridge|Snowflake|Lightbulb|Droplet|WashingMachine/);
   });
 
   test('tags come from priority, flexible and the number of parts, and the window from the appliance', async () => {
     await render();
     await solve();
     const [fridge, pump, washer] = rows();
-    expect(texts(fridge)).toEqual(expect.arrayContaining(['CRITICAL', 'FIXED TIME', 'Allowed 00:00 – 24:00']));
+    expect(texts(fridge)).toEqual(expect.arrayContaining(['CRITICAL', 'FIXED TIME']));
+    expect(texts(fridge).join(' ')).toMatch(/Allowed 00:00 – 24:00/);
     expect(texts(fridge)).not.toContain('FLEXIBLE');
-    expect(texts(pump)).toEqual(expect.arrayContaining(['MEDIUM', 'FLEXIBLE', 'SPLIT INTO 2', 'Allowed 06:00 – 22:00']));
-    expect(texts(washer)).toEqual(expect.arrayContaining(['LOW', 'FLEXIBLE', 'Allowed 10:00 – 23:00']));
+    expect(texts(pump)).toEqual(expect.arrayContaining(['MEDIUM', 'FLEXIBLE', 'SPLIT INTO 2']));
+    expect(texts(pump).join(' ')).toMatch(/Allowed 06:00 – 22:00/);
+    expect(texts(washer)).toEqual(expect.arrayContaining(['LOW', 'FLEXIBLE']));
+    expect(texts(washer).join(' ')).toMatch(/Allowed 10:00 – 23:00/);
     expect(texts(washer).filter((x: string) => /SPLIT/.test(x))).toHaveLength(0);
   });
 
@@ -437,7 +486,7 @@ describe('appliance rows and tags', () => {
     (api.get as jest.Mock).mockImplementation(async (path: string) => { if (path.endsWith('/schedules')) return []; if (path.endsWith('/pv')) return pvRecord; if (path.endsWith('/appliances')) return { ...appliances, items: [appliance('a3', 'Washer', { priority: 'low', critical: true, flexible: true })] }; throw notFound(); });
     await render();
     await solve();
-    expect(texts(rows().find((r: any) => texts(r)[0] === 'Washer'))).toEqual(expect.arrayContaining(['LOW', 'CRITICAL DEMAND']));
+    expect(texts(rows().find((r: any) => texts(r)[1] === 'Washer'))).toEqual(expect.arrayContaining(['LOW', 'CRITICAL DEMAND']));
   });
 
   test('without the appliance list only the priority is tagged, and the window is a dash', async () => {
@@ -445,7 +494,8 @@ describe('appliance rows and tags', () => {
     await render();
     await solve();
     const fridge = rows()[0];
-    expect(texts(fridge)).toEqual(expect.arrayContaining(['CRITICAL', 'Allowed —']));
+    expect(texts(fridge)).toContain('CRITICAL');
+    expect(texts(fridge).join(' ')).toMatch(/Allowed —/);
     expect(texts(fridge)).not.toContain('FIXED TIME');
     expect(texts(fridge)).not.toContain('FLEXIBLE');
   });

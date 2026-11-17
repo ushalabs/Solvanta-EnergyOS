@@ -13,9 +13,13 @@ interface PriorityBadgeProps {
   critical?: boolean;
   /** Further neutral tags built from real fields, for example Split into 2. */
   tags?: string[];
+  /** Outlined pills (a border in the text colour, no fill), as in the schedule rows. */
+  outlined?: boolean;
+  /** One pill under another, right-aligned, for narrow spaces at the end of a row. */
+  stack?: boolean;
 }
 
-export const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority, flexible, fixed, critical, tags }) => {
+export const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority, flexible, fixed, critical, tags, outlined, stack }) => {
   const { tokens } = useTheme();
 
   let bg = tokens.surfaceElevated;
@@ -45,31 +49,19 @@ export const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority, flexible
       break;
   }
 
+  const pill = (key: string, background: string, color: string, text: string) => (
+    <View key={key} testID="badge-pill" style={[styles.badge, outlined ? { backgroundColor: 'transparent', borderWidth: 1, borderColor: color } : { backgroundColor: background }]}>
+      <Text style={[styles.text, { color }]}>{text}</Text>
+    </View>
+  );
+
   return (
-    <View style={styles.container}>
-      <View style={[styles.badge, { backgroundColor: bg }]}>
-        <Text style={[styles.text, { color: fg }]}>{label}</Text>
-      </View>
-      {critical && priority !== 'critical' && (
-        <View style={[styles.badge, { backgroundColor: tokens.redTint }]}>
-          <Text style={[styles.text, { color: tokens.redText }]}>CRITICAL DEMAND</Text>
-        </View>
-      )}
-      {fixed && !flexible && (
-        <View style={[styles.badge, { backgroundColor: tokens.surfaceElevated }]}>
-          <Text style={[styles.text, { color: tokens.textSecondary }]}>FIXED TIME</Text>
-        </View>
-      )}
-      {flexible && (
-        <View style={[styles.badge, { backgroundColor: tokens.limeTint }]}>
-          <Text style={[styles.text, { color: tokens.limeText }]}>FLEXIBLE</Text>
-        </View>
-      )}
-      {(tags ?? []).map(tag => (
-        <View key={tag} style={[styles.badge, { backgroundColor: tokens.surfaceElevated }]}>
-          <Text style={[styles.text, { color: tokens.textSecondary }]}>{tag.toUpperCase()}</Text>
-        </View>
-      ))}
+    <View style={[styles.container, stack && styles.stacked]}>
+      {pill('priority', bg, fg, label)}
+      {critical && priority !== 'critical' && pill('critical', tokens.redTint, tokens.redText, 'CRITICAL DEMAND')}
+      {fixed && !flexible && pill('fixed', tokens.surfaceElevated, tokens.textSecondary, 'FIXED TIME')}
+      {flexible && pill('flexible', tokens.limeTint, tokens.limeText, 'FLEXIBLE')}
+      {(tags ?? []).map(tag => pill(`tag-${tag}`, tokens.surfaceElevated, tokens.textSecondary, tag.toUpperCase()))}
     </View>
   );
 };
@@ -80,6 +72,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: 6,
+  },
+  stacked: {
+    flexDirection: 'column',
+    flexWrap: 'nowrap',
+    alignItems: 'flex-end',
   },
   badge: {
     paddingHorizontal: 9,

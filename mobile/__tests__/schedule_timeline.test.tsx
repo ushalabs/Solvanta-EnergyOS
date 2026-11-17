@@ -100,3 +100,22 @@ describe('PriorityBadge tags', () => {
     expect(text()).toEqual(['MEDIUM']);
   });
 });
+
+describe('PriorityBadge outlined and stacked', () => {
+  const render = async (props: any) => { await act(async () => { tree = create(<PriorityBadge priority="critical" flexible {...props} />); }); };
+  const pills = () => tree.root.findAll(n => (n.type as any) === 'View' && n.props.testID === 'badge-pill').map(n => flat(n.props.style));
+  test('filled by default, as before', async () => {
+    await render({});
+    expect(pills()[0]).toMatchObject({ backgroundColor: darkTokens.redTint });
+    expect(pills()[0].borderWidth).toBeUndefined();
+  });
+  test('outlined pills have no fill and a border in the text colour', async () => {
+    await render({ outlined: true });
+    expect(pills()).toEqual([expect.objectContaining({ backgroundColor: 'transparent', borderWidth: 1, borderColor: darkTokens.redText }), expect.objectContaining({ backgroundColor: 'transparent', borderWidth: 1, borderColor: darkTokens.limeText })]);
+  });
+  test('stack puts the pills in a column at the right edge', async () => {
+    await render({ stack: true });
+    const container = tree.root.findAll(n => (n.type as any) === 'View' && flat(n.props.style).flexDirection === 'column')[0];
+    expect(flat(container.props.style)).toMatchObject({ flexWrap: 'nowrap', alignItems: 'flex-end' });
+  });
+});

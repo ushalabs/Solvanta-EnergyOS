@@ -95,12 +95,12 @@ function SchedulingWorkspace({ picker }: { picker: ReturnType<typeof useBuilding
       const known = !!app;
       return <View key={e.appliance_id} testID="schedule-row" accessibilityLabel={`${e.name}, ${spanText(e.segments)}`} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 12, borderRadius: RADIUS.card, borderWidth: 1, borderColor: t.border, backgroundColor: t.surface }}>
         <View style={{ width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: t.surfaceElevated }}><Plug size={20} color={t.textSecondary} /></View>
-        <View style={{ flex: 1, gap: 4 }}>
-          <Text numberOfLines={1} style={{ color: t.textPrimary, fontSize: 15, lineHeight: 20, fontWeight: '600' }}>{e.name}</Text>
-          <Text style={{ color: t.textSecondary, fontSize: 13, lineHeight: 18 }}>{spanText(e.segments)}{e.segments.length ? ` · ${totalMinutes(e.segments)} min` : ''} · {(e.rated_power_w / 1000).toFixed(2)} kW</Text>
-          <Text style={{ color: t.textSecondary, fontSize: 12, lineHeight: 16 }}>Allowed {known ? windowText(app) : DASH}</Text>
-          <PriorityBadge priority={e.priority as PriorityTier} flexible={known && app!.flexible} fixed={known && !app!.flexible} critical={known && app!.critical} tags={e.segments.length > 1 ? [`Split into ${e.segments.length}`] : []} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={{ color: t.textPrimary, fontSize: 16, lineHeight: 21, fontWeight: '700' }}>{spanText(e.segments)}</Text>
+          <Text numberOfLines={1} style={{ color: t.textSecondary, fontSize: 14, lineHeight: 19 }}>{e.name}</Text>
+          <Text style={{ color: t.textSecondary, fontSize: 12, lineHeight: 17 }}>{e.segments.length ? `${totalMinutes(e.segments)} min · ` : ''}{(e.rated_power_w / 1000).toFixed(2)} kW · Allowed {known ? windowText(app) : DASH}</Text>
         </View>
+        <PriorityBadge outlined stack priority={e.priority as PriorityTier} flexible={known && app!.flexible} fixed={known && !app!.flexible} critical={known && app!.critical} tags={e.segments.length > 1 ? [`Split into ${e.segments.length}`] : []} />
       </View>;
     })}
     <Message>{message}</Message>
