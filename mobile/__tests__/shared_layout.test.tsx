@@ -169,6 +169,17 @@ describe('SolvantaScreen', () => {
   const wrapperOf = (tree: ReactTestRenderer) => hosts(tree, 'View').find(v => v.props.pointerEvents === 'box-none' && v.findAll(n => n.props.testID === 'screen-footer').length > 0)!;
   const scrollPadding = (tree: ReactTestRenderer) => flat(hosts(tree, 'ScrollView')[0].props.contentContainerStyle).paddingBottom;
 
+  test('a pinned footer has a solid backing in the screen colour, so scrolled content does not show around the button', async () => {
+    const tree = await render(<SolvantaScreen banner="SIMULATED" footer={<Logo />}><Logo /></SolvantaScreen>);
+    const backing = tree.root.findAll(n => n.props.testID === 'footer-backing' && (n.type as any) === 'View')[0];
+    expect(backing).toBeTruthy();
+    expect(backing.props.pointerEvents).toBe('none');
+    expect(flat(backing.props.style)).toMatchObject({ position: 'absolute', backgroundColor: darkTokens.background });
+    expect(flat(backing.props.style).opacity ?? 1).toBe(1);
+    const none = await render(<SolvantaScreen banner="SIMULATED"><Logo /></SolvantaScreen>);
+    expect(none.root.findAll(n => n.props.testID === 'footer-backing')).toHaveLength(0);
+  });
+
   test('without a footer nothing is pinned and the dock clearance is unchanged', async () => {
     const tree = await render(<SolvantaScreen banner="SIMULATED"><Logo /></SolvantaScreen>);
     expect(footerOf(tree)).toBeUndefined();
