@@ -1,16 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Modal } from 'react-native';
 import { router } from 'expo-router';
-import Svg, { Polygon, Rect, Circle, Image as SvgImage, Line } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
-import { ImagePlus, Camera, Undo2, Check, Eraser, Calculator, Save, ScanLine, PencilRuler, ArrowUp } from 'lucide-react-native';
+import { ImagePlus, Camera, Undo2, Check, Eraser, Calculator, Save, ScanLine, PencilRuler } from 'lucide-react-native';
 import { SolvantaScreen } from '../../src/components/SolvantaScreen';
 import { Card, CardHeader, Label, Message, Metric, MetricGrid, Field, FieldRow, Action, ActionRow, Chip, ChipGroup, BuildingHeader, useBuildings } from '../../src/components/TwinControls';
 import { api } from '../../src/api/client';
-import { emptyRoof, RoofInput, RoofRecord, Layout, Point, parsePoints, formatPoints, tapToRoofPoint, screenPx, selfIntersects, defaultRectangle, panelGroups, usableWidthM, centroid } from '../../src/api/roof';
+import { emptyRoof, RoofInput, RoofRecord, Layout, Point, parsePoints, formatPoints, selfIntersects, defaultRectangle, roofProblem, obstacleProblem, friendlyRoofError } from '../../src/api/roof';
 import { compassPoint } from '../../src/api/pv';
 import { useTheme } from '../../src/theme/ThemeContext';
-import { RADIUS, SPACING } from '../../src/theme/tokens';
+import { SPACING } from '../../src/theme/tokens';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { RoofCanvas } from '../../src/components/RoofCanvas';
 import { PVDesigner, PVSummary, PVControl } from '../../src/components/PVDesigner';
 import { ModalSheet } from '../../src/components/ModalSheet';
 import { PillSegmentedControl } from '../../src/components/PillSegmentedControl';
@@ -24,11 +25,12 @@ type Tab = 'photo' | 'design' | 'ar';
 // Inactive sections stay mounted (so nothing is lost when switching tabs) and are only hidden.
 const shown = (on: boolean) => on ? undefined : { display: 'none' as const };
 const DASH = '—';
+// Checks made in the app, whose wording is already plain, are marked so they are not rewritten like server errors.
+const clientError = (message: string) => Object.assign(new Error(message), { client: true });
 const MODULE_RATINGS = [400, 450, 500, 550, 600];
 const COMPASS = [{ id: 'N', deg: 0 }, { id: 'NE', deg: 45 }, { id: 'E', deg: 90 }, { id: 'SE', deg: 135 }, { id: 'S', deg: 180 }, { id: 'SW', deg: 225 }, { id: 'W', deg: 270 }, { id: 'NW', deg: 315 }];
 const TILT_MIN = 0, TILT_MAX = 45, TILT_START = 25;
 type Selector = 'type' | 'tilt' | 'orientation';
-const GRID = [0.25, 0.5, 0.75];
 // Short buttons that still give a 44px touch area.
 const compact = { flex: 1, minHeight: 44, paddingVertical: 8, paddingHorizontal: 8 };
 
@@ -59,7 +61,11 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
   const [distance, setDistance] = useState('');
   const [message, setMessage] = useState('Draw a roof, then mark two points with a known distance.');
   const [busy, setBusy] = useState(false);
-  const [width, setWidth] = useState(300);
+  const [editing, setEditing] = useState(false);
+  const insets = useSafeAreaInsets();
+  type Snapshot = { roof: RoofInput; coords: string; distance: string; layout: Layout | null; draft: Point[]; outdated: boolean; unsaved: boolean; message: string; mode: 'roof' | 'obstacle' | 'scale' };
+  const snapshot = useRef<Snapshot | null>(null);
+  const areaSized = useRef(false);
   const apply = (r: RoofRecord) => { setRoof(r.geometry); setDistance(String(r.geometry.scale_distance_m)); setCoords(formatPoints(r.geometry.boundary)); setLayout(r.layout); setSaved(r.layout); setOutdated(false); setUnsaved(false); };
   useEffect(() => {
     let active = true;
@@ -69,12 +75,12 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
   }, [building.id]);
   const change = (next: RoofInput) => { setRoof(next); setLayout(null); setOutdated(true); setUnsaved(false); setMessage('Unsaved geometry changes. Press Calculate Placement first, then Save Roof.'); };
   const outdate = () => { setLayout(null); setOutdated(true); setUnsaved(false); };
-  const tap = (x: number, y: number) => {
-    const point = tapToRoofPoint(x, y, width, roof.width, roof.height);
+  const tapPoint = (point: Point) => {
     if (mode === 'roof') { const boundary = [...roof.boundary, point]; change({ ...roof, boundary }); setCoords(formatPoints(boundary)); }
     else if (mode === 'obstacle') setDraft([...draft, point]);
     else change({ ...roof, scale_points: roof.scale_points.length === 2 ? [point] : [...roof.scale_points, point] });
   };
+  const moveCorner = (i: number, point: Point) => { const boundary = roof.boundary.map((q, j) => j === i ? point : q); change({ ...roof, boundary }); setCoords(formatPoints(boundary)); };
   const importImage = async (camera: boolean) => {
     try {
       if (camera && !(await ImagePicker.requestCameraPermissionsAsync()).granted) throw new Error('Camera permission is required to take a roof photo.');
@@ -96,9 +102,14 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
       const payload = { ...roof, boundary: parsePoints(coords), scale_distance_m: Number(distance) };
       if (draft.length) throw new Error('Finish or discard the obstacle before calculating.');
       if (!distance.trim() || payload.scale_distance_m <= 0 || payload.scale_points.length !== 2) throw new Error('Mark two scale points and enter their measured distance in metres.');
+      // Invalid geometry is never sent to the API.
+      const outline = roofProblem(payload.boundary);
+      if (outline) throw clientError(outline);
+      const badOne = payload.obstacles.findIndex(ring => obstacleProblem(ring, payload.boundary));
+      if (badOne >= 0) throw clientError(`Obstacle ${badOne + 1}: ${obstacleProblem(payload.obstacles[badOne], payload.boundary)}`);
       if (save) { apply(await api.request<RoofRecord>(`/buildings/${building.id}/roof`, { method: 'PUT', body: JSON.stringify(payload) })); setMessage('Saved geometry and photo to this building.'); }
       else { setLayout(await api.post<Layout>(`/buildings/${building.id}/roof/preview`, payload)); setRoof(payload); setOutdated(false); setUnsaved(true); setMessage('Calculated preview — not saved yet. Press Save Roof to keep it.'); }
-    } catch (e: any) { setMessage(e.message); } finally { setBusy(false); }
+    } catch (e: any) { setMessage(e.client ? e.message : friendlyRoofError(e.message)); } finally { setBusy(false); }
   };
   const checkAR = async () => {
     setCheckingAR(true);
@@ -115,19 +126,6 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
     router.push({ pathname: '/rooftop-ar', params: { buildingId: building.id } });
   };
   const legend = [{ color: t.limeMark, name: 'Roof / panels' }, { color: t.textSecondary, name: 'Obstacle' }, { color: t.cyanText, name: 'Scale' }];
-  // Dragging a corner handle moves that corner. Handles are 20px with 12px of hit slop on each side, a 44px touch area.
-  const drag = useRef<{ px: number; py: number; orig: Point } | null>(null);
-  const canvasH = width * roof.height / roof.width;
-  const toX = (x: number) => x / roof.width * width, toY = (y: number) => y / roof.height * canvasH;
-  const moveCorner = (i: number, e: any) => {
-    const d = drag.current; if (!d || width <= 0) return;
-    const p = tapToRoofPoint(toX(d.orig.x) + (e.nativeEvent.pageX - d.px), toY(d.orig.y) + (e.nativeEvent.pageY - d.py), width, roof.width, roof.height);
-    const boundary = roof.boundary.map((q, j) => j === i ? p : q);
-    change({ ...roof, boundary }); setCoords(formatPoints(boundary));
-  };
-  const groups = layout ? panelGroups(layout.panels, (roof.gap_m / (layout.meters_per_pixel || 1)) * 1.5 + 1) : [];
-  const dimension = layout && roof.scale_points.length === 2 && roof.boundary.length >= 3 ? usableWidthM(layout.panels, layout.meters_per_pixel) : null;
-  const dimY = Math.min(canvasH - 18, toY(Math.max(...roof.boundary.map(p => p.y), 0)) + 8);
   const dailyKwh = pv.profile?.daily_energy_kwh;
   const configRows: Array<{ name: string; value: string; open: Selector }> = [
     { name: 'Panel Type', value: pv.wattageW === null ? DASH : `${pv.wattageW} W`, open: 'type' },
@@ -136,11 +134,22 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
   ];
   const corners = roof.boundary.length;
   const outlineWarning = corners > 0 && corners < 3 ? 'The roof outline needs at least 3 corners. Tap more corners, or press Undo.' : corners >= 4 && selfIntersects(roof.boundary) ? 'The roof outline crosses itself, so the area may be wrong. Press Undo to remove the last corner, or fix the vertices in Advanced.' : null;
-  const instruction = { roof: 'Tap each corner of the roof in order (at least 3).', obstacle: 'Tap the corners of something on the roof, then tap Finish.', scale: 'Tap two points on a length you measured, then enter that distance in metres.' }[mode];
+  const hint = { roof: 'Tap each corner of the roof in order', obstacle: 'Tap the corners of an obstacle, then Finish', scale: 'Tap two points on a length you measured, then enter the distance' }[mode];
   const count = mode === 'roof' ? `Corners: ${corners}` : mode === 'obstacle' ? `Obstacle corners: ${draft.length}` : `Scale points: ${roof.scale_points.length} of 2`;
-  const steps = [{ id: 'roof', text: '1 Roof outline' }, { id: 'obstacle', text: '2 Obstacles (optional)' }, { id: 'scale', text: '3 Scale' }, { id: 'calculate', text: '4 Calculate' }];
-  const currentStep = unsaved ? 'calculate' : mode;
-  const finishHint = draft.length >= 3 ? null : mode === 'obstacle' ? 'Finish needs at least 3 obstacle corners. Tap more corners first.' : 'Finish is for obstacles. Switch to Obstacle mode and tap at least 3 corners.';
+  const draftProblem = draft.length >= 3 ? obstacleProblem(draft, roof.boundary) : null;
+  const invalidObstacles = roof.obstacles.map((ring, i) => obstacleProblem(ring, roof.boundary) ? i : -1).filter(i => i >= 0);
+  const finishReason = draftProblem ?? (draft.length >= 3 ? null : mode === 'obstacle' ? 'Finish needs at least 3 obstacle corners. Tap more corners first.' : 'Finish is for obstacles. Switch to Obstacle mode and tap at least 3 corners.');
+  const finishObstacle = () => { if (draft.length < 3 || obstacleProblem(draft, roof.boundary)) return; change({ ...roof, obstacles: [...roof.obstacles, draft] }); setDraft([]); };
+  const openEditor = () => { snapshot.current = { roof, coords, distance, layout, draft, outdated, unsaved, message, mode }; areaSized.current = false; setEditing(true); };
+  const cancelEditor = () => { const s0 = snapshot.current; if (s0) { setRoof(s0.roof); setCoords(s0.coords); setDistance(s0.distance); setLayout(s0.layout); setDraft(s0.draft); setOutdated(s0.outdated); setUnsaved(s0.unsaved); setMessage(s0.message); setMode(s0.mode); } setEditing(false); };
+  // A new, empty roof gets a canvas shaped like the editor area, so the drawing can use the whole screen.
+  const sizeToArea = (w: number, h?: number) => {
+    if (areaSized.current || !h || !w || roof.boundary.length || roof.image_data || roof.obstacles.length || roof.scale_points.length) return;
+    areaSized.current = true;
+    const height = Math.min(1400, Math.max(700, Math.round(1000 * h / w)));
+    if (height !== roof.height) setRoof(r => ({ ...r, height }));
+  };
+  const scaleInEditor = editing && mode === 'scale';
   const startRectangle = () => { const boundary = defaultRectangle(roof.width, roof.height); change({ ...roof, boundary }); setCoords(formatPoints(boundary)); };
   const scaleField = <Field label="Measured scale distance (m)" numeric value={distance} onChange={v => { setDistance(v); outdate(); }} />;
   const savedPanels = saved ? saved.panel_count : null;
@@ -163,46 +172,14 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
       </Card>
     </View>
     <View style={shown(tab === 'design')}>
-      <Card><CardHeader title="Roof layout" subtitle={instruction} icon={<PencilRuler size={18} color={t.limeText} />} />
-        <View accessibilityLabel="Roof steps" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>{steps.map(st => <Text key={st.id} accessibilityState={{ selected: st.id === currentStep }} style={{ color: st.id === currentStep ? t.limeText : t.textSecondary, fontSize: 12, fontWeight: st.id === currentStep ? '700' : '400' }}>{st.text}</Text>)}</View>
-        <PillSegmentedControl a11yLabel="Drawing mode" selectedId={mode} onSelect={id => setMode(id as 'roof' | 'obstacle' | 'scale')} options={[{ id: 'roof', label: 'Roof' }, { id: 'obstacle', label: 'Obstacle' }, { id: 'scale', label: 'Scale' }]} />
-        <View accessible accessibilityRole="image" accessibilityLabel={`Roof canvas, ${mode} mode: ${roof.boundary.length} roof vertices, ${roof.obstacles.length} obstacles, ${layout?.panel_count ?? 0} panels. Roof vertices can also be typed in the field below.`} onLayout={e => setWidth(e.nativeEvent.layout.width)} style={{ height: width * roof.height / roof.width, backgroundColor: t.backgroundRaised, borderRadius: RADIUS.card - 4, borderWidth: 1, borderColor: t.border, overflow: 'hidden' }} onStartShouldSetResponder={() => true} onResponderRelease={e => tap(e.nativeEvent.locationX, e.nativeEvent.locationY)}>
-          {!roof.image_data && GRID.map(f => <React.Fragment key={f}><View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: `${f * 100}%`, height: 1, backgroundColor: t.border, opacity: 0.6 }} /><View pointerEvents="none" style={{ position: 'absolute', top: 0, bottom: 0, left: `${f * 100}%`, width: 1, backgroundColor: t.border, opacity: 0.6 }} /></React.Fragment>)}
-          <Svg pointerEvents="none" width="100%" height="100%" viewBox={`0 0 ${roof.width} ${roof.height}`}>
-            {roof.image_data && <SvgImage href={{ uri: roof.image_data }} width={roof.width} height={roof.height} />}
-            {roof.boundary.length >= 3 && <Polygon points={roof.boundary.map(p => `${p.x},${p.y}`).join(' ')} fill={t.surfaceElevated} fillOpacity={roof.image_data ? 0.35 : 0.9} stroke={t.textSecondary} strokeWidth={screenPx(2.5, width, roof.width)} strokeLinejoin="round" />}
-            {roof.boundary.map((p, i) => <Circle key={`v${i}`} cx={p.x} cy={p.y} r={screenPx(6, width, roof.width)} fill={t.surfaceElevated} stroke={t.limeMark} strokeWidth={screenPx(2, width, roof.width)} />)}
-            {roof.obstacles.map((ring, i) => <Polygon key={i} points={ring.map(p => `${p.x},${p.y}`).join(' ')} fill={t.textSecondary} fillOpacity={0.35} stroke={t.textSecondary} strokeWidth={screenPx(2, width, roof.width)} strokeLinejoin="round" />)}
-            {draft.length > 0 && <Polygon points={draft.map(p => `${p.x},${p.y}`).join(' ')} fill={t.redTint} stroke={t.redText} strokeWidth={screenPx(2, width, roof.width)} strokeLinejoin="round" />}
-            {draft.map((p, i) => <Circle key={`d${i}`} cx={p.x} cy={p.y} r={screenPx(5, width, roof.width)} fill={t.redText} />)}
-            {layout?.panels.map((p, i) => <Rect key={i} {...p} fill={t.panelFill} stroke={t.limeMark} strokeOpacity={0.55} strokeWidth={screenPx(0.5, width, roof.width)} />)}
-            {groups.map((g, i) => { const pad = screenPx(1, width, roof.width); return <Polygon key={`g${i}`} points={[[g.bounds.x - pad, g.bounds.y - pad], [g.bounds.x + g.bounds.width + pad, g.bounds.y - pad], [g.bounds.x + g.bounds.width + pad, g.bounds.y + g.bounds.height + pad], [g.bounds.x - pad, g.bounds.y + g.bounds.height + pad]].map(q => q.join(',')).join(' ')} fill="none" stroke={t.limeMark} strokeWidth={screenPx(1.5, width, roof.width)} strokeLinejoin="round" />; })}
-            {roof.scale_points.map((p, i) => <Circle key={i} cx={p.x} cy={p.y} r={screenPx(7, width, roof.width)} fill={t.cyanText} />)}
-            {roof.scale_points.length === 2 && <Line x1={roof.scale_points[0].x} y1={roof.scale_points[0].y} x2={roof.scale_points[1].x} y2={roof.scale_points[1].y} stroke={t.cyanText} strokeWidth={screenPx(2.5, width, roof.width)} />}
-          </Svg>
-          {roof.obstacles.map((ring, i) => { const c = centroid(ring); return <View key={`o${i}`} pointerEvents="none" style={{ position: 'absolute', left: toX(c.x) - 30, top: toY(c.y) - 7, width: 60, alignItems: 'center' }}><Text style={{ color: t.textPrimary, fontSize: 10, lineHeight: 14 }}>Obstacle</Text></View>; })}
-          {dimension && <View pointerEvents="none" accessibilityLabel={`Usable width ${dimension.widthM.toFixed(1)} metres`} style={{ position: 'absolute', left: toX(dimension.x1), width: Math.max(1, toX(dimension.x2) - toX(dimension.x1)), top: dimY, alignItems: 'center' }}>
-            <View style={{ position: 'absolute', left: 0, right: 0, top: 4, height: 1, backgroundColor: t.cyanText }} /><View style={{ position: 'absolute', left: 0, top: 0, width: 1, height: 9, backgroundColor: t.cyanText }} /><View style={{ position: 'absolute', right: 0, top: 0, width: 1, height: 9, backgroundColor: t.cyanText }} />
-            <Text style={{ marginTop: 8, color: t.cyanText, fontSize: 11, lineHeight: 14 }}>{dimension.widthM.toFixed(1)} m</Text>
-          </View>}
-          <View pointerEvents="none" accessibilityLabel="North arrow: the top of the canvas is assumed to be north" style={{ position: 'absolute', left: 8, top: 8, alignItems: 'center' }}><ArrowUp size={14} color={t.textSecondary} /><Text style={{ color: t.textSecondary, fontSize: 10, lineHeight: 12, fontWeight: '700' }}>N</Text></View>
-          {mode === 'roof' && roof.boundary.map((p, i) => <View key={`h${i}`} accessibilityLabel={`Roof corner ${i + 1}, drag to move`} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={{ position: 'absolute', left: toX(p.x) - 10, top: toY(p.y) - 10, width: 20, height: 20, borderRadius: 10 }} onStartShouldSetResponder={() => true} onResponderGrant={(e: any) => { drag.current = { px: e.nativeEvent.pageX, py: e.nativeEvent.pageY, orig: { ...p } }; }} onResponderMove={(e: any) => moveCorner(i, e)} onResponderRelease={() => { drag.current = null; }} onResponderTerminate={() => { drag.current = null; }} />)}
-        </View>
-        <Label tone="secondary" caption>{count}</Label>
-        {outlineWarning && <Message tone="warning">{outlineWarning}</Message>}
-        {corners === 0 && <Action title="Start with a rectangle" variant="secondary" onPress={startRectangle} />}
-        {mode === 'scale' && scaleField}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>{legend.map(l => <View key={l.name} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: l.color }} /><Text style={{ color: t.textSecondary, fontSize: 12 }}>{l.name}</Text></View>)}</View>
-        <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
-          <Action title="Undo" label="Undo Last Point" style={compact} variant="secondary" icon={<Undo2 size={15} color={t.textPrimary} />} onPress={() => { if (mode === 'obstacle') setDraft(draft.slice(0, -1)); else if (mode === 'scale') change({ ...roof, scale_points: roof.scale_points.slice(0, -1) }); else { const boundary = roof.boundary.slice(0, -1); change({ ...roof, boundary }); setCoords(formatPoints(boundary)); } }} />
-          <Action title="Finish" label="Finish Obstacle" style={compact} variant="secondary" icon={<Check size={15} color={draft.length < 3 ? t.textSecondary : t.textPrimary} />} disabled={draft.length < 3} onPress={() => { change({ ...roof, obstacles: [...roof.obstacles, draft] }); setDraft([]); }} />
-          <Action title="Remove" label="Remove Last Obstacle" style={compact} variant="secondary" icon={<Eraser size={15} color={t.textPrimary} />} onPress={() => { change({ ...roof, obstacles: roof.obstacles.slice(0, -1) }); setDraft([]); }} />
-        </View>
-        {finishHint && <Label tone="secondary" caption>{finishHint}</Label>}
+      <Card><CardHeader title="Roof layout" subtitle="Preview of the roof. Open the editor to draw." icon={<PencilRuler size={18} color={t.limeText} />} />
+        {!editing && <RoofCanvas roof={roof} layout={layout} draft={[]} mode={mode} invalidObstacles={invalidObstacles} a11yLabel={`Roof preview: ${roof.boundary.length} roof vertices, ${roof.obstacles.length} obstacles, ${layout?.panel_count ?? 0} panels.`} />}
+        <Message>{message}</Message>
+        <Action title="Edit roof layout" icon={<PencilRuler size={16} color={t.onLime} />} onPress={openEditor} />
       </Card>
       <MetricGrid>
         <Metric compact label="Usable Area" value={layout ? layout.usable_area_m2.toFixed(1) : DASH} unit={layout ? 'm²' : undefined} />
-        <Metric compact label="Panels" value={layout ? layout.panel_count : DASH} tone="accent" />
+        <Metric compact label="Panels" value={layout ? layout.panel_count : DASH} unit={layout ? 'fit' : undefined} tone="accent" />
         <Metric compact label="Est. Daily (SIMULATED)" value={outdated || pvOutdated || dailyKwh === undefined || !Number.isFinite(dailyKwh) ? DASH : dailyKwh.toFixed(1)} unit={outdated || pvOutdated || dailyKwh === undefined ? undefined : 'kWh'} />
       </MetricGrid>
       {pvOutdated && !outdated && <Label tone="secondary" caption>Est. Daily is outdated: the panel settings changed. Open Advanced and press Calculate PV Estimate.</Label>}
@@ -212,20 +189,18 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
           <Text style={{ flex: 1, color: t.textSecondary, fontSize: 14 }}>{r.name}</Text>
           <Text style={{ color: t.textPrimary, fontSize: 14, fontWeight: '600' }}>{r.value}</Text>
         </TouchableOpacity>)}
-          <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 36, gap: 8 }}><Text style={{ flex: 1, color: t.textSecondary, fontSize: 14 }}>Panel Count</Text><Text style={{ color: t.textPrimary, fontSize: 14, fontWeight: '600' }}>{layout ? `${layout.panel_count} fit` : DASH}</Text></View>
         </View>
         <Action title={advanced ? 'Hide advanced settings' : 'Advanced settings'} variant="secondary" onPress={() => setAdvanced(!advanced)} />
       </Card>
       <Card><CardHeader title="Roof actions" subtitle="Physical scale comes only from your measured distance" />
         {!unsaved && <Action title="Save Roof" icon={<Save size={15} color={calcOff ? t.textSecondary : t.onLime} />} disabled={calcOff} onPress={() => calculate(true)} />}
-        <Message>{message}</Message>
       </Card>
       <View style={shown(advanced)}>
         <Card><CardHeader title="Advanced" subtitle="Vertices, scale, setback and panel size" />
           <Metric label="Roof area" value={layout ? layout.roof_area_m2.toFixed(2) : DASH} unit={layout ? 'm²' : undefined} />
           {layout && <Label tone="secondary" caption>{layout.method}</Label>}
           <Label tone="secondary" caption strong>Roof settings</Label>
-          <FieldRow>{mode !== 'scale' && scaleField}<Field label={geometryLabels.setback_m} numeric value={String(roof.setback_m)} onChange={v => change({ ...roof, setback_m: v === '' ? 0 : Number(v) })} /></FieldRow>
+          <FieldRow>{!scaleInEditor && scaleField}<Field label={geometryLabels.setback_m} numeric value={String(roof.setback_m)} onChange={v => change({ ...roof, setback_m: v === '' ? 0 : Number(v) })} /></FieldRow>
           <Label tone="secondary" caption strong>Panel size</Label>
           <FieldRow>{(['panel_width_m', 'panel_height_m', 'gap_m'] as const).map(key => <Field key={key} label={geometryLabels[key]} numeric value={String(roof[key])} onChange={v => change({ ...roof, [key]: v === '' ? 0 : Number(v) })} />)}</FieldRow>
           <Action title={expert ? 'Hide expert settings' : 'Expert settings'} label={expert ? 'Hide roof expert settings' : 'Roof expert settings'} variant="secondary" onPress={() => setExpert(!expert)} />
@@ -250,6 +225,34 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
         {arCap !== null && arCap !== 'ready' && <ARCapabilityFallback capability={arCap} onContinue2D={() => { setArCap(null); setTab('design'); }} onRetry={arCap === 'check-failed' ? () => { setArCap(null); } : undefined} />}
       </Card>
     </View>
+    <Modal visible={editing} animationType="slide" onRequestClose={cancelEditor}>
+      <View accessibilityViewIsModal style={{ flex: 1, backgroundColor: t.background, paddingTop: Math.max(insets.top, 12), paddingBottom: Math.max(insets.bottom, 12) }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingBottom: 8 }}>
+          <View style={{ minWidth: 96 }}><Action title="Cancel" label="Cancel roof edit" variant="secondary" onPress={cancelEditor} /></View>
+          <Text accessibilityRole="header" numberOfLines={1} style={{ flex: 1, textAlign: 'center', color: t.textPrimary, fontSize: 16, fontWeight: '700' }}>Edit roof layout</Text>
+          <View style={{ minWidth: 96 }}><Action title="Done" label="Done editing roof" onPress={() => setEditing(false)} /></View>
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 8 }} onLayout={e => sizeToArea(e.nativeEvent.layout.width - 16, e.nativeEvent.layout.height ? e.nativeEvent.layout.height - 16 : undefined)}>
+          <RoofCanvas roof={roof} layout={layout} draft={draft} mode={mode} invalidObstacles={invalidObstacles} draftInvalid={!!draftProblem} a11yLabel={`Roof canvas, ${mode} mode: ${roof.boundary.length} roof vertices, ${roof.obstacles.length} obstacles, ${layout?.panel_count ?? 0} panels. Roof vertices can also be typed in the Advanced section.`} onTapPoint={tapPoint} onMoveCorner={moveCorner} />
+        </View>
+        <View style={{ gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingTop: 8 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}><View style={{ flex: 1 }}><Label tone="secondary" caption>{hint}</Label></View><Label tone="secondary" caption>{count}</Label></View>
+          {outlineWarning && <Message tone="warning">{outlineWarning}</Message>}
+          {draftProblem && <Message tone="danger">{draftProblem}</Message>}
+          {!draftProblem && invalidObstacles.length > 0 && <Message tone="danger">{`Obstacle ${invalidObstacles[0] + 1} is outside the roof or crosses itself. Remove it or move the roof corners.`}</Message>}
+          {corners === 0 && <Action title="Start with a rectangle" variant="secondary" onPress={startRectangle} />}
+          {scaleInEditor && scaleField}
+          <PillSegmentedControl a11yLabel="Drawing mode" selectedId={mode} onSelect={id => setMode(id as 'roof' | 'obstacle' | 'scale')} options={[{ id: 'roof', label: 'Roof' }, { id: 'obstacle', label: 'Obstacle' }, { id: 'scale', label: 'Scale' }]} />
+          <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
+            <Action title="Undo" label="Undo Last Point" style={compact} variant="secondary" icon={<Undo2 size={15} color={t.textPrimary} />} onPress={() => { if (mode === 'obstacle') setDraft(draft.slice(0, -1)); else if (mode === 'scale') change({ ...roof, scale_points: roof.scale_points.slice(0, -1) }); else { const boundary = roof.boundary.slice(0, -1); change({ ...roof, boundary }); setCoords(formatPoints(boundary)); } }} />
+            <Action title="Finish" label="Finish Obstacle" style={compact} variant="secondary" icon={<Check size={15} color={finishReason ? t.textSecondary : t.textPrimary} />} disabled={!!finishReason} onPress={finishObstacle} />
+            <Action title="Remove" label="Remove Last Obstacle" style={compact} variant="secondary" icon={<Eraser size={15} color={t.textPrimary} />} onPress={() => { change({ ...roof, obstacles: roof.obstacles.slice(0, -1) }); setDraft([]); }} />
+          </View>
+          {finishReason && !draftProblem && <Label tone="secondary" caption>{finishReason}</Label>}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>{legend.map(l => <View key={l.name} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: l.color }} /><Text style={{ color: t.textSecondary, fontSize: 12 }}>{l.name}</Text></View>)}</View>
+        </View>
+      </View>
+    </Modal>
     <ModalSheet visible={selector !== null} title={selector === 'type' ? 'Panel Type' : selector === 'tilt' ? 'Tilt Angle' : 'Orientation'} dismissOnBackdrop onRequestClose={() => setSelector(null)} footer={<Action title="Done" onPress={() => setSelector(null)} />}>
       {selector === 'type' && <><Label tone="secondary" caption>Module rating. This sets the module rating field in Advanced.</Label><ChipGroup>{MODULE_RATINGS.map(w => <Chip key={w} label={`${w} W`} a11yLabel={`${w} W module`} selected={pv.wattageW === w} onPress={() => choose('module_wattage_w', w)} />)}</ChipGroup></>}
       {selector === 'tilt' && <><Label tone="secondary" caption>Tilt from horizontal, 0 to 45 degrees. This sets the tilt field in Advanced.</Label>
