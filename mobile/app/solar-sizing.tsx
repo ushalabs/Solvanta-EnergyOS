@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { Platform } from 'react-native';
 import { router } from 'expo-router';
-import * as DocumentPicker from 'expo-document-picker';
-import { File } from 'expo-file-system';
 import { api, SolvantaApiError } from '../src/api/client';
+import { BillPickerUnavailableError, loadBillPicker } from '../src/api/billPicker';
 import { billingMonths, pakistanSolarYield, sizeSolar } from '../src/api/solarSizing';
 import { SolvantaScreen } from '../src/components/SolvantaScreen';
 import {
@@ -39,6 +38,7 @@ export default function SolarSizing() {
     setReadingBill(true);
     setNotice(undefined);
     try {
+      const { DocumentPicker, File } = loadBillPicker(Platform.OS);
       const picked = await DocumentPicker.getDocumentAsync({
         type: ['application/pdf', 'image/jpeg', 'image/png'],
         base64: false,
@@ -51,7 +51,7 @@ export default function SolarSizing() {
       }
 
       const form = new FormData();
-      const file = Platform.OS === 'web' ? asset.file : new File(asset.uri);
+      const file = File ? new File(asset.uri) : asset.file;
       if (!file) throw new Error('The browser could not open the selected file.');
       form.append('bill', file, asset.name);
       const { readings } = await api.request<BillHistory>('/solar-sizing/bill-history', {
@@ -69,6 +69,10 @@ export default function SolarSizing() {
         warning: readings.length !== 12,
       });
     } catch (error) {
+      if (error instanceof BillPickerUnavailableError) {
+        setNotice({ text: error.message, warning: true });
+        return;
+      }
       const text = error instanceof SolvantaApiError && error.status === 401
         ? 'Sign in to the Solvanta backend in Settings to read a bill. You can enter the units manually here.'
         : error instanceof Error ? error.message : 'The bill could not be read.';
