@@ -16,6 +16,8 @@ interface SolvantaScreenProps {
   footer?: ReactNode;
   /** Tab screens sit under the floating dock, so the footer must stay above it. Stack screens pass false. */
   footerClearsDock?: boolean;
+  /** Lets a screen scroll its content, for example to bring a new result into view. */
+  scrollRef?: React.Ref<ScrollView>;
 }
 
 const DOCK_CLEARANCE = 110; // Scroll room for the floating navigation dock
@@ -45,6 +47,7 @@ export const SolvantaScreen: React.FC<SolvantaScreenProps> = ({
   contentContainerStyle,
   footer,
   footerClearsDock = true,
+  scrollRef,
 }) => {
   const { tokens, isDark } = useTheme();
   const [footerHeight, setFooterHeight] = useState(0);
@@ -62,6 +65,7 @@ export const SolvantaScreen: React.FC<SolvantaScreenProps> = ({
       <StatusBar style={isDark ? 'light' : 'dark'} />
       {scrollable ? (
         <ScrollView
+          ref={scrollRef}
           style={styles.container}
           contentContainerStyle={[
             styles.scrollContent,
