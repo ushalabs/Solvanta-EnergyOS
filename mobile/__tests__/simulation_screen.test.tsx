@@ -344,6 +344,28 @@ describe('extra tools', () => {
   });
 });
 
+describe('one primary button', () => {
+  const flat = (style: any) => [style].flat(Infinity).reduce((a: any, x: any) => ({ ...a, ...x }), {});
+  const limeButtons = () => all('TouchableOpacity').filter((n: any) => flat(n.props.style).minHeight === 50 && flat(n.props.style).backgroundColor === darkTokens.lime).map((n: any) => n.props.accessibilityLabel);
+
+  test('only Run Simulation is a lime button, with every section open and a run loaded', async () => {
+    await render();
+    await press('Run & Save Simulation');
+    for (const name of ['Run details', 'Digital twin replay', 'Telemetry', 'Automation', 'Plans', 'Resilience comparison', 'Forecast', 'Saved runs']) await press(`Show ${name}`);
+    expect(limeButtons()).toEqual(['Run & Save Simulation']);
+  });
+
+  test('the in-card actions are secondary 50px buttons and keep their names', async () => {
+    await render();
+    await press('Run & Save Simulation');
+    for (const name of ['Create Three Alternatives', 'Compare & Save Resilience', 'Project Energy Shortage', 'Generate Simulated Observations', 'Play Replay']) {
+      const b = button(name)!;
+      expect(b).toBeTruthy();
+      expect(flat(b.props.style)).toMatchObject({ minHeight: 50, backgroundColor: darkTokens.surfaceElevated });
+    }
+  });
+});
+
 describe('section headers', () => {
   const sections: Array<[string, string]> = [['Telemetry', 'Simulated telemetry & incidents'], ['Automation', 'Automation notices'], ['Plans', 'Configuration alternatives & approval'], ['Resilience comparison', 'Outage resilience comparison'], ['Forecast', '24-hour baseline forecast']];
 
