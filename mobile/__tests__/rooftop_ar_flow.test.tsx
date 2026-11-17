@@ -543,7 +543,9 @@ describe('Rooftop guidance and state', () => {
 
   test('explains why Finish is disabled, in each mode', async () => {
     await render();
-    expect(texts()).toMatch(/Finish is for obstacles\. Switch to Obstacle mode/);
+    // Finish is disabled outside Obstacle mode, but the editor stays quiet about it there.
+    expect(texts()).not.toMatch(/Finish is for obstacles/);
+    expect(tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Finish Obstacle')[0].props.disabled).toBe(true);
     await press('Obstacle');
     expect(texts()).toMatch(/Finish needs at least 3 obstacle corners/);
     await tapCanvas(10, 10); await tapCanvas(60, 10); await tapCanvas(60, 60);

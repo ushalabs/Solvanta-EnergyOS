@@ -353,7 +353,7 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
             <Chip compact label={snapOn ? 'Snap on' : 'Snap off'} a11yLabel="Snap to grid and right angles" selected={snapOn} onPress={() => { setSnapOn(!snapOn); setSnapNote(null); }} />
             {snapOn && snapNote && <View accessibilityLabel={snapNote === 'grid' ? 'Snapped to grid' : 'Snapped to right angle'} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><Magnet size={13} color={t.limeText} /><Text style={{ color: t.limeText, fontSize: 12 }}>{snapNote === 'grid' ? 'Snapped to grid' : 'Snapped to right angle'}</Text></View>}
           </View>
-          {finishReason && !draftProblem && <Label tone="secondary" caption>{finishReason}</Label>}
+          {mode === 'obstacle' && finishReason && !draftProblem && <Label tone="secondary" caption>{finishReason}</Label>}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>{legend.map(l => <View key={l.name} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: l.color }} /><Text style={{ color: t.textSecondary, fontSize: 12 }}>{l.name}</Text></View>)}</View>
         </View>
       </View>
