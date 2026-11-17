@@ -76,8 +76,8 @@ export const LimeCTA: React.FC<LimeCTAProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    height: 52,
-    borderRadius: RADIUS.md,
+    height: 50,
+    borderRadius: RADIUS.button,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

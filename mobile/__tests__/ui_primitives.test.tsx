@@ -60,6 +60,23 @@ describe('touch targets stay at least 44dp', () => {
   });
 });
 
+describe('control sizes follow docs/design-reference', () => {
+  test('buttons are 50px tall with a 16px radius', async () => {
+    const action = flat(touchable(await render(<Action title="Go" onPress={() => {}} />)).props.style);
+    expect(action).toMatchObject({ minHeight: 50, borderRadius: 16 });
+    const cta = flat(touchable(await render(<LimeCTA title="Go" onPress={() => {}} />)).props.style);
+    expect(cta).toMatchObject({ height: 50, borderRadius: 16 });
+  });
+  test('the toggle track is 44x26 and its touch area stays at least 44px', async () => {
+    const button = touchable(await render(<Toggle a11yLabel="X" value onValueChange={() => {}} />));
+    const track = flat(button.findAll(n => (n.type as any) === 'View')[0].props.style);
+    expect(track).toMatchObject({ width: 44, height: 26, borderRadius: 13 });
+    expect(flat(button.props.style)).toMatchObject({ minHeight: 48, minWidth: 48 });
+    const thumb = flat(button.findAll(n => (n.type as any) === 'View')[1].props.style);
+    expect(thumb.width).toBeLessThanOrEqual(26 - 2 - 2 * 2);
+  });
+});
+
 describe('accessible names and state', () => {
   test('Action keeps a full name when its visible text is short', async () => {
     const b = touchable(await render(<Action title="Edit" label="Edit Water pump" onPress={() => {}} />));

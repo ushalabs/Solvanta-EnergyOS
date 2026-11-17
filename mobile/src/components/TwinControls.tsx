@@ -10,6 +10,8 @@ import { Toggle } from './Toggle';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const MIN_TARGET = 44;
+/** Primary and secondary buttons, as in docs/design-reference/DESIGN_TOKENS.md. */
+export const BUTTON_HEIGHT = 50;
 export type Tone = 'primary' | 'secondary' | 'accent' | 'warning' | 'danger' | 'success' | 'info';
 
 function useToneColor() {
@@ -59,7 +61,7 @@ export function Action({ title, onPress, disabled = false, selected = false, var
   const { tokens: t } = useTheme();
   const palette = disabled ? { background: t.surfaceElevated, foreground: t.textSecondary, border: t.border }
     : { primary: { background: t.lime, foreground: t.onLime, border: t.lime }, secondary: { background: t.surfaceElevated, foreground: t.textPrimary, border: selected ? t.limeMark : t.border }, danger: { background: 'transparent', foreground: t.redText, border: t.redText } }[variant];
-  return <TouchableOpacity activeOpacity={0.82} accessibilityRole="button" accessibilityLabel={label ?? title} accessibilityState={{ disabled, selected, busy: loading }} disabled={disabled} onPress={onPress} style={[{ flexDirection: 'row', gap: 8, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, minHeight: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.background, borderWidth: selected ? 2 : 1, borderColor: selected && variant === 'primary' ? t.textPrimary : palette.border }, style]}>{loading ? <ActivityIndicator size="small" color={palette.foreground} /> : icon}<Text style={{ flexShrink: 1, color: palette.foreground, fontSize: 14, lineHeight: 19, fontWeight: variant === 'primary' && !disabled ? '800' : '700', textAlign: 'center' }}>{title}</Text></TouchableOpacity>;
+  return <TouchableOpacity activeOpacity={0.82} accessibilityRole="button" accessibilityLabel={label ?? title} accessibilityState={{ disabled, selected, busy: loading }} disabled={disabled} onPress={onPress} style={[{ flexDirection: 'row', gap: 8, borderRadius: RADIUS.button, paddingHorizontal: 14, paddingVertical: 12, minHeight: BUTTON_HEIGHT, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.background, borderWidth: selected ? 2 : 1, borderColor: selected && variant === 'primary' ? t.textPrimary : palette.border }, style]}>{loading ? <ActivityIndicator size="small" color={palette.foreground} /> : icon}<Text style={{ flexShrink: 1, color: palette.foreground, fontSize: 14, lineHeight: 19, fontWeight: variant === 'primary' && !disabled ? '800' : '700', textAlign: 'center' }}>{title}</Text></TouchableOpacity>;
 }
 export function ActionRow({ children }: { children: React.ReactNode }) {
   return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm }}>{React.Children.map(children, child => child && <View style={{ flexGrow: 1, flexBasis: 130 }}>{child}</View>)}</View>;
