@@ -4,8 +4,8 @@ import Svg, { Polygon, Rect, Circle, Image as SvgImage, Line, Defs, Pattern, Pat
 import { ArrowUp, ZoomIn, ZoomOut, Maximize } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { RADIUS } from '../theme/tokens';
-import { RoofInput, Layout, Point, panelGroups, usableWidthM, centroid } from '../api/roof';
-import { edgeLengths, gridStep, nearestCorner, nearestEdge, insidePolygon, setbackStrips } from '../api/roofEdit';
+import { RoofInput, Layout, Point, usableWidthM, centroid } from '../api/roof';
+import { edgeLengths, gridStep, nearestCorner, nearestEdge, insidePolygon, setbackStrips, panelBlocks } from '../api/roofEdit';
 
 const COARSE_GRID = [0.25, 0.5, 0.75];
 /** Half of a 44px touch target. */
@@ -148,7 +148,7 @@ export function RoofCanvas({ roof, layout, draft, mode, metersPerUnit = null, in
     onResponderTerminate: (e: any) => finish(e, false),
   } : {};
 
-  const groups = layout ? panelGroups(layout.panels, (roof.gap_m / (layout.meters_per_pixel || 1)) * 1.5 + 1) : [];
+  const groups = layout ? panelBlocks(layout.panels, (roof.gap_m / (layout.meters_per_pixel || 1)) * 1.5 + 1) : [];
   const dimension = layout && roof.scale_points.length === 2 && roof.boundary.length >= 3 ? usableWidthM(layout.panels, layout.meters_per_pixel) : null;
   const dimY = Math.min(canvasH * zoom - 18, toY(Math.max(...roof.boundary.map(p => p.y), 0)) + 8);
   const strips = metersPerUnit && roof.setback_m > 0 && roof.boundary.length >= 3 ? setbackStrips(roof.boundary, roof.setback_m / metersPerUnit) : [];

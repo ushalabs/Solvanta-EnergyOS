@@ -148,3 +148,25 @@ describe('placing a new obstacle shape', () => {
     expect(r.clearance).toBeCloseTo(distanceToRing(r.point, lShape));
   });
 });
+
+import { panelBlocks } from '../src/api/roofEdit';
+describe('panel blocks for outlines', () => {
+  const p = (x: number, y: number) => ({ x, y, width: 10, height: 20 });
+  test('two full rows stacked within the gap form one rectangular block', () => {
+    const blocks = panelBlocks([p(0, 0), p(11, 0), p(22, 0), p(0, 21), p(11, 21), p(22, 21)], 2);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].bounds).toEqual({ x: 0, y: 0, width: 32, height: 41 });
+  });
+  test('an L of panels is split so no outline covers the empty corner', () => {
+    const blocks = panelBlocks([p(0, 0), p(11, 0), p(22, 0), p(0, 21)], 2);
+    expect(blocks).toHaveLength(2);
+    expect(blocks.map(b => b.bounds)).toEqual([{ x: 0, y: 0, width: 32, height: 20 }, { x: 0, y: 21, width: 10, height: 20 }]);
+  });
+  test('a gap in a row splits the run', () => {
+    expect(panelBlocks([p(0, 0), p(11, 0), p(60, 0)], 2)).toHaveLength(2);
+  });
+  test('every panel ends up in exactly one block', () => {
+    const panels = [p(0, 0), p(11, 0), p(0, 21), p(11, 21), p(40, 21), p(0, 60)];
+    expect(panelBlocks(panels, 2).flatMap(b => b.panels)).toHaveLength(panels.length);
+  });
+});

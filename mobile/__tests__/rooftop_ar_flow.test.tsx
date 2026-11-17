@@ -703,6 +703,16 @@ describe('Roof canvas drawing', () => {
     expect(cells[0].props.strokeWidth).toBeLessThan(outlines[0].props.strokeWidth);
   });
 
+  test('an L-shaped set of panels gets one outline per rectangular block, never one box over the empty corner', async () => {
+    const P = (x: number, y: number) => ({ x, y, width: 50, height: 90 });
+    roofResponse = async () => ({ ...savedRoof, layout: { ...savedRoof.layout, panels: [P(100, 100), P(155, 100), P(210, 100), P(100, 195)] } });
+    await render();
+    const outlines = polygons().filter(p => p.props.fill === 'none').map(p => p.props.points.split(' ').map((xy: string) => xy.split(',').map(Number)));
+    expect(outlines).toHaveLength(2);
+    // Neither outline reaches the empty spot to the right of the lower panel.
+    for (const o of outlines) expect(o.some(([x, y]: number[]) => x > 160 && y > 200)).toBe(false);
+  });
+
   test('two separate blocks of panels get two outlines', async () => {
     roofResponse = async () => ({ ...savedRoof, layout: { ...savedRoof.layout, panels: [{ x: 100, y: 100, width: 50, height: 90 }, { x: 155, y: 100, width: 50, height: 90 }, { x: 700, y: 400, width: 50, height: 90 }] } });
     await render();

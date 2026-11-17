@@ -173,3 +173,33 @@ export function placementPoint(ring: Point[], needed: number): { point: Point; c
   }
   return best;
 }
+
+type Rect = { x: number; y: number; width: number; height: number };
+/**
+ * Rectangular blocks of placed panels for drawing outlines: unbroken runs along a row, then runs in touching rows
+ * with the same left and right ends merged. Unlike a bounding box per group, a block never covers empty roof,
+ * so an outline cannot cross a notch or an obstacle.
+ */
+export function panelBlocks(panels: Rect[], tolerance: number): Array<{ bounds: Rect; panels: Rect[] }> {
+  const rows = new Map<number, Rect[]>();
+  for (const p of panels) {
+    const key = [...rows.keys()].find(y => Math.abs(y - p.y) <= 1) ?? p.y;
+    rows.set(key, [...(rows.get(key) ?? []), p]);
+  }
+  const runs: Array<{ bounds: Rect; panels: Rect[] }> = [];
+  for (const row of rows.values()) {
+    const sorted = [...row].sort((a, b) => a.x - b.x);
+    let run: Rect[] = [];
+    const flush = () => { if (run.length) { const x = run[0].x, y = Math.min(...run.map(p => p.y)); runs.push({ panels: run, bounds: { x, y, width: Math.max(...run.map(p => p.x + p.width)) - x, height: Math.max(...run.map(p => p.y + p.height)) - y } }); } run = []; };
+    for (const p of sorted) { const last = run[run.length - 1]; if (last && p.x - (last.x + last.width) > tolerance) flush(); run.push(p); }
+    flush();
+  }
+  runs.sort((a, b) => a.bounds.y - b.bounds.y || a.bounds.x - b.bounds.x);
+  const blocks: Array<{ bounds: Rect; panels: Rect[] }> = [];
+  for (const r of runs) {
+    const below = blocks.find(b => Math.abs(b.bounds.x - r.bounds.x) <= 1 && Math.abs(b.bounds.width - r.bounds.width) <= 1 && r.bounds.y - (b.bounds.y + b.bounds.height) >= -1 && r.bounds.y - (b.bounds.y + b.bounds.height) <= tolerance);
+    if (below) { below.panels.push(...r.panels); below.bounds = { ...below.bounds, height: r.bounds.y + r.bounds.height - below.bounds.y }; }
+    else blocks.push({ panels: [...r.panels], bounds: { ...r.bounds } });
+  }
+  return blocks;
+}
