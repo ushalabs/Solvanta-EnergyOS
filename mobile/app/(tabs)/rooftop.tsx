@@ -12,7 +12,7 @@ import { useTheme } from '../../src/theme/ThemeContext';
 import { SPACING } from '../../src/theme/tokens';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RoofCanvas, CanvasEvent } from '../../src/components/RoofCanvas';
-import { gridStep, metersPerUnit, polygonArea, snapPoint, SnapKind, insertCorner, removeCorner, ObstacleShape, rectangleRing, circleRing, ringCentre, dragShapeCorner, translateRing, History, emptyHistory, record, undo, redo } from '../../src/api/roofEdit';
+import { gridStep, metersPerUnit, polygonArea, snapPoint, SnapKind, insertCorner, removeCorner, ObstacleShape, rectangleRing, circleRing, ringCentre, placementPoint, dragShapeCorner, translateRing, History, emptyHistory, record, undo, redo } from '../../src/api/roofEdit';
 import { PVDesigner, PVSummary, PVControl } from '../../src/components/PVDesigner';
 import { ModalSheet } from '../../src/components/ModalSheet';
 import { PillSegmentedControl } from '../../src/components/PillSegmentedControl';
@@ -156,9 +156,13 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
   const addShape = (shape: 'rect' | 'circle') => {
     if (roof.boundary.length < 3) { setShapeNote('Draw the roof outline first. Obstacles must stay inside it.'); return; }
     const xs = roof.boundary.map(p => p.x), ys = roof.boundary.map(p => p.y);
-    const size = Math.max(10, Math.min(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) * 0.08);
-    const c = ringCentre(roof.boundary);
-    const ring = shape === 'rect' ? rectangleRing(c, size * 1.25, size) : circleRing(c, size);
+    let size = Math.max(10, Math.min(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) * 0.08);
+    // Drop the shape where it fits inside the roof (the centre of an L-shaped roof is outside it), shrinking it if the roof is narrow.
+    const { point: c, clearance } = placementPoint(roof.boundary, size * 1.6 * 1.5);
+    if (clearance > 0) size = Math.max(4, Math.min(size, clearance / 1.7));
+    const make = (sz: number) => shape === 'rect' ? rectangleRing(c, sz * 1.25, sz) : circleRing(c, sz);
+    let ring = make(size);
+    for (let i = 0; i < 4 && obstacleProblem(ring, roof.boundary); i++) { size = Math.max(4, size / 1.5); ring = make(size); }
     setShapeNote(''); setDraft([]);
     commit({ ...current(), draft: [], roof: { ...roof, obstacles: [...roof.obstacles, ring] }, names: [...names, ''], shapes: [...shapes, shape] });
     setSelected(roof.obstacles.length);

@@ -144,3 +144,32 @@ export function redo<T>(h: History<T>, current: T): { history: History<T>; state
   if (!h.future.length) return null;
   return { history: { past: [...h.past, current], future: h.future.slice(1) }, state: h.future[0] };
 }
+
+const segmentDistance = (p: Point, a: Point, b: Point) => {
+  const vx = b.x - a.x, vy = b.y - a.y, len2 = vx * vx + vy * vy;
+  const t = len2 ? Math.max(0, Math.min(1, ((p.x - a.x) * vx + (p.y - a.y) * vy) / len2)) : 0;
+  return Math.hypot(a.x + t * vx - p.x, a.y + t * vy - p.y);
+};
+/** Shortest distance from a point to the edges of a closed ring. */
+export const distanceToRing = (p: Point, ring: Point[]) => Math.min(...ring.map((a, i) => segmentDistance(p, a, ring[(i + 1) % ring.length])));
+
+/**
+ * Where to drop a new obstacle shape: the roof's centre when there is room around it, otherwise the sampled
+ * inside point farthest from the roof edges. For an L-shaped roof the centre falls in the notch, outside the roof.
+ * Returns the point and its clearance (distance to the nearest roof edge) in roof units.
+ */
+export function placementPoint(ring: Point[], needed: number): { point: Point; clearance: number } {
+  const c = ringCentre(ring);
+  if (insidePolygon(c, ring) && distanceToRing(c, ring) >= needed) return { point: c, clearance: distanceToRing(c, ring) };
+  const xs = ring.map(p => p.x), ys = ring.map(p => p.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  let best = { point: c, clearance: insidePolygon(c, ring) ? distanceToRing(c, ring) : -1 };
+  const steps = 24;
+  for (let i = 1; i < steps; i++) for (let j = 1; j < steps; j++) {
+    const p = { x: minX + (maxX - minX) * i / steps, y: minY + (maxY - minY) * j / steps };
+    if (!insidePolygon(p, ring)) continue;
+    const d = distanceToRing(p, ring);
+    if (d > best.clearance) best = { point: p, clearance: d };
+  }
+  return best;
+}

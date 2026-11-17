@@ -132,3 +132,19 @@ describe('undo and redo', () => {
     expect(h.future).toEqual([]);
   });
 });
+
+import { placementPoint, distanceToRing } from '../src/api/roofEdit';
+describe('placing a new obstacle shape', () => {
+  const lShape = [{ x: 100, y: 100 }, { x: 800, y: 100 }, { x: 800, y: 400 }, { x: 450, y: 400 }, { x: 450, y: 800 }, { x: 100, y: 800 }];
+  test('uses the centre when there is room around it', () => {
+    const r = placementPoint(square, 50);
+    expect(r.point).toEqual({ x: 300, y: 300 });
+    expect(r.clearance).toBe(200);
+  });
+  test('moves away from the centre of an L-shaped roof, which lies in the notch', () => {
+    const r = placementPoint(lShape, 60);
+    expect(insidePolygon(r.point, lShape)).toBe(true);
+    expect(distanceToRing(r.point, lShape)).toBeGreaterThan(100);
+    expect(r.clearance).toBeCloseTo(distanceToRing(r.point, lShape));
+  });
+});

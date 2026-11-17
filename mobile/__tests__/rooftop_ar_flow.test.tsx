@@ -1300,6 +1300,19 @@ describe('Professional editor tools', () => {
       expect(texts()).not.toMatch(/outside the roof/);
     });
 
+    test('on an L-shaped roof the new shape lands inside the roof, not in the notch', async () => {
+      const L = [{ x: 100, y: 100 }, { x: 800, y: 100 }, { x: 800, y: 350 }, { x: 450, y: 350 }, { x: 450, y: 650 }, { x: 100, y: 650 }];
+      roofResponse = async () => ({ ...savedRoof, geometry: { ...savedRoof.geometry, boundary: L } });
+      await render();
+      await press('Obstacle');
+      for (const shape of ['Add rectangle obstacle', 'Add circle obstacle']) {
+        await press(shape);
+        expect(texts()).not.toMatch(/outside the roof/);
+        expect(tree.root.findAll(n => (n.type as any) === 'Polygon' && n.props.stroke === require('../src/theme/tokens').darkTokens.redText)).toHaveLength(0);
+        await press('Remove Last Obstacle');
+      }
+    });
+
     test('Circle adds a 16-sided polygon', async () => {
       await withRoof();
       await press('Obstacle');
