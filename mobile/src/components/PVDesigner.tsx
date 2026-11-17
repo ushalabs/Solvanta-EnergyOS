@@ -11,7 +11,10 @@ const labels: Record<keyof typeof defaults, string> = { module_wattage_w: 'Modul
 const stringDefaults = { modules_per_string: '10', module_voc_v: '49', module_vmp_v: '41', inverter_max_dc_v: '600', mppt_min_v: '120', mppt_max_v: '550' };
 const stringLabels: Record<keyof typeof stringDefaults, string> = { modules_per_string: 'Modules per string', module_voc_v: 'Module Voc (V)', module_vmp_v: 'Module Vmp (V)', inverter_max_dc_v: 'Inverter max DC (V)', mppt_min_v: 'MPPT min (V)', mppt_max_v: 'MPPT max (V)' };
 
-export function PVDesigner({ buildingId }: { buildingId: string }) {
+/** What the Rooftop summary shows. Values are null until a PV record has loaded or been calculated, so defaults are never presented as data. */
+export type PVSummary = { profile: PVProfile | null; wattageW: number | null; tiltDeg: number | null; azimuthDeg: number | null };
+
+export function PVDesigner({ buildingId, onSummary }: { buildingId: string; onSummary?: (summary: PVSummary) => void }) {
   const { tokens: t } = useTheme();
   const [fields, setFields] = useState(defaults);
   const [strings, setStrings] = useState(stringDefaults);
@@ -21,7 +24,14 @@ export function PVDesigner({ buildingId }: { buildingId: string }) {
   const [message, setMessage] = useState('Save a calibrated roof first.');
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [known, setKnown] = useState(false);
+  useEffect(() => {
+    const number = (text: string) => known && text.trim() && Number.isFinite(Number(text)) ? Number(text) : null;
+    onSummary?.({ profile, wattageW: number(fields.module_wattage_w), tiltDeg: number(fields.tilt_deg), azimuthDeg: number(fields.azimuth_deg) });
+    // The callback is the parent's; only data changes should report.
+  }, [profile, fields.module_wattage_w, fields.tilt_deg, fields.azimuth_deg, known]);
   function load(record: PVRecord) {
+    setKnown(true);
     setFields(Object.fromEntries(Object.keys(defaults).map(k => [k, String(record.parameters[k as keyof typeof defaults])])) as typeof defaults);
     setCheckStrings(!!record.parameters.string_specs);
     setStrings(record.parameters.string_specs ? Object.fromEntries(Object.entries(record.parameters.string_specs).map(([k,v]) => [k,String(v)])) as typeof stringDefaults : stringDefaults);
@@ -29,7 +39,7 @@ export function PVDesigner({ buildingId }: { buildingId: string }) {
     setProfile(record.profile); setMessage(record.saved ? 'Loaded saved PV assumptions. Profile recalculated from current roof.' : 'Preview from building equipment; assumptions not saved yet.');
   }
   useEffect(() => {
-    let active = true; setProfile(null); setFields(defaults); setStrings(stringDefaults); setCheckStrings(false); setIrradiance('');
+    let active = true; setKnown(false); setProfile(null); setFields(defaults); setStrings(stringDefaults); setCheckStrings(false); setIrradiance('');
     if (buildingId) api.get<PVRecord>(`/buildings/${buildingId}/pv`).then(r => { if (active) load(r); }).catch(e => { if (active) setMessage(e.status === 404 ? 'Save a measured roof before estimating PV.' : e.message); });
     return () => { active = false; };
   }, [buildingId]);
@@ -42,7 +52,7 @@ export function PVDesigner({ buildingId }: { buildingId: string }) {
       if (values.some(v => !v.trim() || !Number.isFinite(Number(v)))) throw new Error('Enter valid numbers for all enabled parameters.');
       const data = { ...Object.fromEntries(Object.entries(fields).map(([k,v]) => [k,Number(v)])), poa_w_m2: parseIrradiance(irradiance), string_specs: checkStrings ? Object.fromEntries(Object.entries(strings).map(([k,v]) => [k,Number(v)])) : null } as PVParameters;
       if (save) { load(await api.request<PVRecord>(`/buildings/${buildingId}/pv`, { method: 'PUT', body: JSON.stringify(data) })); setMessage('Saved PV assumptions to this building.'); }
-      else { setProfile(await api.post<PVProfile>(`/buildings/${buildingId}/pv/preview`, data)); setMessage('Calculated preview — not saved yet.'); }
+      else { setProfile(await api.post<PVProfile>(`/buildings/${buildingId}/pv/preview`, data)); setKnown(true); setMessage('Calculated preview — not saved yet.'); }
     } catch (e: any) { setProfile(null); setMessage(e.message); } finally { setBusy(false); }
   }
   return <Card><CardHeader title="PV design & generation estimate" icon={<Sun size={18} color={t.limeText} />} /><Label tone="secondary" caption>Panel count comes from the saved roof layout. Save roof edits before calculating. These design assumptions do not overwrite installed equipment in Settings.</Label>

@@ -28,7 +28,7 @@ jest.mock('lucide-react-native', () => {
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: (props: any) => require('react').createElement('Gradient', props, props.children) }));
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: {} } }));
-jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: (props: any) => require('react').createElement('Safe', props, props.children) }));
+jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }), SafeAreaView: (props: any) => require('react').createElement('Safe', props, props.children) }));
 jest.mock('expo-router', () => ({ useFocusEffect: (cb: any) => require('react').useEffect(cb, []), router: { push: jest.fn(), replace: jest.fn() } }));
 jest.mock('@react-native-async-storage/async-storage', () => ({ __esModule: true, default: { getItem: jest.fn(async () => null), setItem: jest.fn(async () => undefined), removeItem: jest.fn(async () => undefined) } }));
 jest.mock('expo-image-picker', () => ({ requestCameraPermissionsAsync: jest.fn(), launchCameraAsync: jest.fn(), launchImageLibraryAsync: jest.fn() }));
@@ -348,5 +348,61 @@ describe('Roof photo import limits', () => {
     expect(input(VERTICES).props.value).toBe('');
     expect(canvas().props.style.height).toBe(150);
     expect(tree.root.findAll(n => (n.type as any) === 'SvgImage')[0].props.href.uri).toBe('data:image/jpeg;base64,abc');
+  });
+});
+
+describe('Rooftop layout', () => {
+  const hiddenTexts = () => tree.root.findAll(n => (n.type as any) === 'View' && n.props.style?.display === 'none').map(n => n.findAll(c => (c.type as any) === 'Text').map(c => [c.props.children].flat(Infinity).join('')).join(' ')).join(' || ');
+  const footerButton = () => tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Preview in AR')[0];
+
+  test('opens on Design, with the Photo and AR sections mounted but hidden', async () => {
+    await render();
+    expect(hiddenTexts()).toMatch(/Take Roof Photo/);
+    expect(hiddenTexts()).toMatch(/last saved layout/);
+    expect(hiddenTexts()).not.toMatch(/Calculate Placement/);
+  });
+
+  test('View in AR is the footer button and keeps its spoken name', async () => {
+    await render();
+    expect(texts()).toMatch(/View in AR/);
+    expect(footerButton()).toBeTruthy();
+  });
+
+  test('stats show dashes and the estimate is labelled simulated when nothing is known', async () => {
+    await render();
+    expect(texts()).toMatch(/Usable Area \| —|USABLE AREA/i);
+    expect(texts()).toMatch(/SIMULATED/);
+    expect(texts()).toMatch(/Panel Type \| — \| Tilt Angle \| — \| Orientation \| —/);
+  });
+
+  test('a saved roof fills Usable Area and Panels', async () => {
+    roofResponse = async () => savedRoof;
+    await render();
+    expect(texts()).toMatch(/30\.0/);
+    expect(texts()).toMatch(/\| 6 \|/);
+  });
+
+  test('advanced settings stay hidden until opened and the fields remain mounted', async () => {
+    await render();
+    expect(hiddenTexts()).toMatch(/Vertices, scale, setback and panel size/);
+    await press('Advanced settings');
+    expect(hiddenTexts()).not.toMatch(/Vertices, scale, setback and panel size/);
+    expect(input(VERTICES)).toBeTruthy();
+  });
+
+  test('the AR gate switches to the AR tab and Back to 2D returns to Design', async () => {
+    await render();
+    await press('Preview in AR');
+    expect(hiddenTexts()).not.toMatch(/This build has no AR module/);
+    expect(hiddenTexts()).toMatch(/Calculate Placement/);
+    await press('Back to 2D layout');
+    expect(hiddenTexts()).not.toMatch(/Calculate Placement/);
+  });
+
+  test('placed panels use the panel fill with the lime outline', async () => {
+    roofResponse = async () => savedRoof;
+    await render();
+    const rect = tree.root.findAll(n => (n.type as any) === 'Rect')[0];
+    expect(rect.props.fill).toBe(require('../src/theme/tokens').darkTokens.panelFill);
   });
 });
