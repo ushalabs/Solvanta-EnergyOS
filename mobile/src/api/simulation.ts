@@ -13,3 +13,8 @@ export function parseOutages(text:string) {
  if(outages.some((o,i)=>i>0&&outages[i-1].end_min>o.start_min))throw new Error('Outages cannot overlap.');
  return outages;
 }
+export type Scenario = 'normal' | 'outage' | 'custom';
+/** The Outage preset is the screens original example range, 08:00 to 10:00. */
+export const OUTAGE_PRESET = '480-600';
+/** The outage text a scenario stands for: Normal is no outage, Outage is the preset, Custom is what the user typed. */
+export const scenarioOutages = (scenario: Scenario, custom: string) => scenario === 'normal' ? '' : scenario === 'outage' ? OUTAGE_PRESET : custom;
