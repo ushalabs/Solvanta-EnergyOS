@@ -24,9 +24,12 @@ const FOOTER_GAP = 10;
 // Kept separate so the safe-area hook only runs on screens that pin a footer.
 function PinnedFooter({ children, clearsDock, onHeight }: { children: ReactNode; clearsDock: boolean; onHeight: (height: number) => void }) {
   const insets = useSafeAreaInsets();
+  const { tokens } = useTheme();
   const bottom = Math.max(insets.bottom, DOCK.minBottom) + (clearsDock ? DOCK.height + FOOTER_GAP : 0);
   return (
     <View pointerEvents="box-none" style={[styles.footerWrapper, { bottom }]}>
+      {/* Content scrolls under the footer; this backing keeps it from showing around the button. */}
+      <View testID="footer-backing" pointerEvents="none" style={[styles.footerBacking, { backgroundColor: tokens.background }]} />
       <View testID="screen-footer" onLayout={e => onHeight(e.nativeEvent.layout.height)} style={styles.footer}>
         {children}
       </View>
@@ -128,6 +131,13 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     paddingHorizontal: SPACING.horizontalPadding,
+  },
+  footerBacking: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: -FOOTER_GAP,
+    bottom: -FOOTER_GAP,
   },
   footer: {
     width: '100%',

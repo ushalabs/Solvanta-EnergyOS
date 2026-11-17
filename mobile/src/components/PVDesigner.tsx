@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useImperativeHandle, useState } from 'react';
 import { View, Text } from 'react-native';
 import { Sun } from 'lucide-react-native';
 import { Card, CardHeader, Label, Message, Metric, MetricGrid, Field, FieldRow, Toggle, Action, ActionRow } from './TwinControls';
@@ -11,7 +11,13 @@ const labels: Record<keyof typeof defaults, string> = { module_wattage_w: 'Modul
 const stringDefaults = { modules_per_string: '10', module_voc_v: '49', module_vmp_v: '41', inverter_max_dc_v: '600', mppt_min_v: '120', mppt_max_v: '550' };
 const stringLabels: Record<keyof typeof stringDefaults, string> = { modules_per_string: 'Modules per string', module_voc_v: 'Module Voc (V)', module_vmp_v: 'Module Vmp (V)', inverter_max_dc_v: 'Inverter max DC (V)', mppt_min_v: 'MPPT min (V)', mppt_max_v: 'MPPT max (V)' };
 
-export function PVDesigner({ buildingId }: { buildingId: string }) {
+/** What the Rooftop summary shows. Values are null until a PV record has loaded or been calculated, so defaults are never presented as data. */
+export type PVSummary = { profile: PVProfile | null; wattageW: number | null; tiltDeg: number | null; azimuthDeg: number | null };
+
+/** Lets the Rooftop panel selectors set a field. A change clears the old estimate, like typing in the field does. */
+export type PVControl = { set: (key: 'module_wattage_w' | 'tilt_deg' | 'azimuth_deg', value: number) => void };
+
+export function PVDesigner({ buildingId, onSummary, controlRef }: { buildingId: string; onSummary?: (summary: PVSummary) => void; controlRef?: React.Ref<PVControl> }) {
   const { tokens: t } = useTheme();
   const [fields, setFields] = useState(defaults);
   const [strings, setStrings] = useState(stringDefaults);
@@ -21,7 +27,15 @@ export function PVDesigner({ buildingId }: { buildingId: string }) {
   const [message, setMessage] = useState('Save a calibrated roof first.');
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [known, setKnown] = useState(false);
+  const [expert, setExpert] = useState(false);
+  useEffect(() => {
+    const number = (text: string) => known && text.trim() && Number.isFinite(Number(text)) ? Number(text) : null;
+    onSummary?.({ profile, wattageW: number(fields.module_wattage_w), tiltDeg: number(fields.tilt_deg), azimuthDeg: number(fields.azimuth_deg) });
+    // The callback is the parent's; only data changes should report.
+  }, [profile, fields.module_wattage_w, fields.tilt_deg, fields.azimuth_deg, known]);
   function load(record: PVRecord) {
+    setKnown(true);
     setFields(Object.fromEntries(Object.keys(defaults).map(k => [k, String(record.parameters[k as keyof typeof defaults])])) as typeof defaults);
     setCheckStrings(!!record.parameters.string_specs);
     setStrings(record.parameters.string_specs ? Object.fromEntries(Object.entries(record.parameters.string_specs).map(([k,v]) => [k,String(v)])) as typeof stringDefaults : stringDefaults);
@@ -29,11 +43,12 @@ export function PVDesigner({ buildingId }: { buildingId: string }) {
     setProfile(record.profile); setMessage(record.saved ? 'Loaded saved PV assumptions. Profile recalculated from current roof.' : 'Preview from building equipment; assumptions not saved yet.');
   }
   useEffect(() => {
-    let active = true; setProfile(null); setFields(defaults); setStrings(stringDefaults); setCheckStrings(false); setIrradiance('');
+    let active = true; setKnown(false); setProfile(null); setFields(defaults); setStrings(stringDefaults); setCheckStrings(false); setIrradiance('');
     if (buildingId) api.get<PVRecord>(`/buildings/${buildingId}/pv`).then(r => { if (active) load(r); }).catch(e => { if (active) setMessage(e.status === 404 ? 'Save a measured roof before estimating PV.' : e.message); });
     return () => { active = false; };
   }, [buildingId]);
   const dirty = () => { setProfile(null); setMessage('Changed assumptions — calculate or save to refresh.'); };
+  useImperativeHandle(controlRef, () => ({ set: (key, value) => { setFields(f => ({ ...f, [key]: String(value) })); setKnown(true); dirty(); } }));
   async function calculate(save: boolean) {
     if (!buildingId || busy) return;
     setBusy(true);
@@ -42,14 +57,17 @@ export function PVDesigner({ buildingId }: { buildingId: string }) {
       if (values.some(v => !v.trim() || !Number.isFinite(Number(v)))) throw new Error('Enter valid numbers for all enabled parameters.');
       const data = { ...Object.fromEntries(Object.entries(fields).map(([k,v]) => [k,Number(v)])), poa_w_m2: parseIrradiance(irradiance), string_specs: checkStrings ? Object.fromEntries(Object.entries(strings).map(([k,v]) => [k,Number(v)])) : null } as PVParameters;
       if (save) { load(await api.request<PVRecord>(`/buildings/${buildingId}/pv`, { method: 'PUT', body: JSON.stringify(data) })); setMessage('Saved PV assumptions to this building.'); }
-      else { setProfile(await api.post<PVProfile>(`/buildings/${buildingId}/pv/preview`, data)); setMessage('Calculated preview — not saved yet.'); }
+      else { setProfile(await api.post<PVProfile>(`/buildings/${buildingId}/pv/preview`, data)); setKnown(true); setMessage('Calculated preview — not saved yet.'); }
     } catch (e: any) { setProfile(null); setMessage(e.message); } finally { setBusy(false); }
   }
   return <Card><CardHeader title="PV design & generation estimate" icon={<Sun size={18} color={t.limeText} />} /><Label tone="secondary" caption>Panel count comes from the saved roof layout. Save roof edits before calculating. These design assumptions do not overwrite installed equipment in Settings.</Label>
     <FieldRow>{(Object.keys(defaults) as Array<keyof typeof defaults>).map(k => <Field key={k} label={labels[k]} numeric value={fields[k]} onChange={v => { setFields({ ...fields, [k]: v }); dirty(); }} />)}</FieldRow>
+    <Action title={expert ? 'Hide expert settings' : 'Expert settings'} variant="secondary" onPress={() => setExpert(!expert)} />
+    <View style={expert ? { gap: 16 } : { display: 'none' }}>
     <Toggle label="Optional reference string voltage checks" a11yLabel="Check string voltages" value={checkStrings} onValueChange={v => { setCheckStrings(v); dirty(); }} />
     {checkStrings && <FieldRow>{(Object.keys(stringDefaults) as Array<keyof typeof stringDefaults>).map(k => <Field key={k} label={stringLabels[k]} numeric value={strings[k]} onChange={v => { setStrings({ ...strings, [k]: v }); dirty(); }} />)}</FieldRow>}
     <Field label="Optional hourly plane-of-array irradiance (24 comma-separated W/m² values)" value={irradiance} onChange={v => { setIrradiance(v); dirty(); }} hint="Blank irradiance uses a synthetic equinox solar day. Supplied values are already on the panel plane, so tilt/azimuth are not applied again." />
+    </View>
     <ActionRow><Action title="Calculate PV Estimate" variant="secondary" disabled={!buildingId || busy} onPress={() => calculate(false)} /><Action title="Save PV Design" disabled={!buildingId || busy} onPress={() => calculate(true)} /></ActionRow>
     <Message>{message}</Message>
     {profile && <><MetricGrid><Metric label="Panels" value={profile.panel_count} /><Metric label="DC capacity" value={profile.dc_capacity_kwp.toFixed(2)} unit="kWp" /><Metric label="DC/AC ratio" value={profile.dc_ac_ratio.toFixed(2)} /><Metric label="Representative day" value={profile.daily_energy_kwh.toFixed(2)} unit="kWh" tone="accent" /></MetricGrid><Label tone="secondary" caption>{profile.source}</Label><Label tone="secondary" caption>{profile.time_basis}</Label>

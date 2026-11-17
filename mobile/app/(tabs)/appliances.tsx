@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Plug, Plus, Trash2 } from 'lucide-react-native';
 import { SolvantaScreen } from '../../src/components/SolvantaScreen';
-import { Card, Label, Message, Field, FieldRow, Action, ActionRow, Chip, ChipGroup, Toggle, ScreenHeader, BuildingPicker, useBuildings } from '../../src/components/TwinControls';
+import { Card, Label, Message, Field, FieldRow, Action, ActionRow, Chip, ChipGroup, Toggle, BuildingHeader, useBuildings } from '../../src/components/TwinControls';
 import { ModalSheet } from '../../src/components/ModalSheet';
 import { ConfirmDialog } from '../../src/components/ConfirmDialog';
 import { api } from '../../src/api/client';
@@ -34,7 +34,6 @@ function AppliancesWorkspace({building:picker}:{building:ReturnType<typeof useBu
   const [pendingDelete,setPendingDelete]=useState<Appliance | null>(null);
   const [filter,setFilter]=useState<Filter>('all');
   const [busy,setBusy]=useState(false);
-  const [choosing,setChoosing]=useState(false);
   const [message,setMessage]=useState('Select a building.');
   async function reload(id=building.id) {
     if (!id) return;
@@ -73,13 +72,8 @@ function AppliancesWorkspace({building:picker}:{building:ReturnType<typeof useBu
   // Delete lives inside the edit popup. Closing that popup first keeps only one popup open at a time.
   const askDelete=(a:Appliance)=>{setShowForm(false);setPendingDelete(a);};
   const visible=(list?.items||[]).filter(a=>matches(a,filter));
-  const selected=picker.buildings.find(b=>b.id===picker.id);
-  const place=selected?.address?.split(',')[0].trim();
-  const showPicker=choosing||!!picker.error||!picker.id;
   return <SolvantaScreen banner="SCENARIO ONLY • no real appliances are switched" footer={<Action title="Add Appliance" disabled={!building.id} icon={<Plus size={18} color={building.id?t.onLime:t.textSecondary}/>} onPress={create}/>}>
-    <ScreenHeader title="Appliances" subtitle={selected?`${selected.name}${place?` · ${place}`:''}`:'Choose a building'} onTitlePress={()=>setChoosing(!choosing)} titlePressLabel={selected?`Change building: ${selected.name}`:'Choose a building'}/>
-    {showPicker&&<BuildingPicker state={picker}/>}
-    <View style={{marginBottom:SPACING.sm}}><Label tone="secondary" caption>Scenario only: nothing real is switched.</Label></View>
+    <BuildingHeader title="Appliances" building={picker}/>
     <View style={{marginBottom:SPACING.md,gap:2}}><Label tone="secondary" caption>Scenario load {kw(list?.summary.requested_kw)} kW · Critical {kw(list?.summary.critical_kw)} kW · {list?`${list.summary.selected_count} selected`:'— selected'}</Label><Label tone="secondary" caption>{message}</Label></View>
     <View style={{marginBottom:SPACING.md}}><ChipGroup>{FILTERS.map(f=><Chip key={f.id} compact label={f.label} a11yLabel={f.spoken} selected={filter===f.id} onPress={()=>setFilter(f.id)}/>)}</ChipGroup></View>
     <View style={{gap:12}}>

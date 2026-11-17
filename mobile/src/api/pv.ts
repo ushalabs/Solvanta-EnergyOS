@@ -17,3 +17,11 @@ export function parseIrradiance(text: string): number[] | null {
   if (entries.length !== 24 || entries.some(v => !v.trim() || !Number.isFinite(Number(v)) || Number(v) < 0 || Number(v) > 1500)) throw new Error('Enter exactly 24 hourly irradiance values, 0–1500 W/m².');
   return entries.map(Number);
 }
+
+const POINTS = ['North', 'North-east', 'East', 'South-east', 'South', 'South-west', 'West', 'North-west'];
+/** Compass word for an azimuth in degrees from north. A dash when the value is missing or not a number. */
+export function compassPoint(deg: number | null | undefined): string {
+  if (deg == null || !Number.isFinite(deg)) return '—';
+  const normalised = ((deg % 360) + 360) % 360;
+  return POINTS[Math.round(normalised / 45) % 8];
+}

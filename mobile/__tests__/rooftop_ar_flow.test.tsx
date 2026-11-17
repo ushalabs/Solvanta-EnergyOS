@@ -11,6 +11,9 @@ jest.mock('react-native', () => {
   return {
     Text: host('Text'), View: host('View'), TextInput: host('TextInput'), TouchableOpacity: host('TouchableOpacity'),
     Pressable: host('Pressable'), ScrollView: host('ScrollView'), ActivityIndicator: host('ActivityIndicator'),
+    KeyboardAvoidingView: host('KeyboardAvoidingView'),
+    // Like the real Modal, children only exist while visible.
+    Modal: (props: any) => props.visible ? React.createElement('Modal', props, props.children) : null,
     StyleSheet: { create: (styles: any) => styles },
     Platform: { OS: 'android', select: (o: any) => o.android ?? o.default },
   };
@@ -18,7 +21,7 @@ jest.mock('react-native', () => {
 jest.mock('react-native-svg', () => {
   const React = require('react');
   const host = (name: string) => (props: any) => React.createElement(name, props, props.children);
-  return { __esModule: true, default: host('Svg'), Polygon: host('Polygon'), Rect: host('Rect'), Circle: host('Circle'), Image: host('SvgImage'), Line: host('Line') };
+  return { __esModule: true, default: host('Svg'), Polygon: host('Polygon'), Rect: host('Rect'), Circle: host('Circle'), Image: host('SvgImage'), Line: host('Line'), Defs: host('Defs'), Pattern: host('Pattern'), Path: host('Path') };
 });
 jest.mock('lucide-react-native', () => {
   const React = require('react');
@@ -28,7 +31,7 @@ jest.mock('lucide-react-native', () => {
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: (props: any) => require('react').createElement('Gradient', props, props.children) }));
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: {} } }));
-jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: (props: any) => require('react').createElement('Safe', props, props.children) }));
+jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }), SafeAreaView: (props: any) => require('react').createElement('Safe', props, props.children) }));
 jest.mock('expo-router', () => ({ useFocusEffect: (cb: any) => require('react').useEffect(cb, []), router: { push: jest.fn(), replace: jest.fn() } }));
 jest.mock('@react-native-async-storage/async-storage', () => ({ __esModule: true, default: { getItem: jest.fn(async () => null), setItem: jest.fn(async () => undefined), removeItem: jest.fn(async () => undefined) } }));
 jest.mock('expo-image-picker', () => ({ requestCameraPermissionsAsync: jest.fn(), launchCameraAsync: jest.fn(), launchImageLibraryAsync: jest.fn() }));
@@ -68,17 +71,29 @@ const input = (label: string) => tree.root.findAll(n => (n.type as any) === 'Tex
 const type = async (label: string, value: string) => { await act(async () => { input(label).props.onChangeText(value); }); };
 const canvas = () => tree.root.findAll(n => (n.type as any) === 'View' && !!n.props.onResponderRelease)[0];
 const tapCanvas = async (x: number, y: number) => { await act(async () => { canvas().props.onResponderRelease({ nativeEvent: { locationX: x, locationY: y } }); }); };
+const pressAR = async () => { await press('AR'); await act(async () => { await Promise.resolve(); }); await press('Preview in AR'); };
+// A one-finger gesture on the editor canvas: press at `from`, move to `to`, lift.
+const gesture = async (from: [number, number], to: [number, number]) => {
+  await act(async () => { canvas().props.onResponderGrant({ nativeEvent: { locationX: from[0], locationY: from[1], pageX: from[0], pageY: from[1], touches: [{ pageX: from[0], pageY: from[1] }] } }); });
+  await act(async () => { canvas().props.onResponderMove({ nativeEvent: { pageX: to[0], pageY: to[1], locationX: to[0], locationY: to[1], touches: [{ pageX: to[0], pageY: to[1] }] } }); });
+  await act(async () => { canvas().props.onResponderRelease({ nativeEvent: { pageX: to[0], pageY: to[1], locationX: to[0], locationY: to[1], touches: [] } }); });
+};
 const VERTICES = 'Roof vertices (x,y; x,y) — edit to correct';
 
-async function render() {
+// The roof editor is a full-screen popup. Most tests draw in it, so render() opens it; renderPreview() leaves it closed.
+async function renderPreview() {
   await act(async () => { tree = create(<RooftopScreen />); });
   await act(async () => { await Promise.resolve(); });
+}
+async function render() {
+  await renderPreview();
+  await press('Edit roof layout');
   // A 300-wide canvas on a 1000-wide roof: one screen unit is 10/3 roof units.
   await act(async () => { canvas().props.onLayout({ nativeEvent: { layout: { width: 300 } } }); });
 }
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  jest.clearAllMocks(); mockCapability.mockReset();
   roofResponse = () => Promise.reject(notFound());
   jest.spyOn(api, 'getBuildings').mockResolvedValue([{ id: BUILDING, name: 'Test building' }] as any);
   jest.spyOn(api, 'getCurrentUser').mockResolvedValue({ id: 'u1' } as any);
@@ -110,7 +125,7 @@ describe('AR gate on the Rooftop screen', () => {
     roofResponse = async () => savedRoof;
     await render();
     const calls = getSpy.mock.calls.length;
-    await press('Preview in AR');
+    await pressAR();
     expect(texts()).toMatch(GATE);
     expect(router.push).not.toHaveBeenCalled();
     expect(ImagePicker.requestCameraPermissionsAsync).not.toHaveBeenCalled();
@@ -124,7 +139,7 @@ describe('AR gate on the Rooftop screen', () => {
     roofResponse = async () => savedRoof;
     await render();
     const before = input(VERTICES).props.value;
-    await press('Preview in AR');
+    await pressAR();
     await press('Back to 2D layout');
     expect(texts()).not.toMatch(GATE);
     expect(input(VERTICES).props.value).toBe(before);
@@ -134,19 +149,19 @@ describe('AR gate on the Rooftop screen', () => {
 
   test('can be reopened, and the 2D editor keeps working while it is open', async () => {
     await render();
-    await press('Preview in AR');
+    await pressAR();
     await tapCanvas(30, 30);
     expect(input(VERTICES).props.value).toBe('100,100');
     expect(texts()).toMatch(GATE);
     await press('Back to 2D layout');
-    await press('Preview in AR');
+    await pressAR();
     expect(texts()).toMatch(GATE);
   });
 
   test('works with no building or saved roof, because it needs neither', async () => {
     jest.spyOn(api, 'getBuildings').mockResolvedValue([] as any);
     await render();
-    await press('Preview in AR');
+    await pressAR();
     expect(texts()).toMatch(GATE);
   });
 
@@ -156,7 +171,7 @@ describe('AR gate on the Rooftop screen', () => {
     test('ready: opens the AR screen for this building with no gate', async () => {
       mockCapability.mockResolvedValue('ready');
       await render();
-      await press('Preview in AR');
+      await pressAR();
       expect(router.push).toHaveBeenCalledTimes(1);
       expect(router.push).toHaveBeenCalledWith({ pathname: '/rooftop-ar', params: { buildingId: BUILDING } });
       expect(texts()).not.toMatch(/Back to 2D layout/);
@@ -166,14 +181,14 @@ describe('AR gate on the Rooftop screen', () => {
       mockCapability.mockResolvedValue('ready');
       await render();
       await tapCanvas(30, 30);
-      await press('Preview in AR');
+      await pressAR();
       expect(input(VERTICES).props.value).toBe('100,100');
     });
 
     test('unsupported device: names ARCore, stays on the 2D editor and does not navigate', async () => {
       mockCapability.mockResolvedValue('unsupported');
       await render();
-      await press('Preview in AR');
+      await pressAR();
       expect(texts()).toMatch(/ARCORE NOT SUPPORTED/);
       expect(router.push).not.toHaveBeenCalled();
       await tapCanvas(30, 30);
@@ -181,12 +196,17 @@ describe('AR gate on the Rooftop screen', () => {
     });
 
     test('a failed check can be retried from the gate, and a clean answer closes the gate', async () => {
-      mockCapability.mockResolvedValueOnce('check-failed').mockResolvedValueOnce('ready');
+      roofResponse = async () => savedRoof;
+      mockCapability.mockResolvedValueOnce('check-failed').mockResolvedValue('ready');
       await render();
-      await press('Preview in AR');
+      await press('AR');
+      await act(async () => { await Promise.resolve(); });
       expect(texts()).toMatch(/ARCORE CHECK FAILED/);
       await press('Check Again');
+      await act(async () => { await Promise.resolve(); });
       expect(texts()).not.toMatch(/ARCORE CHECK FAILED/);
+      expect(router.push).not.toHaveBeenCalled();
+      await press('Preview in AR');
       expect(router.push).toHaveBeenCalledTimes(1);
     });
   });
@@ -230,15 +250,16 @@ describe('2D roof editor', () => {
   });
 
   test('mode switch routes taps: obstacle drafts need three points before finishing', async () => {
+    roofResponse = async () => savedRoof;
     await render();
     await press('Obstacle');
-    await tapCanvas(90, 60);
-    await tapCanvas(120, 60);
+    await tapCanvas(150, 45);
+    await tapCanvas(210, 45);
     const finish = () => tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Finish Obstacle')[0];
     expect(finish().props.disabled).toBe(true);
-    await tapCanvas(120, 90);
+    await tapCanvas(210, 90);
     expect(finish().props.disabled).toBe(false);
-    expect(input(VERTICES).props.value).toBe('');
+    expect(input(VERTICES).props.value).toBe('100,100; 900,100; 900,600');
     await press('Finish Obstacle');
     expect(finish().props.disabled).toBe(true);
   });
@@ -307,7 +328,18 @@ describe('2D roof editor', () => {
     expect(put.mock.calls[0][1].method).toBe('PUT');
     put.mockRejectedValueOnce(new SolvantaApiError(422, { detail: 'Roof must be a simple polygon with positive area' }));
     await press('Save Roof');
-    expect(texts()).toMatch(/simple polygon/);
+    expect(texts()).toMatch(/at least 3 corners, not cross itself/);
+    expect(texts()).not.toMatch(/simple polygon/);
+  });
+
+  test('a raw validation error about an obstacle is shown as a plain sentence', async () => {
+    roofResponse = async () => savedRoof;
+    await render();
+    put.mockRejectedValueOnce(new SolvantaApiError(422, { detail: [{ loc: ['body'], msg: 'Value error, Obstacle must be a valid polygon inside the roof' }] }));
+    await press('Save Roof');
+    expect(texts()).toMatch(/Obstacle must stay inside the roof and not cross itself/);
+    expect(texts()).not.toMatch(/Value error/);
+    expect(texts()).not.toMatch(/body:/);
   });
 });
 
@@ -348,5 +380,1088 @@ describe('Roof photo import limits', () => {
     expect(input(VERTICES).props.value).toBe('');
     expect(canvas().props.style.height).toBe(150);
     expect(tree.root.findAll(n => (n.type as any) === 'SvgImage')[0].props.href.uri).toBe('data:image/jpeg;base64,abc');
+  });
+});
+
+describe('Rooftop layout', () => {
+  const hiddenTexts = () => tree.root.findAll(n => (n.type as any) === 'View' && n.props.style?.display === 'none').map(n => n.findAll(c => (c.type as any) === 'Text').map(c => [c.props.children].flat(Infinity).join('')).join(' ')).join(' || ');
+  const footerButton = () => tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Preview in AR')[0];
+
+  test('opens on Design, with the Photo and AR sections mounted but hidden', async () => {
+    await render();
+    expect(hiddenTexts()).toMatch(/Take Roof Photo/);
+    expect(hiddenTexts()).toMatch(/last saved layout/);
+    expect(hiddenTexts()).not.toMatch(/Calculate Placement/);
+  });
+
+  const footerLabels = () => tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && ['Preview in AR', 'Calculate Placement', 'Continue to Design'].includes(n.props.accessibilityLabel)).map(n => n.props.accessibilityLabel);
+  const tabs = async (name: string) => { await press(name); await act(async () => { await Promise.resolve(); }); };
+
+  test('the pinned button follows the tab', async () => {
+    await render();
+    expect(footerLabels()).toEqual(['Calculate Placement']);
+    await tabs('Photo');
+    expect(footerLabels()).toEqual(['Continue to Design']);
+    await press('Continue to Design');
+    expect(footerLabels()).toEqual(['Calculate Placement']);
+    await tabs('AR');
+    expect(footerLabels()).toEqual(['Preview in AR']);
+    expect(texts()).toMatch(/View in AR/);
+  });
+
+  test('only one lime primary button is on screen: the card Save Roof is secondary while Calculate Placement is pinned', async () => {
+    roofResponse = async () => savedRoof;
+    await renderPreview();
+    const bg = (name: string) => [tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === name)[0].props.style].flat(Infinity).reduce((a: any, x: any) => ({ ...a, ...x }), {}).backgroundColor;
+    const { darkTokens } = require('../src/theme/tokens');
+    expect(bg('Calculate Placement')).toBe(darkTokens.lime);
+    expect(bg('Save Roof')).toBe(darkTokens.surfaceElevated);
+  });
+
+  test('Calculate Placement is not repeated inside the Roof actions card', async () => {
+    await render();
+    expect(tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Calculate Placement').length).toBe(1);
+    expect(texts()).toMatch(/Roof actions/);
+    expect(texts()).not.toMatch(/Measurements/);
+  });
+
+  test('without a saved roof the AR button is disabled and the card says why', async () => {
+    mockCapability.mockResolvedValue('ready');
+    await render();
+    await tabs('AR');
+    const button = tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Preview in AR')[0];
+    expect(button.props.disabled).toBe(true);
+    expect(texts()).toMatch(/Save a roof layout first/);
+    expect(texts()).toMatch(/Saved roof \| No/);
+  });
+
+  test('with a saved roof and a supported device the AR button is enabled and shows real data', async () => {
+    mockCapability.mockResolvedValue('ready');
+    roofResponse = async () => savedRoof;
+    await render();
+    await tabs('AR');
+    const button = tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Preview in AR')[0];
+    expect(button.props.disabled).toBe(false);
+    expect(texts()).toMatch(/AR supported/);
+    expect(texts()).toMatch(/Panels \(saved\) \| 6/);
+    expect(texts()).toMatch(/Saved on \| —/);
+    expect(texts()).toMatch(/Tilt angle \| —/);
+  });
+
+  test('an unsupported device disables the button and shows the reason', async () => {
+    mockCapability.mockResolvedValue('unsupported');
+    roofResponse = async () => savedRoof;
+    await render();
+    await tabs('AR');
+    const button = tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Preview in AR')[0];
+    expect(button.props.disabled).toBe(true);
+    expect(texts()).toMatch(/ARCORE NOT SUPPORTED/);
+  });
+
+  test('Roof area sits in Advanced and is not repeated in a second stats block', async () => {
+    roofResponse = async () => savedRoof;
+    await renderPreview();
+    expect(texts().match(/Roof area/gi)?.length).toBe(1);
+    expect(texts().match(/Usable area/gi)?.length).toBe(1);
+  });
+
+  test('the three canvas buttons are one compact row with full spoken names', async () => {
+    await render();
+    for (const name of ['Undo Last Point', 'Finish Obstacle', 'Remove Last Obstacle']) {
+      const b = tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === name)[0];
+      const style = [b.props.style].flat(Infinity).reduce((a: any, x: any) => ({ ...a, ...x }), {});
+      expect(style.minHeight).toBe(44);
+      expect(style.flex).toBe(1);
+    }
+  });
+
+  test('panel configuration rows are short and have no chevrons', async () => {
+    await render();
+    const row = tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && /^Panel Type:/.test(n.props.accessibilityLabel))[0];
+    expect(row.props.style.minHeight).toBe(36);
+    expect(row.props.hitSlop).toEqual({ top: 4, bottom: 4 });
+    expect(row.findAll(n => (n.type as any) === 'Icon').length).toBe(0);
+  });
+
+  test('stats show dashes and the estimate is labelled simulated when nothing is known', async () => {
+    await render();
+    expect(texts()).toMatch(/Usable Area \| —|USABLE AREA/i);
+    expect(texts()).toMatch(/SIMULATED/);
+    expect(texts()).toMatch(/Panel Type \| — \| Tilt Angle \| — \| Orientation \| —/);
+  });
+
+  test('a saved roof fills Usable Area and Panels', async () => {
+    roofResponse = async () => savedRoof;
+    await render();
+    expect(texts()).toMatch(/30\.0/);
+    expect(texts()).toMatch(/\| 6 \|/);
+  });
+
+  test('advanced settings stay hidden until opened and the fields remain mounted', async () => {
+    await render();
+    expect(hiddenTexts()).toMatch(/Vertices, scale, setback and panel size/);
+    await press('Advanced settings');
+    expect(hiddenTexts()).not.toMatch(/Vertices, scale, setback and panel size/);
+    expect(input(VERTICES)).toBeTruthy();
+  });
+
+  test('the AR gate shows on the AR tab and Back to 2D returns to Design', async () => {
+    await render();
+    await tabs('AR');
+    expect(texts()).toMatch(/This build has no AR module/);
+    await press('Back to 2D layout');
+    expect(footerLabels()).toEqual(['Calculate Placement']);
+  });
+
+  test('placed panels use the panel fill with the lime outline', async () => {
+    roofResponse = async () => savedRoof;
+    await render();
+    const rect = tree.root.findAll(n => (n.type as any) === 'Rect')[0];
+    expect(rect.props.fill).toBe(require('../src/theme/tokens').darkTokens.panelFill);
+  });
+});
+
+describe('Rooftop guidance and state', () => {
+  const footerNames = () => tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && ['Save Roof', 'Calculate Placement'].includes(n.props.accessibilityLabel)).map(n => n.props.accessibilityLabel);
+  const stepLine = () => tree.root.findAll(n => (n.type as any) === 'View' && n.props.accessibilityLabel === 'Roof steps')[0];
+  const currentStep = () => stepLine().findAll(n => (n.type as any) === 'Text' && n.props.accessibilityState?.selected).map(n => n.props.children).flat();
+  const fieldInside = (label: string) => tree.root.findAll(n => (n.type as any) === 'TextInput' && n.props.accessibilityLabel === label)[0];
+  const climbTo = (node: any, test: (n: any) => boolean) => { let n = node; while (n && !test(n)) n = n.parent; return n; };
+  const inHidden = (node: any) => !!climbTo(node, n => (n.type as any) === 'View' && n.props.style?.display === 'none');
+
+  test('there is no step line, and each mode has one short hint inside the editor', async () => {
+    await render();
+    expect(texts()).not.toMatch(/1 Roof outline|2 Obstacles|3 Scale|4 Calculate/);
+    expect(tree.root.findAll(n => (n.props.accessibilityLabel ?? '') === 'Roof steps')).toHaveLength(0);
+    expect(texts()).toMatch(/Tap each corner of the roof in order/);
+    await press('Obstacle');
+    expect(texts()).toMatch(/Tap the corners of an obstacle, then Finish/);
+    await press('Scale');
+    expect(texts()).toMatch(/Tap two points on a length you measured, then enter the distance/);
+    expect(texts()).not.toMatch(/Current mode/);
+  });
+
+  test('a next-step line walks a first-time user from outline to scale to calculate', async () => {
+    await render();
+    expect(texts()).not.toMatch(/Next:|Ready:/);
+    await tapCanvas(30, 30); await tapCanvas(270, 30); await tapCanvas(270, 180);
+    expect(texts()).toMatch(/Next: tap Scale and mark a length you measured on the roof\./);
+    await press('Scale');
+    expect(texts()).toMatch(/Next: tap both ends of a length you measured\./);
+    await tapCanvas(30, 200); await tapCanvas(270, 200);
+    expect(texts()).toMatch(/Next: type the measured distance in metres\./);
+    await type('Measured scale distance (m)', '12');
+    expect(texts()).toMatch(/Ready: press Done, then Calculate Placement\./);
+    await press('Obstacle');
+    await tapCanvas(150, 60);
+    expect(texts()).toMatch(/Next: finish or undo the obstacle you are drawing\./);
+  });
+
+  test('shows a corner count that follows taps', async () => {
+    await render();
+    expect(texts()).toMatch(/Corners: 0/);
+    await tapCanvas(30, 30);
+    expect(texts()).toMatch(/Corners: 1/);
+    await press('Scale');
+    expect(texts()).toMatch(/Scale points: 0 of 2/);
+  });
+
+  test('explains why Finish is disabled, in each mode', async () => {
+    await render();
+    // Finish is disabled outside Obstacle mode, but the editor stays quiet about it there.
+    expect(texts()).not.toMatch(/Finish is for obstacles/);
+    expect(tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Finish Obstacle')[0].props.disabled).toBe(true);
+    await press('Obstacle');
+    expect(texts()).toMatch(/Finish needs at least 3 obstacle corners/);
+    await tapCanvas(10, 10); await tapCanvas(60, 10); await tapCanvas(60, 60);
+    expect(texts()).not.toMatch(/Finish needs at least 3/);
+  });
+
+  test('warns, without blocking, about fewer than 3 corners and about a crossing outline', async () => {
+    await render();
+    expect(texts()).not.toMatch(/needs at least 3 corners/);
+    await tapCanvas(30, 30);
+    expect(texts()).toMatch(/needs at least 3 corners\. Tap more corners, or press Undo/);
+    await tapCanvas(270, 200); await tapCanvas(270, 30);
+    expect(texts()).not.toMatch(/crosses itself/);
+    await tapCanvas(30, 200);
+    expect(texts()).toMatch(/outline crosses itself/);
+    expect(input(VERTICES).props.value.split(';').length).toBe(4);
+    await press('Undo Last Point');
+    expect(texts()).not.toMatch(/crosses itself/);
+  });
+
+  test('an empty canvas offers a starting rectangle that can still be edited', async () => {
+    await render();
+    await press('Start with a rectangle');
+    expect(input(VERTICES).props.value.split(';').length).toBe(4);
+    expect(texts()).toMatch(/Corners: 4/);
+    expect(texts()).not.toMatch(/Start with a rectangle/);
+    expect(texts()).not.toMatch(/crosses itself/);
+    await press('Undo Last Point');
+    expect(texts()).toMatch(/Corners: 0/);
+    await press('Redo');
+    expect(texts()).toMatch(/Corners: 4/);
+  });
+
+  test('the scale distance field sits under the canvas in Scale mode and is not duplicated', async () => {
+    await render();
+    const count = () => tree.root.findAll(n => (n.type as any) === 'TextInput' && n.props.accessibilityLabel === 'Measured scale distance (m)').length;
+    expect(count()).toBe(1);
+    expect(inHidden(fieldInside('Measured scale distance (m)'))).toBe(true);
+    await press('Scale');
+    expect(count()).toBe(1);
+    expect(inHidden(fieldInside('Measured scale distance (m)'))).toBe(false);
+    await type('Measured scale distance (m)', '12');
+    await press('Obstacle');
+    expect(fieldInside('Measured scale distance (m)').props.value).toBe('12');
+  });
+
+  test('Advanced groups its fields and keeps the raw vertices and PV extras in collapsed Expert groups', async () => {
+    await render();
+    expect(texts()).toMatch(/Roof settings/);
+    expect(texts()).toMatch(/Panel size/);
+    expect(inHidden(input(VERTICES))).toBe(true);
+    const pvExtra = tree.root.findAll(n => (n.type as any) === 'TextInput' && /plane-of-array/.test(n.props.accessibilityLabel ?? ''))[0];
+    expect(pvExtra).toBeTruthy();
+    expect(inHidden(pvExtra)).toBe(true);
+    const moduleRating = fieldInside('Module rating (W)');
+    expect(moduleRating).toBeTruthy();
+    expect(texts()).toMatch(/Expert settings/);
+  });
+
+  test('after the roof changes all three tiles are dashes with an Outdated note, then recover on calculate', async () => {
+    roofResponse = async () => savedRoof;
+    await render();
+    expect(texts()).not.toMatch(/Outdated/);
+    await tapCanvas(150, 150);
+    expect(texts()).toMatch(/Outdated: the roof changed/);
+    expect(texts()).toMatch(/Usable Area \| — \| Panels \| — \| Est\. Daily \| —/);
+    await press('Calculate Placement');
+    expect(texts()).not.toMatch(/Outdated/);
+    expect(texts()).toMatch(/Usable Area \| 30\.0/);
+  });
+
+  test('typing a new scale distance also marks the tiles outdated', async () => {
+    roofResponse = async () => savedRoof;
+    await render();
+    await press('Scale');
+    await type('Measured scale distance (m)', '13');
+    expect(texts()).toMatch(/Outdated/);
+  });
+
+  test('after Calculate Placement the pinned button becomes Save Roof, and saving returns it', async () => {
+    roofResponse = async () => savedRoof;
+    await render();
+    await tapCanvas(150, 150);
+    expect(footerNames().sort()).toEqual(['Calculate Placement', 'Save Roof']);
+    await press('Calculate Placement');
+    expect(footerNames()).toEqual(['Save Roof']);
+    expect(texts()).toMatch(/Press Save Roof to keep it/);
+    await press('Save Roof');
+    expect(put).toHaveBeenCalled();
+    expect(footerNames().sort()).toEqual(['Calculate Placement', 'Save Roof']);
+  });
+
+  test('the unsaved note says what to press first', async () => {
+    await render();
+    await tapCanvas(30, 30);
+    expect(texts()).toMatch(/Press Calculate Placement first, then Save Roof/);
+  });
+});
+
+describe('Roof canvas drawing', () => {
+  const polygons = () => tree.root.findAll(n => (n.type as any) === 'Polygon');
+  const outline = () => polygons().find(n => n.props.fill === require('../src/theme/tokens').darkTokens.surfaceElevated);
+  const handles = () => tree.root.findAll(n => (n.type as any) === 'View' && /^Roof corner/.test(n.props.accessibilityLabel ?? ''));
+  const labelled = (text: string) => tree.root.findAll(n => (n.type as any) === 'View' && (n.props.accessibilityLabel ?? '').startsWith(text));
+
+  test('1 or 2 corners draw handles only, 3 or more draw a closed filled outline', async () => {
+    await render();
+    await tapCanvas(30, 30); await tapCanvas(270, 30);
+    expect(outline()).toBeUndefined();
+    expect(handles()).toHaveLength(2);
+    await tapCanvas(270, 200);
+    const shape = outline()!;
+    expect(shape).toBeTruthy();
+    expect(shape.props.strokeLinejoin).toBe('round');
+    expect(shape.props.points.split(' ')).toHaveLength(3);
+  });
+
+  test('corner handles give a 44px touch area and moving one updates the vertices', async () => {
+    await render();
+    await tapCanvas(30, 30); await tapCanvas(270, 30); await tapCanvas(270, 200);
+    expect(handles()).toHaveLength(3);
+    // Pressing 20px away from the corner still grabs it: the hit area is 44px across.
+    // The corner ends where the finger ends: 30px right and 20px down of the press.
+    await gesture([50, 30], [80, 50]);
+    expect(input(VERTICES).props.value).toBe('200,167; 900,100; 900,667');
+    expect(texts()).toMatch(/Outdated|Unsaved geometry changes/);
+  });
+
+  test('handles only show in Roof mode, so taps in other modes reach the canvas', async () => {
+    await render();
+    await tapCanvas(30, 30);
+    expect(handles()).toHaveLength(1);
+    await press('Obstacle');
+    expect(handles()).toHaveLength(0);
+  });
+
+  test('placed panels are cells with a thin border, and each contiguous group gets one lime outline', async () => {
+    roofResponse = async () => savedRoof;
+    await render();
+    const cells = tree.root.findAll(n => (n.type as any) === 'Rect');
+    expect(cells).toHaveLength(1);
+    expect(cells[0].props.fill).toBe(require('../src/theme/tokens').darkTokens.panelFill);
+    const lime = require('../src/theme/tokens').darkTokens.limeMark;
+    const outlines = polygons().filter(p => p.props.fill === 'none' && p.props.stroke === lime);
+    expect(outlines).toHaveLength(1);
+    expect(cells[0].props.strokeWidth).toBeLessThan(outlines[0].props.strokeWidth);
+  });
+
+  test('an L-shaped set of panels gets one outline per rectangular block, never one box over the empty corner', async () => {
+    const P = (x: number, y: number) => ({ x, y, width: 50, height: 90 });
+    roofResponse = async () => ({ ...savedRoof, layout: { ...savedRoof.layout, panels: [P(100, 100), P(155, 100), P(210, 100), P(100, 195)] } });
+    await render();
+    const outlines = polygons().filter(p => p.props.fill === 'none').map(p => p.props.points.split(' ').map((xy: string) => xy.split(',').map(Number)));
+    expect(outlines).toHaveLength(2);
+    // Neither outline reaches the empty spot to the right of the lower panel.
+    for (const o of outlines) expect(o.some(([x, y]: number[]) => x > 160 && y > 200)).toBe(false);
+  });
+
+  test('two separate blocks of panels get two outlines', async () => {
+    roofResponse = async () => ({ ...savedRoof, layout: { ...savedRoof.layout, panels: [{ x: 100, y: 100, width: 50, height: 90 }, { x: 155, y: 100, width: 50, height: 90 }, { x: 700, y: 400, width: 50, height: 90 }] } });
+    await render();
+    expect(polygons().filter(p => p.props.fill === 'none')).toHaveLength(2);
+  });
+
+  test('obstacles are drawn as muted rounded shapes labelled Obstacle', async () => {
+    roofResponse = async () => savedRoof;
+    await render();
+    await press('Obstacle');
+    await tapCanvas(150, 45); await tapCanvas(210, 45); await tapCanvas(210, 90);
+    await press('Finish Obstacle');
+    const shape = polygons().find(p => p.props.strokeLinejoin === 'round' && p.props.fillOpacity === 0.35)!;
+    expect(shape).toBeTruthy();
+    const labels = tree.root.findAll(n => (n.type as any) === 'View' && n.props.pointerEvents === 'none').flatMap(v => v.findAll(c => (c.type as any) === 'Text').map(c => c.props.children));
+    expect(labels).toContain('Obstacle');
+  });
+
+  test('a north arrow sits in the top left and says it is an assumption', async () => {
+    await render();
+    const arrow = labelled('North arrow')[0];
+    expect(arrow.props.style.left).toBe(8);
+    expect(arrow.props.style.top).toBe(8);
+    expect(arrow.props.accessibilityLabel).toMatch(/assumed/);
+  });
+
+  test('the usable width line shows only with placement data and a scale', async () => {
+    await render();
+    expect(labelled('Usable width')).toHaveLength(0);
+    await act(async () => { tree.unmount(); });
+    roofResponse = async () => savedRoof;
+    await render();
+    // One panel 73 roof units wide at 0.015 m per unit.
+    expect(labelled('Usable width')).toHaveLength(1);
+    expect(labelled('Usable width')[0].props.accessibilityLabel).toBe('Usable width 1.1 metres');
+    const text = labelled('Usable width')[0].findAll((n: any) => (n.type as any) === 'Text')[0];
+    expect(text.props.children.join('')).toBe('1.1 m usable width');
+    // A solid chip, so the words stay readable when the scale line passes behind them.
+    expect(text.props.style.backgroundColor).toBe(require('../src/theme/tokens').darkTokens.backgroundRaised);
+    await tapCanvas(150, 150);
+    expect(labelled('Usable width')).toHaveLength(0);
+  });
+});
+
+describe('Panel Configuration selectors', () => {
+  const pvRecord = {
+    saved: true,
+    parameters: { module_wattage_w: 450, inverter_kw: 8, inverter_efficiency_pct: 96, tilt_deg: 20, azimuth_deg: 180, losses_pct: 14, latitude_deg: 31.52, cell_temperature_c: 25, temperature_coefficient_per_c: -0.004, string_specs: null, poa_w_m2: null },
+    profile: { panel_count: 6, dc_capacity_kwp: 2.7, inverter_kw: 8, dc_ac_ratio: 0.34, daily_energy_kwh: 12.34, timeline: [], warnings: [], source: 'SIMULATED', time_basis: 'Representative day' },
+  };
+  const withPv = () => getSpy.mockImplementation(async (path: string) => {
+    if (path.endsWith('/roof')) return roofResponse();
+    if (path.endsWith('/pv')) return pvRecord as any;
+    throw notFound();
+  });
+  const row = (name: string) => tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && new RegExp(`^${name}:`).test(n.props.accessibilityLabel ?? ''))[0];
+  const modalText = () => tree.root.findAll(n => (n.type as any) === 'Modal').flatMap(m => m.findAll(c => (c.type as any) === 'Text').map(c => [c.props.children].flat(Infinity).join(''))).join(' | ');
+  const field = (label: string) => tree.root.findAll(n => (n.type as any) === 'TextInput' && n.props.accessibilityLabel === label)[0];
+  const open = async (name: string) => { await act(async () => { row(name).props.onPress(); }); };
+  const pick = async (label: string) => { const b = tree.root.findAll(n => (n.type as any) === 'Modal')[0].findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === label)[0]; await act(async () => { b.props.onPress(); }); };
+
+  test('rows show dashes until data exists and keep their spoken names', async () => {
+    await renderPreview();
+    for (const name of ['Panel Type', 'Tilt Angle', 'Orientation']) expect(row(name).props.accessibilityLabel).toBe(`${name}: —`);
+  });
+
+  test('rows show saved values, with the orientation as a compass word', async () => {
+    withPv();
+    await renderPreview();
+    expect(row('Panel Type').props.accessibilityLabel).toBe('Panel Type: 450 W');
+    expect(row('Tilt Angle').props.accessibilityLabel).toBe('Tilt Angle: 20°');
+    expect(row('Orientation').props.accessibilityLabel).toBe('Orientation: South');
+  });
+
+  test('Panel Type offers 400 to 600 W and sets the module rating field', async () => {
+    withPv();
+    await renderPreview();
+    await open('Panel Type');
+    for (const w of [400, 450, 500, 550, 600]) expect(modalText()).toContain(`${w} W`);
+    await pick('600 W module');
+    expect(field('Module rating (W)').props.value).toBe('600');
+    expect(row('Panel Type').props.accessibilityLabel).toBe('Panel Type: 600 W');
+  });
+
+  test('Tilt steps by one degree between 0 and 45 and sets the tilt field', async () => {
+    withPv();
+    await renderPreview();
+    await open('Tilt Angle');
+    await pick('Increase tilt');
+    expect(field('Tilt (degrees)').props.value).toBe('21');
+    await pick('Decrease tilt'); await pick('Decrease tilt');
+    expect(field('Tilt (degrees)').props.value).toBe('19');
+    await pick('Tilt 40 degrees');
+    for (let i = 0; i < 8; i++) await pick('Increase tilt');
+    expect(field('Tilt (degrees)').props.value).toBe('45');
+    const plus = tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Increase tilt')[0];
+    expect(plus.props.disabled).toBe(true);
+    await pick('Tilt 10 degrees');
+    for (let i = 0; i < 12; i++) await pick('Decrease tilt');
+    expect(field('Tilt (degrees)').props.value).toBe('0');
+  });
+
+  test('Orientation offers eight compass choices and 180 is South', async () => {
+    withPv();
+    await renderPreview();
+    await open('Orientation');
+    for (const c of ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']) expect(modalText()).toContain(c);
+    await pick('Face East');
+    expect(field('Azimuth (degrees from north)').props.value).toBe('90');
+    expect(row('Orientation').props.accessibilityLabel).toBe('Orientation: East');
+    await pick('Face South');
+    expect(field('Azimuth (degrees from north)').props.value).toBe('180');
+  });
+
+  test('choices are at least 44px tall', async () => {
+    withPv();
+    await renderPreview();
+    await open('Panel Type');
+    const b = tree.root.findAll(n => (n.type as any) === 'Modal')[0].findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === '500 W module')[0];
+    const style = [b.props.style].flat(Infinity).reduce((a: any, x: any) => ({ ...a, ...x }), {});
+    expect((style.minHeight ?? 0) + (b.props.hitSlop?.top ?? 0) + (b.props.hitSlop?.bottom ?? 0)).toBeGreaterThanOrEqual(44);
+  });
+
+  test('changing a value marks Est. Daily as outdated until it is recalculated', async () => {
+    withPv();
+    await renderPreview();
+    expect(texts()).toMatch(/Est\. Daily \| 12\.3 \| +kWh/);
+    expect(texts()).not.toMatch(/Est\. Daily is outdated/);
+    await open('Panel Type');
+    await pick('500 W module');
+    expect(texts()).toMatch(/Est\. Daily \| —/);
+    expect(texts()).toMatch(/Est\. Daily is outdated/);
+    post.mockResolvedValue({ ...pvRecord.profile, daily_energy_kwh: 15.5 } as any);
+    await press('Calculate PV Estimate');
+    expect(texts()).not.toMatch(/Est\. Daily is outdated/);
+    expect(texts()).toMatch(/Est\. Daily \| 15\.5/);
+  });
+
+  test('the roof tiles are not marked outdated by a panel setting change', async () => {
+    withPv();
+    roofResponse = async () => savedRoof;
+    await renderPreview();
+    await open('Tilt Angle');
+    await pick('Increase tilt');
+    expect(texts()).not.toMatch(/Outdated: the roof changed/);
+    expect(texts()).toMatch(/Usable Area \| 30\.0/);
+  });
+
+  test('the Est. Daily tile has a short label so the three tiles line up, and the SIMULATED label sits just under them', async () => {
+    withPv();
+    await renderPreview();
+    const labels = tree.root.findAll(n => (n.type as any) === 'Text').map(n => [n.props.children].flat(Infinity).join(''));
+    expect(labels).toContain('Est. Daily');
+    expect(labels).not.toContain('Est. Daily (SIMULATED)');
+    const note = labels.findIndex(t => /Est\. Daily is SIMULATED/.test(t));
+    expect(note).toBeGreaterThan(labels.indexOf('Est. Daily'));
+    expect(note).toBeLessThan(labels.indexOf('Panel Configuration'));
+  });
+
+  test('there is no Panel Count row or count control; the Panels tile says how many fit', async () => {
+    roofResponse = async () => savedRoof;
+    await renderPreview();
+    expect(texts()).not.toMatch(/Panel Count/);
+    expect(texts()).toMatch(/Panels \| 6 \| +fit/);
+    expect(tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && /panel count|more panels|fewer panels/i.test(n.props.accessibilityLabel ?? ''))).toHaveLength(0);
+  });
+
+  test('the Panels tile shows a dash before placement', async () => {
+    await renderPreview();
+    expect(texts()).toMatch(/Panels \| —/);
+    expect(texts()).not.toMatch(/fit/);
+  });
+});
+
+describe('Full-screen roof editor', () => {
+  const editor = () => tree.root.findAll(n => (n.type as any) === 'Modal').find(m => m.findAll(c => (c.type as any) === 'Text').some(c => c.props.children === 'Edit roof layout'));
+  const polygons = () => tree.root.findAll(n => (n.type as any) === 'Polygon');
+  const red = () => require('../src/theme/tokens').darkTokens.redText;
+  const finish = () => tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Finish Obstacle')[0];
+  const previewCanvas = () => tree.root.findAll(n => (n.type as any) === 'View' && /^Roof preview/.test(n.props.accessibilityLabel ?? ''))[0];
+  // Roof from savedRoof is a triangle (100,100) (900,100) (900,600); in a 300px canvas that is (30,30) (270,30) (270,180).
+
+  test('the Design tab shows a read-only preview and an Edit roof layout button, with no editor yet', async () => {
+    roofResponse = async () => savedRoof;
+    await renderPreview();
+    expect(editor()).toBeUndefined();
+    expect(previewCanvas()).toBeTruthy();
+    expect(previewCanvas().props.onResponderRelease).toBeUndefined();
+    expect(tree.root.findAll(n => (n.type as any) === 'View' && /^Roof corner/.test(n.props.accessibilityLabel ?? ''))).toHaveLength(0);
+    expect(tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Undo Last Point')).toHaveLength(0);
+    expect(tree.root.findAll(n => (n.type as any) === 'Rect')).toHaveLength(1);
+  });
+
+  test('the preview shows the finished drawing without editing handles, whatever mode the editor was left in', async () => {
+    roofResponse = async () => ({ ...savedRoof, geometry: { ...savedRoof.geometry, obstacles: [[{ x: 500, y: 150 }, { x: 700, y: 150 }, { x: 700, y: 300 }]] } });
+    await renderPreview();
+    await press('Edit roof layout');
+    await press('Obstacle');
+    // In the editor: 3 roof corners, 3 obstacle corners and 2 scale points.
+    expect(tree.root.findAll(n => (n.type as any) === 'Circle')).toHaveLength(8);
+    await press('Done editing roof');
+    // In the preview only the two scale points remain.
+    const circles = tree.root.findAll(n => (n.type as any) === 'Circle');
+    expect(circles).toHaveLength(2);
+    expect(circles.every(c => c.props.fill === require('../src/theme/tokens').darkTokens.cyanText)).toBe(true);
+  });
+
+  test('Edit roof layout opens the editor with the mode switch, toolbar, Done and Cancel', async () => {
+    await renderPreview();
+    await press('Edit roof layout');
+    expect(editor()).toBeTruthy();
+    for (const name of ['Roof', 'Obstacle', 'Scale', 'Undo Last Point', 'Finish Obstacle', 'Remove Last Obstacle', 'Done editing roof', 'Cancel roof edit']) {
+      expect(tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === name).length).toBeGreaterThan(0);
+    }
+    expect(canvas()).toBeTruthy();
+  });
+
+  test('Done keeps the edit on the Design tab', async () => {
+    await renderPreview();
+    await press('Edit roof layout');
+    await act(async () => { canvas().props.onLayout({ nativeEvent: { layout: { width: 300 } } }); });
+    await tapCanvas(30, 30); await tapCanvas(270, 30); await tapCanvas(270, 180);
+    await press('Done editing roof');
+    expect(editor()).toBeUndefined();
+    expect(input(VERTICES).props.value).toBe('100,100; 900,100; 900,600');
+    expect(previewCanvas().props.accessibilityLabel).toMatch(/3 roof vertices/);
+    // A brand-new roof was never calculated, so it is not called outdated.
+    expect(texts()).toMatch(/Not calculated yet\. Press Calculate Placement\./);
+    expect(texts()).not.toMatch(/Outdated/);
+  });
+
+  test('Cancel discards everything done in the editor', async () => {
+    roofResponse = async () => savedRoof;
+    await renderPreview();
+    await press('Edit roof layout');
+    await act(async () => { canvas().props.onLayout({ nativeEvent: { layout: { width: 300 } } }); });
+    await tapCanvas(100, 100);
+    await press('Obstacle');
+    await press('Scale');
+    await type('Measured scale distance (m)', '99');
+    expect(input(VERTICES).props.value).toBe('100,100; 900,100; 900,600; 333,333');
+    await press('Cancel roof edit');
+    expect(editor()).toBeUndefined();
+    expect(input(VERTICES).props.value).toBe('100,100; 900,100; 900,600');
+    expect(input('Measured scale distance (m)').props.value).toBe('12');
+    expect(texts()).not.toMatch(/Outdated/);
+    expect(texts()).toMatch(/Usable Area \| 30\.0/);
+  });
+
+  test('Android back closes the editor like Cancel', async () => {
+    roofResponse = async () => savedRoof;
+    await renderPreview();
+    await press('Edit roof layout');
+    await act(async () => { canvas().props.onLayout({ nativeEvent: { layout: { width: 300 } } }); });
+    await tapCanvas(100, 100);
+    await act(async () => { editor()!.props.onRequestClose(); });
+    expect(editor()).toBeUndefined();
+    expect(input(VERTICES).props.value).toBe('100,100; 900,100; 900,600');
+  });
+
+  test('the canvas is fitted into the space left by the toolbar, and the toolbar scrolls instead of pushing it', async () => {
+    roofResponse = async () => savedRoof;
+    await renderPreview();
+    await press('Edit roof layout');
+    const area = tree.root.findAll(n => (n.type as any) === 'View' && typeof n.props.onLayout === 'function' && n.props.style?.flex === 1 && n.props.style?.justifyContent === 'center')[0];
+    expect(area.props.style).toMatchObject({ minHeight: 0, overflow: 'hidden' });
+    // A short area: 376 wide, 300 tall. The 1000 x 700 roof must fit 300 - 16 - 52 = 232px of height.
+    await act(async () => { area.props.onLayout({ nativeEvent: { layout: { width: 376, height: 300 } } }); });
+    const fit = () => { let n: any = canvas(); while (n && n.props.style?.alignSelf !== 'center') n = n.parent; return n.props.style; };
+    const style = fit();
+    expect(style.width).toBeCloseTo(232 * 1000 / 700, 0);
+    expect(style.alignSelf).toBe('center');
+    // A roomy area is limited by width instead.
+    await act(async () => { area.props.onLayout({ nativeEvent: { layout: { width: 376, height: 900 } } }); });
+    expect(fit().width).toBe(360);
+    const toolbar = tree.root.findAll(n => (n.type as any) === 'ScrollView' && n.props.style?.maxHeight === '50%');
+    expect(toolbar).toHaveLength(1);
+    expect(toolbar[0].findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Undo Last Point')).toHaveLength(1);
+  });
+
+  test('the scale distance field is in the editor in Scale mode', async () => {
+    await renderPreview();
+    await press('Edit roof layout');
+    await press('Scale');
+    const field = input('Measured scale distance (m)');
+    expect(field).toBeTruthy();
+    let n: any = field; let insideEditor = false;
+    while (n) { if (n === editor()) insideEditor = true; n = n.parent; }
+    expect(insideEditor).toBe(true);
+  });
+
+  test('an empty roof gets a canvas shaped like the editor area, never shorter than the default', async () => {
+    await renderPreview();
+    await press('Edit roof layout');
+    const area = tree.root.findAll(n => (n.type as any) === 'View' && typeof n.props.onLayout === 'function' && n.props.style?.flex === 1 && n.props.style?.justifyContent === 'center')[0];
+    await act(async () => { area.props.onLayout({ nativeEvent: { layout: { width: 376, height: 600 } } }); });
+    await act(async () => { canvas().props.onLayout({ nativeEvent: { layout: { width: 360 } } }); });
+    // 1000 * 584 / 360 = 1622, capped at 1400.
+    expect(canvas().props.style.height).toBeCloseTo(360 * 1400 / 1000);
+  });
+});
+
+describe('Obstacle validation in the editor', () => {
+  const finish = () => tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Finish Obstacle')[0];
+  const polygons = () => tree.root.findAll(n => (n.type as any) === 'Polygon');
+  const redText = () => require('../src/theme/tokens').darkTokens.redText;
+  const startObstacle = async () => { roofResponse = async () => savedRoof; await render(); await press('Obstacle'); };
+
+  test('fewer than 3 corners keeps Finish disabled with the reason', async () => {
+    await startObstacle();
+    await tapCanvas(150, 45); await tapCanvas(210, 45);
+    expect(finish().props.disabled).toBe(true);
+    expect(texts()).toMatch(/Finish needs at least 3 obstacle corners/);
+  });
+
+  test('a bow-tie obstacle gets a red outline and a message, and cannot be finished', async () => {
+    await startObstacle();
+    await tapCanvas(150, 45); await tapCanvas(210, 90); await tapCanvas(210, 45); await tapCanvas(150, 90);
+    expect(finish().props.disabled).toBe(true);
+    expect(texts()).toMatch(/The obstacle crosses itself/);
+    expect(polygons().some(p => p.props.stroke === redText())).toBe(true);
+    await press('Finish Obstacle');
+    expect(tree.root.findAll(n => (n.type as any) === 'Polygon').filter(p => p.props.fillOpacity === 0.35)).toHaveLength(0);
+  });
+
+  test('an obstacle outside the roof is refused with a message and a red outline', async () => {
+    await startObstacle();
+    await tapCanvas(30, 150); await tapCanvas(100, 150); await tapCanvas(100, 190);
+    expect(finish().props.disabled).toBe(true);
+    expect(texts()).toMatch(/The obstacle must stay inside the roof/);
+    expect(polygons().some(p => p.props.stroke === redText())).toBe(true);
+  });
+
+  test('an obstacle with no roof asks for the roof first', async () => {
+    await render();
+    await press('Obstacle');
+    await tapCanvas(100, 100); await tapCanvas(150, 100); await tapCanvas(150, 140);
+    expect(finish().props.disabled).toBe(true);
+    expect(texts()).toMatch(/Draw the roof outline first/);
+  });
+
+  test('a valid obstacle is accepted, drawn muted and not red', async () => {
+    await startObstacle();
+    await tapCanvas(150, 45); await tapCanvas(210, 45); await tapCanvas(210, 90);
+    expect(finish().props.disabled).toBe(false);
+    expect(polygons().some(p => p.props.stroke === redText())).toBe(false);
+    await press('Finish Obstacle');
+    expect(polygons().filter(p => p.props.fillOpacity === 0.35)).toHaveLength(1);
+  });
+
+  test('moving a roof corner so an obstacle sticks out marks it red', async () => {
+    await startObstacle();
+    await tapCanvas(150, 45); await tapCanvas(210, 45); await tapCanvas(210, 90);
+    await press('Finish Obstacle');
+    await press('Roof');
+    await gesture([270, 30], [100, 30]);
+    expect(polygons().some(p => p.props.stroke === redText())).toBe(true);
+    expect(texts()).toMatch(/Obstacle 1 is outside the roof/);
+  });
+});
+
+describe('Invalid geometry is not sent to the API', () => {
+  const setup = async () => { roofResponse = async () => savedRoof; await render(); };
+
+  test('a self-crossing roof is blocked before Calculate Placement and Save Roof', async () => {
+    await setup();
+    await type(VERTICES, '100,100; 900,600; 900,100; 100,600');
+    await press('Calculate Placement');
+    expect(post).not.toHaveBeenCalled();
+    expect(texts()).toMatch(/roof outline crosses itself/);
+    await press('Save Roof');
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  test('a roof with fewer than 3 corners is not sent', async () => {
+    await setup();
+    await type(VERTICES, '100,100; 900,600');
+    await press('Calculate Placement');
+    expect(post).not.toHaveBeenCalled();
+    expect(texts()).toMatch(/at least 3 corners/);
+  });
+
+  test('an obstacle that sticks out of the roof is not sent, and the message names it', async () => {
+    roofResponse = async () => ({ ...savedRoof, geometry: { ...savedRoof.geometry, obstacles: [[{ x: 100, y: 500 }, { x: 200, y: 500 }, { x: 200, y: 600 }]] } });
+    await render();
+    await press('Calculate Placement');
+    expect(post).not.toHaveBeenCalled();
+    expect(texts()).toMatch(/Obstacle 1: The obstacle must stay inside the roof/);
+  });
+
+  test('a valid roof is still sent', async () => {
+    await setup();
+    await press('Calculate Placement');
+    expect(post).toHaveBeenCalledTimes(1);
+  });
+
+  test('a server rejection of a preview is also shown as a plain sentence', async () => {
+    await setup();
+    post.mockRejectedValueOnce(new SolvantaApiError(422, { detail: [{ loc: ['body'], msg: 'Value error, Obstacle must be a valid polygon inside the roof' }] }));
+    await press('Calculate Placement');
+    expect(texts()).toMatch(/Obstacle must stay inside the roof and not cross itself/);
+    expect(texts()).not.toMatch(/Value error/);
+  });
+
+  test('a blocked or failed calculation shows as a warning under the preview; ordinary notes stay neutral', async () => {
+    roofResponse = async () => ({ ...savedRoof, geometry: { ...savedRoof.geometry, obstacles: [[{ x: 100, y: 500 }, { x: 200, y: 500 }, { x: 200, y: 600 }]] } });
+    await renderPreview();
+    const statusTone = () => { const icon = tree.root.findAll(n => (n.type as any) === 'View' && n.props.accessibilityLiveRegion === 'polite')[0]; return icon.props.style.backgroundColor; };
+    const { darkTokens } = require('../src/theme/tokens');
+    expect(statusTone()).toBe(darkTokens.surfaceElevated);
+    await press('Calculate Placement');
+    expect(texts()).toMatch(/Obstacle 1: The obstacle must stay inside the roof/);
+    expect(statusTone()).toBe(darkTokens.amberTint);
+  });
+
+  test('the status message is shown under the preview so a failed save is not hidden', async () => {
+    roofResponse = async () => savedRoof;
+    await renderPreview();
+    put.mockRejectedValueOnce(new SolvantaApiError(422, { detail: 'Calibrated canvas must be at most 200 m on each axis' }));
+    await press('Save Roof');
+    let card: any = tree.root.findAll(n => (n.type as any) === 'View' && /^Roof preview/.test(n.props.accessibilityLabel ?? ''))[0];
+    while (card && !card.findAll((c: any) => (c.type as any) === 'Text' && c.props.children === 'Roof layout').length) card = card.parent;
+    const text = card.findAll((c: any) => (c.type as any) === 'Text').map((c: any) => [c.props.children].flat(Infinity).join('')).join(' | ');
+    expect(text).toMatch(/larger than 200 m/);
+  });
+});
+
+describe('Professional editor tools', () => {
+  // 300px canvas, roof 1000 x 700 units: one screen pixel is 10/3 roof units. savedRoof is the triangle
+  // (100,100) (900,100) (900,600), shown at (30,30) (270,30) (270,180), with 800 units measured as 12 m.
+  const label = (prefix: string) => tree.root.findAll(n => (n.type as any) === 'View' && (n.props.accessibilityLabel ?? '').startsWith(prefix));
+  const textsIn = (node: any) => node.findAll((c: any) => (c.type as any) === 'Text').map((c: any) => [c.props.children].flat(Infinity).join('')).join(' | ');
+  const obstacles = () => tree.root.findAll(n => (n.type as any) === 'Polygon' && n.props.fillOpacity === 0.35).map(p => p.props.points.split(' ').map((xy: string) => xy.split(',').map(Number)));
+  const button = (name: string) => tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === name)[0];
+  const withRoof = async () => { roofResponse = async () => savedRoof; await render(); };
+
+  describe('snapping', () => {
+    test('is on by default: a point near a grid line jumps to it and says so', async () => {
+      await render();
+      expect(button('Snap to grid and right angles').props.accessibilityState?.selected ?? true).toBeTruthy();
+      await tapCanvas(62, 30);
+      expect(input(VERTICES).props.value).toBe('200,100');
+      expect(label('Snapped to grid')).toHaveLength(1);
+    });
+
+    test('an edge close to horizontal is straightened, which keeps right angles', async () => {
+      await render();
+      await tapCanvas(30, 30);
+      await tapCanvas(152, 33);
+      expect(input(VERTICES).props.value).toBe('100,100; 507,100');
+      expect(label('Snapped to right angle')).toHaveLength(1);
+    });
+
+    test('the edge back to the first corner is squared up too, so a box drawn by eye closes square', async () => {
+      await render();
+      await tapCanvas(30, 30); await tapCanvas(270, 30); await tapCanvas(270, 180);
+      await tapCanvas(36, 180);
+      expect(input(VERTICES).props.value).toBe('100,100; 900,100; 900,600; 100,600');
+      expect(label('Snapped to right angle')).toHaveLength(1);
+    });
+
+    test('can be turned off from the toolbar', async () => {
+      await render();
+      await press('Snap to grid and right angles');
+      expect(texts()).toMatch(/Snap off/);
+      await tapCanvas(62, 30); await tapCanvas(152, 33);
+      expect(input(VERTICES).props.value).toBe('207,100; 507,110');
+      expect(label('Snapped to')).toHaveLength(0);
+    });
+
+    test('scale points are never snapped', async () => {
+      await render();
+      await press('Scale');
+      await tapCanvas(62, 31);
+      expect(tree.root.findAll(n => (n.type as any) === 'Circle' && n.props.cx === 207 && n.props.cy === 103)).toHaveLength(1);
+    });
+  });
+
+  describe('corners and edges', () => {
+    test('dragging a roof corner moves it, and Undo and Redo step through the drag', async () => {
+      await withRoof();
+      await gesture([270, 180], [240, 150]);
+      expect(input(VERTICES).props.value).toBe('100,100; 900,100; 800,500');
+      await press('Undo Last Point');
+      expect(input(VERTICES).props.value).toBe('100,100; 900,100; 900,600');
+      await press('Redo');
+      expect(input(VERTICES).props.value).toBe('100,100; 900,100; 800,500');
+    });
+
+    test('a press away from any corner pans instead of moving a corner or adding a point', async () => {
+      await withRoof();
+      await gesture([150, 150], [190, 150]);
+      expect(input(VERTICES).props.value).toBe('100,100; 900,100; 900,600');
+    });
+
+    test('holding a corner deletes it', async () => {
+      await withRoof();
+      jest.useFakeTimers();
+      try {
+        act(() => { canvas().props.onResponderGrant({ nativeEvent: { locationX: 270, locationY: 30, pageX: 270, pageY: 30, touches: [{}] } }); });
+        act(() => { jest.advanceTimersByTime(600); });
+        act(() => { canvas().props.onResponderRelease({ nativeEvent: { locationX: 270, locationY: 30, pageX: 270, pageY: 30, touches: [] } }); });
+      } finally { jest.useRealTimers(); }
+      expect(input(VERTICES).props.value).toBe('100,100; 900,600');
+    });
+
+    test('a short press on a corner neither deletes it nor adds a point', async () => {
+      await withRoof();
+      await gesture([270, 30], [272, 31]);
+      expect(input(VERTICES).props.value).toBe('100,100; 900,100; 900,600');
+    });
+
+    test('tapping an edge inserts a corner on it', async () => {
+      await withRoof();
+      await tapCanvas(150, 31);
+      expect(input(VERTICES).props.value).toBe('100,100; 500,100; 900,100; 900,600');
+    });
+  });
+
+  describe('readouts', () => {
+    test('each roof edge shows its length in metres from the measured scale', async () => {
+      await withRoof();
+      expect(label('Edge ').map(v => v.props.accessibilityLabel)).toEqual(['Edge 1: 12.0 metres', 'Edge 2: 7.5 metres', 'Edge 3: 14.2 metres']);
+    });
+
+    test('no metres are shown without a scale', async () => {
+      await render();
+      await press('Start with a rectangle');
+      expect(label('Edge ')).toHaveLength(0);
+      expect(textsIn(tree.root)).not.toMatch(/\d m\b/);
+    });
+
+    test('clearing the measured distance removes the lengths', async () => {
+      await withRoof();
+      await press('Scale');
+      await type('Measured scale distance (m)', '');
+      expect(label('Edge ')).toHaveLength(0);
+    });
+
+    test('the live bar shows measured roof area, last usable area and panels, and goes Outdated after edits', async () => {
+      await withRoof();
+      const bar = () => textsIn(label('Roof readout')[0]);
+      expect(bar()).toBe('Roof area | 45.0 m² | Usable area | 30.0 m² | Panels | 6');
+      await tapCanvas(150, 150);
+      expect(bar()).toMatch(/Usable area \| — \| Panels \| — \| Outdated/);
+      expect(bar()).toMatch(/^Roof area \| \d+\.\d m²/);
+    });
+
+    test('the live bar shows dashes without a roof or scale', async () => {
+      await render();
+      expect(textsIn(label('Roof readout')[0])).toBe('Roof area | — | Usable area | — | Panels | — | Not calculated yet');
+      // Drawing a new roof is not "outdated": nothing was calculated yet.
+      await tapCanvas(30, 30); await tapCanvas(270, 30); await tapCanvas(270, 180);
+      expect(textsIn(label('Roof readout')[0])).toMatch(/Not calculated yet$/);
+      expect(textsIn(label('Roof readout')[0])).not.toMatch(/Outdated/);
+    });
+
+    test('the setback band is drawn only when there is a setback and a scale', async () => {
+      await withRoof();
+      const bands = () => tree.root.findAll(n => (n.type as any) === 'Polygon' && n.props.fill === 'url(#setbackHatch)');
+      expect(bands()).toHaveLength(3);
+      expect(tree.root.findAll(n => (n.type as any) === 'Pattern' && n.props.id === 'setbackHatch')).toHaveLength(1);
+      await press('Scale');
+      await type('Measured scale distance (m)', '');
+      expect(bands()).toHaveLength(0);
+    });
+  });
+
+  describe('zoom and pan', () => {
+    const zoomLabel = () => label('Zoom ')[0].props.accessibilityLabel;
+    const content = () => canvas().findAll((n: any) => (n.type as any) === 'View' && n.props.pointerEvents === 'none' && n.props.style?.position === 'absolute' && typeof n.props.style?.width === 'number')[0];
+
+    test('zoom buttons change the zoom and Reset view returns to the whole roof', async () => {
+      await withRoof();
+      expect(zoomLabel()).toBe('Zoom 100 percent');
+      expect(button('Reset view').props.disabled).toBe(true);
+      await press('Zoom in');
+      expect(zoomLabel()).toBe('Zoom 150 percent');
+      expect(content().props.style.width).toBe(450);
+      expect(button('Reset view').props.disabled).toBe(false);
+      await press('Reset view');
+      expect(zoomLabel()).toBe('Zoom 100 percent');
+      expect(content().props.style).toMatchObject({ left: 0, top: 0, width: 300 });
+    });
+
+    test('the zoom buttons sit under the canvas, so they never cover a roof corner', async () => {
+      await withRoof();
+      const inside = canvas().findAll((n: any) => n.props.accessibilityLabel === 'Zoom in' || n.props.accessibilityLabel === 'Reset view');
+      expect(inside).toHaveLength(0);
+      for (const name of ['Zoom in', 'Zoom out', 'Reset view']) {
+        const b = button(name);
+        expect(b.props.style.width).toBe(44);
+        expect(b.props.style.height).toBe(44);
+        expect(b.props.style.position).toBeUndefined();
+      }
+    });
+
+    test('pinching zooms, up to 4x, and Reset view undoes it', async () => {
+      await withRoof();
+      const two = (d: number) => ({ nativeEvent: { pageX: 150 - d, pageY: 100, touches: [{ pageX: 150 - d, pageY: 100 }, { pageX: 150 + d, pageY: 100 }] } });
+      await act(async () => { canvas().props.onResponderGrant({ nativeEvent: { locationX: 120, locationY: 100, pageX: 120, pageY: 100, touches: [{}] } }); });
+      await act(async () => { canvas().props.onResponderMove(two(30)); });
+      await act(async () => { canvas().props.onResponderMove(two(60)); });
+      expect(zoomLabel()).toBe('Zoom 200 percent');
+      await act(async () => { canvas().props.onResponderMove(two(600)); });
+      expect(zoomLabel()).toBe('Zoom 400 percent');
+      await act(async () => { canvas().props.onResponderRelease({ nativeEvent: { pageX: 150, pageY: 100, locationX: 150, locationY: 100, touches: [] } }); });
+      expect(input(VERTICES).props.value).toBe('100,100; 900,100; 900,600');
+      await press('Reset view');
+      expect(zoomLabel()).toBe('Zoom 100 percent');
+    });
+
+    test('when zoomed, dragging pans and taps still land on the right roof point', async () => {
+      await render();
+      await press('Zoom in');
+      await press('Zoom in');
+      // 2.25x around the centre, then pan fully to the top left.
+      await gesture([20, 20], [300, 300]);
+      expect(content().props.style).toMatchObject({ left: 0, top: 0 });
+      await tapCanvas(45, 45);
+      // 45px at 2.25x is 20px unzoomed, which is 67 roof units.
+      expect(input(VERTICES).props.value).toBe('67,67');
+    });
+  });
+
+  describe('obstacle quick shapes', () => {
+    test('Rectangle adds a rectangle in the middle of the roof, selected and valid', async () => {
+      await withRoof();
+      await press('Obstacle');
+      await press('Add rectangle obstacle');
+      const [ring] = obstacles();
+      expect(ring).toEqual([[583, 227], [683, 227], [683, 307], [583, 307]]);
+      expect(tree.root.findAll(n => (n.type as any) === 'TextInput' && n.props.accessibilityLabel === 'Obstacle 1 name')).toHaveLength(1);
+      expect(texts()).not.toMatch(/outside the roof/);
+    });
+
+    test('on an L-shaped roof the new shape lands inside the roof, not in the notch', async () => {
+      const L = [{ x: 100, y: 100 }, { x: 800, y: 100 }, { x: 800, y: 350 }, { x: 450, y: 350 }, { x: 450, y: 650 }, { x: 100, y: 650 }];
+      roofResponse = async () => ({ ...savedRoof, geometry: { ...savedRoof.geometry, boundary: L } });
+      await render();
+      await press('Obstacle');
+      for (const shape of ['Add rectangle obstacle', 'Add circle obstacle']) {
+        await press(shape);
+        expect(texts()).not.toMatch(/outside the roof/);
+        expect(tree.root.findAll(n => (n.type as any) === 'Polygon' && n.props.stroke === require('../src/theme/tokens').darkTokens.redText)).toHaveLength(0);
+        await press('Remove Last Obstacle');
+      }
+    });
+
+    test('Circle adds a 16-sided polygon', async () => {
+      await withRoof();
+      await press('Obstacle');
+      await press('Add circle obstacle');
+      expect(obstacles()[0]).toHaveLength(16);
+    });
+
+    test('dragging a rectangle corner resizes it and keeps it a rectangle', async () => {
+      await withRoof();
+      await press('Obstacle');
+      await press('Add rectangle obstacle');
+      // Corner (683,307) is at about (205,92) on screen.
+      await gesture([205, 92], [235, 112]);
+      const [ring] = obstacles();
+      expect(ring[0]).toEqual([583, 227]);
+      expect(ring[1][1]).toBe(227); expect(ring[3][0]).toBe(583);
+      expect(ring[2][0]).toBe(ring[1][0]); expect(ring[2][1]).toBe(ring[3][1]);
+      expect(ring[2][0]).toBeGreaterThan(683);
+    });
+
+    test('dragging inside an obstacle moves it', async () => {
+      await withRoof();
+      await press('Obstacle');
+      await press('Add rectangle obstacle');
+      await gesture([190, 80], [220, 80]);
+      expect(obstacles()[0][0]).toEqual([683, 227]);
+    });
+
+    test('a name can be typed and is drawn on the obstacle; without a name it reads Obstacle', async () => {
+      await withRoof();
+      await press('Obstacle');
+      await press('Add rectangle obstacle');
+      const nameTexts = () => canvas().findAll((n: any) => (n.type as any) === 'Text').map((n: any) => n.props.children);
+      expect(nameTexts()).toContain('Obstacle');
+      await type('Obstacle 1 name', 'Water tank');
+      expect(nameTexts()).toContain('Water tank');
+      expect(texts()).toMatch(/names are not saved/);
+    });
+
+    test('shapes still go through validation', async () => {
+      await withRoof();
+      await press('Obstacle');
+      await press('Add rectangle obstacle');
+      // Drag the whole rectangle to the left edge, outside the triangle.
+      await gesture([190, 80], [20, 160]);
+      expect(texts()).toMatch(/Obstacle 1 is outside the roof/);
+      await press('Calculate Placement');
+      expect(post).not.toHaveBeenCalled();
+    });
+
+    test('without a roof, a shape cannot be added', async () => {
+      await render();
+      await press('Obstacle');
+      await press('Add circle obstacle');
+      expect(obstacles()).toHaveLength(0);
+      expect(texts()).toMatch(/Draw the roof outline first/);
+    });
+
+    test('Remove and Undo keep names in step with obstacles', async () => {
+      await withRoof();
+      await press('Obstacle');
+      await press('Add rectangle obstacle');
+      await type('Obstacle 1 name', 'Tank');
+      await press('Remove Last Obstacle');
+      expect(obstacles()).toHaveLength(0);
+      await press('Undo Last Point');
+      expect(obstacles()).toHaveLength(1);
+      expect(canvas().findAll((n: any) => (n.type as any) === 'Text').map((n: any) => n.props.children)).toContain('Tank');
+    });
+  });
+});
+
+describe('Panel orientation', () => {
+  const value = (label: string) => tree.root.findAll(n => (n.type as any) === 'TextInput' && n.props.accessibilityLabel === label)[0].props.value;
+  test('Landscape swaps the panel width and height fields, and Portrait swaps them back', async () => {
+    roofResponse = async () => savedRoof;
+    await renderPreview();
+    expect([value('Panel width (m)'), value('Panel height (m)')]).toEqual(['1.1', '2']);
+    await press('Landscape');
+    expect([value('Panel width (m)'), value('Panel height (m)')]).toEqual(['2', '1.1']);
+    expect(texts()).toMatch(/Outdated: the roof changed/);
+    await press('Landscape');
+    expect([value('Panel width (m)'), value('Panel height (m)')]).toEqual(['2', '1.1']);
+    await press('Portrait');
+    expect([value('Panel width (m)'), value('Panel height (m)')]).toEqual(['1.1', '2']);
   });
 });

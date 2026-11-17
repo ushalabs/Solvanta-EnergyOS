@@ -77,10 +77,11 @@ export function ChipGroup({ children }: { children: React.ReactNode }) {
   return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm }}>{children}</View>;
 }
 export { Toggle };
-export function Metric({ label, value, unit, tone = 'primary' }: { label: string; value: string | number; unit?: string; tone?: Tone }) {
+/** `compact` fits three tiles in one row: they share the width equally and use a smaller figure. */
+export function Metric({ label, value, unit, tone = 'primary', compact = false }: { label: string; value: string | number; unit?: string; tone?: Tone; compact?: boolean }) {
   const { tokens: t } = useTheme();
   const color = useToneColor();
-  return <View accessible accessibilityLabel={`${label}: ${value}${unit ? ` ${unit}` : ''}`} style={{ flexGrow: 1, flexBasis: 130, padding: 12, gap: 2, borderRadius: RADIUS.md, backgroundColor: t.surfaceElevated }}><Text style={{ color: t.textSecondary, fontSize: TYPOGRAPHY.caption, lineHeight: 17 }}>{label}</Text><Text style={{ color: color(tone), fontSize: 22, lineHeight: 28, fontWeight: '700' }}>{value}{unit && <Text style={{ color: t.textSecondary, fontSize: 13, fontWeight: '600' }}> {unit}</Text>}</Text></View>;
+  return <View accessible accessibilityLabel={`${label}: ${value}${unit ? ` ${unit}` : ''}`} style={{ flexGrow: 1, flexBasis: compact ? 0 : 130, minWidth: compact ? 0 : undefined, padding: 12, gap: 2, borderRadius: RADIUS.md, backgroundColor: t.surfaceElevated }}><Text style={{ color: t.textSecondary, fontSize: TYPOGRAPHY.caption, lineHeight: 17 }}>{label}</Text><Text style={{ color: color(tone), fontSize: compact ? 19 : 22, lineHeight: compact ? 25 : 28, fontWeight: '700' }}>{value}{unit && <Text style={{ color: t.textSecondary, fontSize: 13, fontWeight: '600' }}> {unit}</Text>}</Text></View>;
 }
 export function MetricGrid({ children }: { children: React.ReactNode }) {
   return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm }}>{children}</View>;
@@ -129,6 +130,16 @@ export function useBuildings() {
   }, []));
   const select=(value:string)=>{if(buildings.some(b=>b.id===value)){setId(value);if(selectionKey)AsyncStorage.setItem(selectionKey,value).catch(()=>{});}};
   return { buildings, id, setId:select, error };
+}
+/** Screen title with the building as one line and a chevron; tapping it opens the building picker. */
+export function BuildingHeader({ title, building }: { title: string; building: ReturnType<typeof useBuildings> }) {
+  const [choosing, setChoosing] = useState(false);
+  const selected = building.buildings.find(b => b.id === building.id);
+  const place = selected?.address?.split(',')[0].trim();
+  return <>
+    <ScreenHeader title={title} subtitle={selected ? `${selected.name}${place ? ` · ${place}` : ''}` : 'Choose a building'} onTitlePress={() => setChoosing(!choosing)} titlePressLabel={selected ? `Change building: ${selected.name}` : 'Choose a building'} />
+    {(choosing || !!building.error || !building.id) && <BuildingPicker state={building} />}
+  </>;
 }
 export function BuildingPicker({ state }: { state: ReturnType<typeof useBuildings> }) {
   const { tokens: t } = useTheme();
