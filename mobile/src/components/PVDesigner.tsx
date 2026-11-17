@@ -25,6 +25,7 @@ export function PVDesigner({ buildingId, onSummary }: { buildingId: string; onSu
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [known, setKnown] = useState(false);
+  const [expert, setExpert] = useState(false);
   useEffect(() => {
     const number = (text: string) => known && text.trim() && Number.isFinite(Number(text)) ? Number(text) : null;
     onSummary?.({ profile, wattageW: number(fields.module_wattage_w), tiltDeg: number(fields.tilt_deg), azimuthDeg: number(fields.azimuth_deg) });
@@ -57,9 +58,12 @@ export function PVDesigner({ buildingId, onSummary }: { buildingId: string; onSu
   }
   return <Card><CardHeader title="PV design & generation estimate" icon={<Sun size={18} color={t.limeText} />} /><Label tone="secondary" caption>Panel count comes from the saved roof layout. Save roof edits before calculating. These design assumptions do not overwrite installed equipment in Settings.</Label>
     <FieldRow>{(Object.keys(defaults) as Array<keyof typeof defaults>).map(k => <Field key={k} label={labels[k]} numeric value={fields[k]} onChange={v => { setFields({ ...fields, [k]: v }); dirty(); }} />)}</FieldRow>
+    <Action title={expert ? 'Hide expert settings' : 'Expert settings'} variant="secondary" onPress={() => setExpert(!expert)} />
+    <View style={expert ? { gap: 16 } : { display: 'none' }}>
     <Toggle label="Optional reference string voltage checks" a11yLabel="Check string voltages" value={checkStrings} onValueChange={v => { setCheckStrings(v); dirty(); }} />
     {checkStrings && <FieldRow>{(Object.keys(stringDefaults) as Array<keyof typeof stringDefaults>).map(k => <Field key={k} label={stringLabels[k]} numeric value={strings[k]} onChange={v => { setStrings({ ...strings, [k]: v }); dirty(); }} />)}</FieldRow>}
     <Field label="Optional hourly plane-of-array irradiance (24 comma-separated W/m² values)" value={irradiance} onChange={v => { setIrradiance(v); dirty(); }} hint="Blank irradiance uses a synthetic equinox solar day. Supplied values are already on the panel plane, so tilt/azimuth are not applied again." />
+    </View>
     <ActionRow><Action title="Calculate PV Estimate" variant="secondary" disabled={!buildingId || busy} onPress={() => calculate(false)} /><Action title="Save PV Design" disabled={!buildingId || busy} onPress={() => calculate(true)} /></ActionRow>
     <Message>{message}</Message>
     {profile && <><MetricGrid><Metric label="Panels" value={profile.panel_count} /><Metric label="DC capacity" value={profile.dc_capacity_kwp.toFixed(2)} unit="kWp" /><Metric label="DC/AC ratio" value={profile.dc_ac_ratio.toFixed(2)} /><Metric label="Representative day" value={profile.daily_energy_kwh.toFixed(2)} unit="kWh" tone="accent" /></MetricGrid><Label tone="secondary" caption>{profile.source}</Label><Label tone="secondary" caption>{profile.time_basis}</Label>
