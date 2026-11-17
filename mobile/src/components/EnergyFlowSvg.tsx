@@ -1,199 +1,232 @@
-import React from 'react';
-import { StyleSheet, View, Text } from 'react-native';
-import Svg, { Circle, Line, Rect, Path, G } from 'react-native-svg';
+import React, { ReactNode, useEffect, useState } from 'react';
+import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
+import Svg, { Circle, Path } from 'react-native-svg';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  SharedValue,
+  useAnimatedProps,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
+import { Battery, House, Sun, UtilityPole, Zap } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeContext';
-import { SPACING, RADIUS } from '../theme/tokens';
+import { SPACING } from '../theme/tokens';
+import type { Flow } from '../api/overview';
+import { EnergyMetricCard } from './EnergyMetricCard';
+import { flowPaths, nodeRects, pathD, Point, polylineLength, sameSize, Size } from './energyFlowPaths';
+
+export interface FlowNode {
+  /** Already formatted; a dash when there is no reading. */
+  value: string;
+  unit?: string;
+  subtext?: string;
+  /** A pulse runs on this node's line only while power is flowing. */
+  flow?: Flow;
+  a11yLabel?: string;
+}
 
 interface EnergyFlowSvgProps {
-  solarKw: number;
-  batterySocPct: number;
-  batteryFlowKw: number; // positive = discharge to home, negative = charge
-  loadKw: number;
-  gridAvailable: boolean;
+  solar: FlowNode;
+  grid: FlowNode;
+  battery: FlowNode & { socPct?: number | null };
+  home: FlowNode;
+  /** Drawn above the nodes, for example the house. The line to the hub starts at its bottom edge. */
+  children?: ReactNode;
+  /** How far above the bottom of `children` the line starts. */
+  originInset?: number;
+  /** Set false to keep the lines still. Reduced motion always keeps them still. */
+  animated?: boolean;
+}
+
+type NodeKey = 'solar' | 'grid' | 'battery' | 'home';
+
+const HUB_SIZE = 44;
+const COLUMN_GAP = 16;
+const ROW_GAP = 20;
+const LINE_WIDTH = 2;
+const DOT_RADIUS = 3.5;
+const PULSE_LENGTH = 18;
+const PULSE_MS = 2400;
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+/** A short bright dash that travels from the first point to the last. */
+function Pulse({ points, progress, color }: { points: Point[]; progress: SharedValue<number>; color: string }) {
+  const length = polylineLength(points);
+  const animatedProps = useAnimatedProps(() => ({
+    strokeDashoffset: PULSE_LENGTH - progress.value * (length + PULSE_LENGTH),
+  }));
+  return (
+    <AnimatedPath
+      testID="flow-pulse"
+      d={pathD(points)}
+      stroke={color}
+      strokeWidth={LINE_WIDTH + 1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+      strokeDasharray={`${PULSE_LENGTH} ${length + PULSE_LENGTH}`}
+      animatedProps={animatedProps}
+    />
+  );
 }
 
 export const EnergyFlowSvg: React.FC<EnergyFlowSvgProps> = ({
-  solarKw,
-  batterySocPct,
-  batteryFlowKw,
-  loadKw,
-  gridAvailable,
+  solar,
+  grid,
+  battery,
+  home,
+  children,
+  originInset = 0,
+  animated = true,
 }) => {
   const { tokens } = useTheme();
+  const reducedMotion = useReducedMotion();
+  const progress = useSharedValue(0);
+  // Only sizes are kept. On web a layout event fires when an element resizes, not when it merely moves,
+  // so positions read from events go stale. Positions are worked out from the sizes instead.
+  const [size, setSize] = useState<Size | null>(null);
+  const [topHeight, setTopHeight] = useState(0);
+  const [nodesWidth, setNodesWidth] = useState(0);
+  const [cards, setCards] = useState<Partial<Record<NodeKey, Size>>>({});
 
-  const isBatteryDischarging = batteryFlowKw > 0;
-  const isSolarGenerating = solarKw > 0.05;
+  const nodes: Record<NodeKey, FlowNode> = { solar, grid, battery, home };
+  const moving = animated && !reducedMotion && Object.values(nodes).some(n => n.flow);
+
+  useEffect(() => {
+    if (!moving) return;
+    progress.value = 0;
+    progress.value = withRepeat(withTiming(1, { duration: PULSE_MS, easing: Easing.linear }), -1, false);
+    return () => { cancelAnimation(progress); progress.value = 0; };
+  }, [moving, progress]);
+
+  const measure = (key: NodeKey) => (e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    setCards(previous => sameSize(previous[key], { width, height }) ? previous : { ...previous, [key]: { width, height } });
+  };
+
+  const { solar: solarSize, grid: gridSize, battery: batterySize, home: homeSize } = cards;
+  const paths = size && nodesWidth && solarSize && gridSize && batterySize && homeSize
+    ? flowPaths({
+        originY: topHeight - originInset,
+        ...nodeRects({ top: topHeight, width: nodesWidth, rowGap: ROW_GAP, solar: solarSize, grid: gridSize, battery: batterySize, home: homeSize }),
+      })
+    : null;
+
+  const icon = (Icon: React.ComponentType<any>) => <Icon size={18} color={tokens.limeText} />;
+  const card = (key: NodeKey, label: string, Icon: React.ComponentType<any>, extra?: { progressPct?: number | null; progressLabel?: string }) => (
+    <EnergyMetricCard
+      key={key}
+      label={label}
+      value={nodes[key].value}
+      unit={nodes[key].unit}
+      subtext={nodes[key].subtext}
+      a11yLabel={nodes[key].a11yLabel}
+      icon={icon(Icon)}
+      onLayout={measure(key)}
+      style={styles.node}
+      {...extra}
+    />
+  );
+
+  // A pulse follows the power: toward the hub from a source, away from it to a load.
+  const pulsePoints = (key: NodeKey): Point[] | null => {
+    const flow = nodes[key].flow;
+    if (!paths || !flow) return null;
+    return flow === 'in' ? [...paths[key]].reverse() : paths[key];
+  };
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: tokens.surface,
-          borderColor: tokens.border,
-        },
-      ]}
-    >
-      <View style={styles.headerRow}>
-        <Text style={[styles.headerTitle, { color: tokens.textSecondary }]}>
-          ENERGY FLOW DIGITAL TWIN
-        </Text>
-        <View style={[styles.liveBadge, { backgroundColor: tokens.surfaceElevated }]}>
-          <View style={[styles.pulseDot, { backgroundColor: tokens.amber }]} />
-          <Text style={[styles.liveBadgeText, { color: tokens.amber }]}>
-            OUTAGE SIMULATED
-          </Text>
-        </View>
+    <View testID="energy-flow" onLayout={e => setSize({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}>
+      {children ? <View testID="flow-top" onLayout={e => setTopHeight(e.nativeEvent.layout.height)}>{children}</View> : null}
+
+      <View testID="flow-nodes" style={styles.nodes} onLayout={e => setNodesWidth(e.nativeEvent.layout.width)}>
+        {card('solar', 'Solar', Sun)}
+        {card('grid', 'Grid', UtilityPole)}
+        {card('battery', 'Battery', Battery, {
+          progressPct: battery.socPct ?? null,
+          progressLabel: battery.socPct == null ? undefined : `${Math.round(battery.socPct)}%`,
+        })}
+        {card('home', 'Home', House)}
       </View>
 
-      <View style={styles.svgContainer}>
-        <Svg width="100%" height={160} viewBox="0 0 300 160">
-          {/* Connecting Lines */}
-          {/* Solar to Home (Top to Center) */}
-          <Line
-            x1="70"
-            y1="40"
-            x2="150"
-            y2="80"
-            stroke={isSolarGenerating ? tokens.lime : tokens.border}
-            strokeWidth="2.5"
-            strokeDasharray={isSolarGenerating ? '5,3' : undefined}
-          />
-          {/* Home to Battery (Center to Right) */}
-          <Line
-            x1="150"
-            y1="80"
-            x2="230"
-            y2="40"
-            stroke={isBatteryDischarging ? tokens.lime : tokens.border}
-            strokeWidth="2.5"
-            strokeDasharray={isBatteryDischarging ? '5,3' : undefined}
-          />
-          {/* Grid to Home (Bottom to Center) */}
-          <Line
-            x1="150"
-            y1="130"
-            x2="150"
-            y2="80"
-            stroke={gridAvailable ? tokens.cyan : tokens.red}
-            strokeWidth="2"
-            strokeDasharray={gridAvailable ? '4,4' : '2,4'}
-          />
-
-          {/* Node 1: Solar (Top Left) */}
-          <Circle cx="70" cy="40" r="24" fill={tokens.surfaceElevated} stroke={isSolarGenerating ? tokens.lime : tokens.border} strokeWidth="2" />
-          <G stroke={tokens.textSecondary} strokeWidth="2" fill="none">
-            <Circle cx="70" cy="40" r="7" />
-            <Path d="M70 26v-4 M70 54v4 M56 40h-4 M84 40h4 M60 30l-3-3 M80 50l3 3 M60 50l-3 3 M80 30l3-3" />
-          </G>
-
-          {/* Node 2: Battery (Top Right) */}
-          <Circle cx="230" cy="40" r="24" fill={tokens.surfaceElevated} stroke={tokens.lime} strokeWidth="2" />
-          <Rect x="218" y="33" width="22" height="14" rx="3" stroke={tokens.lime} strokeWidth="2" fill="none" />
-          <Path d="M243 37v6 M222 37v6 M227 37v6 M232 37v6" stroke={tokens.lime} strokeWidth="2" />
-
-          {/* Node 3: Home / Load (Center) */}
-          <Rect x="125" y="55" width="50" height="50" rx="14" fill={tokens.lime} />
-          <Path d="M136 78l14-12 14 12 M140 75v18h20V75 M147 93V83h6v10" fill="none" stroke={tokens.onLime} strokeWidth="2.5" strokeLinejoin="round" />
-
-          {/* Node 4: Grid (Bottom Center) */}
-          <Circle cx="150" cy="130" r="18" fill={tokens.surfaceElevated} stroke={gridAvailable ? tokens.cyan : tokens.red} strokeWidth="1.5" />
-          <Path d="M150 119l-8 12h7l-1 10 10-14h-8z" fill="none" stroke={gridAvailable ? tokens.cyan : tokens.red} strokeWidth="1.5" strokeLinejoin="round" />
+      {paths && size ? (
+        <Svg pointerEvents="none" width={size.width} height={size.height} style={styles.overlay}>
+          {(['main', 'solar', 'grid', 'battery', 'home'] as const).map(key => (
+            <Path
+              key={key}
+              testID="flow-line"
+              d={pathD(paths[key])}
+              stroke={tokens.limeMark}
+              strokeWidth={LINE_WIDTH}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          ))}
+          {(['solar', 'grid', 'battery', 'home'] as const).map(key => {
+            const end = paths[key][paths[key].length - 1];
+            return <Circle key={key} testID="flow-dot" cx={end.x} cy={end.y} r={DOT_RADIUS} fill={tokens.limeMark} />;
+          })}
+          {moving ? (
+            <>
+              <Pulse points={paths.main} progress={progress} color={tokens.limeBright} />
+              {(['solar', 'grid', 'battery', 'home'] as const).map(key => {
+                const points = pulsePoints(key);
+                return points ? <Pulse key={key} points={points} progress={progress} color={tokens.limeBright} /> : null;
+              })}
+            </>
+          ) : null}
         </Svg>
-      </View>
+      ) : null}
 
-      {/* Metric Labels under the SVG diagram */}
-      <View style={styles.metricsRow}>
-        <View style={styles.metricItem}>
-          <Text style={[styles.metricLabel, { color: tokens.textMuted }]}>Solar</Text>
-          <Text style={[styles.metricValue, { color: isSolarGenerating ? tokens.lime : tokens.textPrimary }]}>
-            {solarKw.toFixed(1)} kW
-          </Text>
+      {paths ? (
+        <View
+          pointerEvents="none"
+          testID="flow-hub"
+          style={[
+            styles.hub,
+            {
+              left: paths.hub.x - HUB_SIZE / 2,
+              top: paths.hub.y - HUB_SIZE / 2,
+              backgroundColor: tokens.lime,
+              boxShadow: `0px 0px 18px ${tokens.limeGlow}`,
+            },
+          ]}
+        >
+          <Zap size={20} color={tokens.onLime} strokeWidth={2.4} />
         </View>
-
-        <View style={styles.metricItem}>
-          <Text style={[styles.metricLabel, { color: tokens.textMuted }]}>Load</Text>
-          <Text style={[styles.metricValue, { color: tokens.textPrimary }]}>
-            {loadKw.toFixed(2)} kW
-          </Text>
-        </View>
-
-        <View style={styles.metricItem}>
-          <Text style={[styles.metricLabel, { color: tokens.textMuted }]}>Battery</Text>
-          <Text style={[styles.metricValue, { color: tokens.lime }]}>
-            {batterySocPct}%
-          </Text>
-        </View>
-
-        <View style={styles.metricItem}>
-          <Text style={[styles.metricLabel, { color: tokens.textMuted }]}>Grid</Text>
-          <Text style={[styles.metricValue, { color: gridAvailable ? tokens.cyan : tokens.red }]}>
-            {gridAvailable ? 'Active' : 'Outage'}
-          </Text>
-        </View>
-      </View>
+      ) : null}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: RADIUS.card,
-    padding: SPACING.cardPadding,
-    marginVertical: SPACING.sm,
-    borderWidth: 1,
-  },
-  headerRow: {
+  nodes: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
+    flexWrap: 'wrap',
+    columnGap: COLUMN_GAP,
+    rowGap: ROW_GAP,
   },
-  headerTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
+  node: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: '40%',
   },
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: RADIUS.pill,
+  overlay: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
   },
-  pulseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 5,
-  },
-  liveBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  svgContainer: {
+  hub: {
+    position: 'absolute',
+    width: HUB_SIZE,
+    height: HUB_SIZE,
+    borderRadius: HUB_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 4,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  metricItem: {
-    alignItems: 'center',
-  },
-  metricLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  metricValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginTop: 2,
   },
 });

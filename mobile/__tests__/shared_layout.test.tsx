@@ -110,16 +110,27 @@ describe('ScreenHeader', () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  test('renders left and right slots and an element subtitle', async () => {
-    const tree = await render(<ScreenHeader title="Solvanta" left={<React.Fragment><Logo /></React.Fragment>} right={<Bell />} subtitle={<Place />} />);
+  test('renders left and right slots', async () => {
+    const tree = await render(<ScreenHeader title="Solvanta" left={<Logo />} right={<Bell />} />);
     expect(tree.root.findAllByType(Logo)).toHaveLength(1);
     expect(tree.root.findAllByType(Bell)).toHaveLength(1);
-    expect(tree.root.findAllByType(Place)).toHaveLength(1);
+    expect(hosts(tree, 'TouchableOpacity')).toHaveLength(0);
+  });
+
+  test('with onTitlePress the title block is one named 44px button with a chevron', async () => {
+    const onPress = jest.fn();
+    const tree = await render(<ScreenHeader title="Solvanta" subtitle="Demo home · Lahore" onTitlePress={onPress} titlePressLabel="Change building: Demo home" />);
+    const button = hosts(tree, 'TouchableOpacity')[0];
+    expect(button.props.accessibilityRole).toBe('button');
+    expect(button.props.accessibilityLabel).toBe('Change building: Demo home');
+    expect(flat(button.props.style).minHeight).toBeGreaterThanOrEqual(44);
+    expect(button.findAll(n => (n.type as any) === 'Icon').map(i => i.props.name)).toEqual(['ChevronDown']);
+    button.props.onPress();
+    expect(onPress).toHaveBeenCalledTimes(1);
   });
 });
 const Logo = () => null;
 const Bell = () => null;
-const Place = () => null;
 
 describe('SolvantaScreen', () => {
   const footerOf = (tree: ReactTestRenderer) => tree.root.findAll(n => n.props.testID === 'screen-footer' && (n.type as any) === 'View')[0];

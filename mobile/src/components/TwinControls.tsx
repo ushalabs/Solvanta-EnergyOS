@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleProp, ViewStyle } from 'react-native';
 import { useFocusEffect, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Building2, Check, Info, AlertTriangle, CheckCircle2 } from 'lucide-react-native';
+import { ArrowLeft, Building2, Check, ChevronDown, Info, AlertTriangle, CheckCircle2 } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { RADIUS, SPACING, TYPOGRAPHY } from '../theme/tokens';
 import { api } from '../api/client';
@@ -85,13 +85,16 @@ export function IconButton({ label, onPress, children }: { label: string; onPres
   const { tokens: t } = useTheme();
   return <TouchableOpacity activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={{ width: MIN_TARGET, height: MIN_TARGET, borderRadius: MIN_TARGET / 2, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: t.border, backgroundColor: t.surface }}>{children}</TouchableOpacity>;
 }
-/** `left` is for a logo or avatar; `subtitle` may be an element, for example a pressable building name. */
-export function ScreenHeader({ title, subtitle, onBack, backLabel = 'Back', left, right }: { title: string; subtitle?: React.ReactNode; onBack?: () => void; backLabel?: string; left?: React.ReactNode; right?: React.ReactNode }) {
+/** `left` is for a logo. With `onTitlePress` the title block becomes one button with a chevron, for example to switch building. */
+export function ScreenHeader({ title, subtitle, onBack, backLabel = 'Back', left, right, onTitlePress, titlePressLabel }: { title: string; subtitle?: string; onBack?: () => void; backLabel?: string; left?: React.ReactNode; right?: React.ReactNode; onTitlePress?: () => void; titlePressLabel?: string }) {
   const { tokens: t } = useTheme();
+  const text = <><Text accessibilityRole="header" style={{ color: t.textPrimary, fontSize: TYPOGRAPHY.screenTitle, lineHeight: 24, fontWeight: '600' }}>{title}</Text>{subtitle ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><Text numberOfLines={1} style={{ flexShrink: 1, color: t.textSecondary, fontSize: 13, lineHeight: 18 }}>{subtitle}</Text>{onTitlePress && <ChevronDown size={14} color={t.textSecondary} />}</View> : null}</>;
   return <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.md, minHeight: MIN_TARGET, marginBottom: SPACING.md }}>
     {onBack && <IconButton label={backLabel} onPress={onBack}><ArrowLeft size={18} color={t.textPrimary} /></IconButton>}
     {left}
-    <View style={{ flex: 1 }}><Text accessibilityRole="header" style={{ color: t.textPrimary, fontSize: TYPOGRAPHY.screenTitle, lineHeight: 24, fontWeight: '600' }}>{title}</Text>{typeof subtitle === 'string' ? <Text style={{ color: t.textSecondary, fontSize: 13, lineHeight: 18 }}>{subtitle}</Text> : subtitle}</View>
+    {onTitlePress
+      ? <TouchableOpacity activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={titlePressLabel ?? title} onPress={onTitlePress} style={{ flex: 1, minHeight: MIN_TARGET, justifyContent: 'center' }}>{text}</TouchableOpacity>
+      : <View style={{ flex: 1 }}>{text}</View>}
     {right}
   </View>;
 }
@@ -107,7 +110,7 @@ export function ListAction({ title, onPress, disabled = false, selected = false 
   return <Action title={title} onPress={onPress} disabled={disabled} selected={selected} variant="secondary" />;
 }
 export function useBuildings() {
-  const [buildings, setBuildings] = useState<Array<{ id: string; name: string }>>([]);
+  const [buildings, setBuildings] = useState<Array<{ id: string; name: string; address?: string }>>([]);
   const [id, setId] = useState('');
   const [error, setError] = useState('');
   const [selectionKey, setSelectionKey] = useState('');
