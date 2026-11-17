@@ -42,6 +42,9 @@ interface ScheduleTimelineProps {
 
 const hours = [0, 4, 8, 12, 16, 20, 24];
 const LABEL_W = 96;
+/** Room to the right of the plot, so the 24:00 label that is centred on the last gridline stays inside the card. */
+const INSET_R = 20;
+const AXIS_LABEL_W = 40;
 const AXIS = [0, 360, 720, 1080, 1440];
 const clock = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 
@@ -59,12 +62,12 @@ export const ScheduleTimeline: React.FC<ScheduleTimelineProps> = ({ tasks = [], 
         </View>
         <View style={styles.sharedRow}>
           <View style={{ width: LABEL_W }} />
-          <View style={styles.axisPlot}>
-            {AXIS.map(m => <Text key={m} style={[styles.axisText, { position: 'absolute', color: tokens.textSecondary, left: `${m / 14.4}%`, transform: [{ translateX: m === 0 ? 0 : m === 1440 ? -30 : -15 }] }]}>{clock(m)}</Text>)}
+          <View style={[styles.axisPlot, { marginRight: INSET_R }]}>
+            {AXIS.map(m => <Text key={m} style={[styles.axisText, { position: 'absolute', width: AXIS_LABEL_W, marginLeft: -AXIS_LABEL_W / 2, textAlign: 'center', color: tokens.textSecondary, left: `${m / 14.4}%` }]}>{clock(m)}</Text>)}
           </View>
         </View>
         <View style={{ position: 'relative' }}>
-          <View pointerEvents="none" style={[styles.plotOverlay, { left: LABEL_W }]}>
+          <View pointerEvents="none" style={[styles.plotOverlay, { left: LABEL_W, right: INSET_R }]}>
             {bands.map((b, i) => <View key={`band${i}`} testID="timeline-band" style={{ position: 'absolute', top: 0, bottom: 0, left: `${Math.max(0, b.from) / 14.4}%`, width: `${Math.max(0, Math.min(1440, b.to) - Math.max(0, b.from)) / 14.4}%`, backgroundColor: tokens.redText, opacity: 0.14 }} />)}
             {AXIS.map(m => <View key={`grid${m}`} style={{ position: 'absolute', top: 0, bottom: 0, left: `${m / 14.4}%`, width: 1, backgroundColor: tokens.border }} />)}
           </View>
@@ -72,7 +75,7 @@ export const ScheduleTimeline: React.FC<ScheduleTimelineProps> = ({ tasks = [], 
             {lanes.map(lane => (
               <View key={lane.id} testID={`lane-${lane.id}`} accessible accessibilityLabel={lane.a11yLabel ?? `${lane.label}: ${lane.segments.length ? lane.segments.map(s => `${clock(s.start_min)} to ${clock(s.end_min)}`).join(', ') : 'none'}`} style={styles.taskRow}>
                 <Text numberOfLines={1} style={[styles.taskName, { width: LABEL_W, color: tokens.textPrimary }]}>{lane.label}</Text>
-                <View style={styles.laneTrack}>
+                <View style={[styles.laneTrack, { marginRight: INSET_R }]}>
                   {lane.segments.map((s, i) => <View key={i} testID="lane-bar" style={[styles.laneBar, { left: `${s.start_min / 14.4}%`, width: `${Math.max(1.5, (s.end_min - s.start_min) / 14.4)}%`, backgroundColor: colourOf(lane.tone) }]} />)}
                   {!lane.segments.length && lane.emptyNote ? <Text numberOfLines={1} style={[styles.emptyNote, { color: tokens.textSecondary }]}>{lane.emptyNote}</Text> : null}
                 </View>
@@ -198,7 +201,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     bottom: 0,
-    right: 0,
   },
   bandsContainer: {
     gap: 12,
@@ -244,22 +246,24 @@ const styles = StyleSheet.create({
   },
   legend: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.lg,
+    flexWrap: 'nowrap',
+    justifyContent: 'space-between',
+    gap: 8,
     marginTop: SPACING.md,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    flexShrink: 1,
+    gap: 4,
   },
   dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   legendText: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
   },
 });

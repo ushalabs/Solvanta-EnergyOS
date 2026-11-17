@@ -67,6 +67,28 @@ describe('ScheduleTimeline shared lanes', () => {
     expect(flat(band[0].props.style).left).toBe(`${480 / 14.4}%`);
   });
 
+  test('the five hour labels are the same size and centred on their gridlines, so they are evenly spaced', async () => {
+    await render({ bands: [] });
+    const labels = ['00:00', '06:00', '12:00', '18:00', '24:00'].map(l => tree.root.findAll(n => (n.type as any) === 'Text' && n.props.children === l)[0]);
+    const styles = labels.map(l => flat(l.props.style));
+    expect(styles.every(s => s.width === 40 && s.marginLeft === -20 && s.textAlign === 'center' && s.position === 'absolute')).toBe(true);
+    expect(styles.map(s => parseFloat(s.left))).toEqual([0, 25, 50, 75, 100]);
+    // The gridlines are at the same percentages, in a box with the same left and right edges as the axis.
+    const gridlines = tree.root.findAll(n => (n.type as any) === 'View' && flat(n.props.style).width === 1 && typeof flat(n.props.style).left === 'string').map(n => parseFloat(flat(n.props.style).left));
+    expect(gridlines).toEqual([0, 25, 50, 75, 100]);
+    expect(tree.root.findAll(n => (n.type as any) === 'View' && flat(n.props.style).left === 96 && flat(n.props.style).right === 20)[0]).toBeTruthy();
+    expect(tree.root.findAll(n => (n.type as any) === 'View' && flat(n.props.style).marginRight === 20 && flat(n.props.style).height === 16)[0]).toBeTruthy();
+    expect(tree.root.findAll(n => (n.type as any) === 'View' && flat(n.props.style).marginRight === 20 && flat(n.props.style).height === 14)[0]).toBeTruthy();
+  });
+
+  test('the legend is one compact row with small swatches', async () => {
+    await render({ legend: [{ tone: 'solar', label: 'Solar (estimated)' }, { tone: 'grid', label: 'Grid' }, { tone: 'appliance', label: 'Appliance' }, { tone: 'outage', label: 'Outage' }] });
+    expect(tree.root.findAll(n => (n.type as any) === 'View' && flat(n.props.style).justifyContent === 'space-between' && flat(n.props.style).flexWrap === 'nowrap')[0]).toBeTruthy();
+    expect(tree.root.findAll(n => (n.type as any) === 'View' && flat(n.props.style).width === 8 && flat(n.props.style).height === 8)).toHaveLength(4);
+    const label = tree.root.findAll(n => (n.type as any) === 'Text' && n.props.children === 'Appliance')[0];
+    expect(flat(label.props.style).fontSize).toBe(12);
+  });
+
   test('a lane that is too short to see still gets a minimum width', async () => {
     await act(async () => { tree = create(<ScheduleTimeline lanes={[{ id: 'a', label: 'A', tone: 'appliance', segments: [{ start_min: 100, end_min: 101 }] }]} />); });
     expect(parseFloat(flat(tree.root.findAll(n => (n.type as any) === 'View' && n.props.testID === 'lane-bar')[0].props.style).width)).toBeGreaterThanOrEqual(1.5);
