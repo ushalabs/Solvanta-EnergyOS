@@ -1,15 +1,15 @@
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  Home,
-  Sliders,
-  Activity,
-  Sun,
-  Bot,
+  House,
+  LayoutGrid,
+  ChartNoAxesColumn,
+  MapPin,
+  MessageCircle,
 } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeContext';
-import { RADIUS } from '../theme/tokens';
+import { DOCK, RADIUS } from '../theme/tokens';
 
 export type TabName = 'index' | 'appliances' | 'simulation' | 'rooftop' | 'ai';
 
@@ -18,12 +18,13 @@ interface FloatingTabDockProps {
   onSelectTab: (tab: TabName) => void;
 }
 
+// The label is the accessible name only; the dock shows icons, as in docs/design-reference.
 const TABS: { id: TabName; label: string; icon: React.ComponentType<any> }[] = [
-  { id: 'index', label: 'Home', icon: Home },
-  { id: 'appliances', label: 'Loads', icon: Sliders },
-  { id: 'simulation', label: 'Sim', icon: Activity },
-  { id: 'rooftop', label: 'Roof', icon: Sun },
-  { id: 'ai', label: 'AI', icon: Bot },
+  { id: 'index', label: 'Home', icon: House },
+  { id: 'appliances', label: 'Loads', icon: LayoutGrid },
+  { id: 'simulation', label: 'Sim', icon: ChartNoAxesColumn },
+  { id: 'rooftop', label: 'Roof', icon: MapPin },
+  { id: 'ai', label: 'AI', icon: MessageCircle },
 ];
 
 export const FloatingTabDock: React.FC<FloatingTabDockProps> = ({
@@ -39,7 +40,7 @@ export const FloatingTabDock: React.FC<FloatingTabDockProps> = ({
       style={[
         styles.dockWrapper,
         {
-          bottom: Math.max(insets.bottom, 12),
+          bottom: Math.max(insets.bottom, DOCK.minBottom),
         },
       ]}
     >
@@ -63,35 +64,27 @@ export const FloatingTabDock: React.FC<FloatingTabDockProps> = ({
               key={tab.id}
               activeOpacity={0.8}
               onPress={() => onSelectTab(tab.id)}
-              style={[styles.tabButton, isSelected && styles.tabButtonSelected]}
+              style={styles.tabButton}
               accessibilityRole="tab"
               accessibilityState={{ selected: isSelected }}
               aria-selected={isSelected}
               accessibilityLabel={`${tab.label} tab`}
             >
-              {isSelected ? (
-                <View
-                  style={[
-                    styles.activePill,
-                    {
-                      backgroundColor: tokens.lime,
-                    },
-                  ]}
-                >
-                  <IconComponent size={18} color={tokens.onLime} strokeWidth={2.5} />
-                  <Text style={[styles.activeLabel, { color: tokens.onLime }]}>
-                    {tab.label}
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.inactiveIconContainer}>
-                  <IconComponent
-                    size={20}
-                    color={tokens.textSecondary}
-                    strokeWidth={1.8}
-                  />
-                </View>
-              )}
+              <View
+                style={[
+                  styles.iconCircle,
+                  isSelected && {
+                    backgroundColor: tokens.lime,
+                    boxShadow: `0px 0px 16px ${tokens.limeGlow}`,
+                  },
+                ]}
+              >
+                <IconComponent
+                  size={22}
+                  color={isSelected ? tokens.onLime : tokens.textSecondary}
+                  strokeWidth={isSelected ? 2.4 : 1.8}
+                />
+              </View>
             </TouchableOpacity>
           );
         })}
@@ -111,7 +104,7 @@ const styles = StyleSheet.create({
   dockCapsule: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 64,
+    height: DOCK.height,
     width: '100%',
     maxWidth: 420,
     borderRadius: RADIUS.dock,
@@ -128,27 +121,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: '100%',
   },
-  tabButtonSelected: {
-    flex: 1.7,
-  },
-  activePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'stretch',
-    minHeight: 46,
-    marginHorizontal: 2,
-    borderRadius: RADIUS.pill,
-  },
-  activeLabel: {
-    fontSize: 12,
-    fontWeight: '800',
-    marginLeft: 6,
-    letterSpacing: 0.3,
-  },
-  inactiveIconContainer: {
-    minWidth: 44,
-    minHeight: 44,
+  iconCircle: {
+    width: DOCK.activeSize,
+    height: DOCK.activeSize,
+    borderRadius: DOCK.activeSize / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
