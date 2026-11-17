@@ -21,7 +21,7 @@ jest.mock('react-native', () => {
 jest.mock('react-native-svg', () => {
   const React = require('react');
   const host = (name: string) => (props: any) => React.createElement(name, props, props.children);
-  return { __esModule: true, default: host('Svg'), Polygon: host('Polygon'), Rect: host('Rect'), Circle: host('Circle'), Image: host('SvgImage'), Line: host('Line') };
+  return { __esModule: true, default: host('Svg'), Polygon: host('Polygon'), Rect: host('Rect'), Circle: host('Circle'), Image: host('SvgImage'), Line: host('Line'), Defs: host('Defs'), Pattern: host('Pattern'), Path: host('Path') };
 });
 jest.mock('lucide-react-native', () => {
   const React = require('react');
@@ -72,6 +72,12 @@ const type = async (label: string, value: string) => { await act(async () => { i
 const canvas = () => tree.root.findAll(n => (n.type as any) === 'View' && !!n.props.onResponderRelease)[0];
 const tapCanvas = async (x: number, y: number) => { await act(async () => { canvas().props.onResponderRelease({ nativeEvent: { locationX: x, locationY: y } }); }); };
 const pressAR = async () => { await press('AR'); await act(async () => { await Promise.resolve(); }); await press('Preview in AR'); };
+// A one-finger gesture on the editor canvas: press at `from`, move to `to`, lift.
+const gesture = async (from: [number, number], to: [number, number]) => {
+  await act(async () => { canvas().props.onResponderGrant({ nativeEvent: { locationX: from[0], locationY: from[1], pageX: from[0], pageY: from[1], touches: [{ pageX: from[0], pageY: from[1] }] } }); });
+  await act(async () => { canvas().props.onResponderMove({ nativeEvent: { pageX: to[0], pageY: to[1], locationX: to[0], locationY: to[1], touches: [{ pageX: to[0], pageY: to[1] }] } }); });
+  await act(async () => { canvas().props.onResponderRelease({ nativeEvent: { pageX: to[0], pageY: to[1], locationX: to[0], locationY: to[1], touches: [] } }); });
+};
 const VERTICES = 'Roof vertices (x,y; x,y) — edit to correct';
 
 // The roof editor is a full-screen popup. Most tests draw in it, so render() opens it; renderPreview() leaves it closed.
@@ -445,7 +451,7 @@ describe('Rooftop layout', () => {
 
   test('Roof area sits in Advanced and is not repeated in a second stats block', async () => {
     roofResponse = async () => savedRoof;
-    await render();
+    await renderPreview();
     expect(texts().match(/Roof area/gi)?.length).toBe(1);
     expect(texts().match(/Usable area/gi)?.length).toBe(1);
   });
@@ -566,7 +572,9 @@ describe('Rooftop guidance and state', () => {
     expect(texts()).not.toMatch(/Start with a rectangle/);
     expect(texts()).not.toMatch(/crosses itself/);
     await press('Undo Last Point');
-    expect(texts()).toMatch(/Corners: 3/);
+    expect(texts()).toMatch(/Corners: 0/);
+    await press('Redo');
+    expect(texts()).toMatch(/Corners: 4/);
   });
 
   test('the scale distance field sits under the canvas in Scale mode and is not duplicated', async () => {
@@ -656,13 +664,10 @@ describe('Roof canvas drawing', () => {
   test('corner handles give a 44px touch area and moving one updates the vertices', async () => {
     await render();
     await tapCanvas(30, 30); await tapCanvas(270, 30); await tapCanvas(270, 200);
-    const h = handles()[0];
-    expect(20 + h.props.hitSlop.left + h.props.hitSlop.right).toBeGreaterThanOrEqual(44);
-    expect(20 + h.props.hitSlop.top + h.props.hitSlop.bottom).toBeGreaterThanOrEqual(44);
-    await act(async () => { h.props.onResponderGrant({ nativeEvent: { pageX: 100, pageY: 100 } }); });
-    await act(async () => { handles()[0].props.onResponderMove({ nativeEvent: { pageX: 130, pageY: 120 } }); });
-    await act(async () => { handles()[0].props.onResponderRelease(); });
-    // 300px canvas on a 1000 roof: 30px right and 20px down is 100 and 67 roof units.
+    expect(handles()).toHaveLength(3);
+    // Pressing 20px away from the corner still grabs it: the hit area is 44px across.
+    // The corner ends where the finger ends: 30px right and 20px down of the press.
+    await gesture([50, 30], [80, 50]);
     expect(input(VERTICES).props.value).toBe('200,167; 900,100; 900,667');
     expect(texts()).toMatch(/Outdated|Unsaved geometry changes/);
   });
@@ -991,9 +996,7 @@ describe('Obstacle validation in the editor', () => {
     await tapCanvas(150, 45); await tapCanvas(210, 45); await tapCanvas(210, 90);
     await press('Finish Obstacle');
     await press('Roof');
-    const handle = () => tree.root.findAll(n => (n.type as any) === 'View' && /^Roof corner 2/.test(n.props.accessibilityLabel ?? ''))[0];
-    await act(async () => { handle().props.onResponderGrant({ nativeEvent: { pageX: 270, pageY: 30 } }); });
-    await act(async () => { handle().props.onResponderMove({ nativeEvent: { pageX: 100, pageY: 30 } }); });
+    await gesture([270, 30], [100, 30]);
     expect(polygons().some(p => p.props.stroke === redText())).toBe(true);
     expect(texts()).toMatch(/Obstacle 1 is outside the roof/);
   });
@@ -1051,5 +1054,262 @@ describe('Invalid geometry is not sent to the API', () => {
     while (card && !card.findAll((c: any) => (c.type as any) === 'Text' && c.props.children === 'Roof layout').length) card = card.parent;
     const text = card.findAll((c: any) => (c.type as any) === 'Text').map((c: any) => [c.props.children].flat(Infinity).join('')).join(' | ');
     expect(text).toMatch(/larger than 200 m/);
+  });
+});
+
+describe('Professional editor tools', () => {
+  // 300px canvas, roof 1000 x 700 units: one screen pixel is 10/3 roof units. savedRoof is the triangle
+  // (100,100) (900,100) (900,600), shown at (30,30) (270,30) (270,180), with 800 units measured as 12 m.
+  const label = (prefix: string) => tree.root.findAll(n => (n.type as any) === 'View' && (n.props.accessibilityLabel ?? '').startsWith(prefix));
+  const textsIn = (node: any) => node.findAll((c: any) => (c.type as any) === 'Text').map((c: any) => [c.props.children].flat(Infinity).join('')).join(' | ');
+  const obstacles = () => tree.root.findAll(n => (n.type as any) === 'Polygon' && n.props.fillOpacity === 0.35).map(p => p.props.points.split(' ').map((xy: string) => xy.split(',').map(Number)));
+  const button = (name: string) => tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === name)[0];
+  const withRoof = async () => { roofResponse = async () => savedRoof; await render(); };
+
+  describe('snapping', () => {
+    test('is on by default: a point near a grid line jumps to it and says so', async () => {
+      await render();
+      expect(button('Snap to grid and right angles').props.accessibilityState?.selected ?? true).toBeTruthy();
+      await tapCanvas(62, 30);
+      expect(input(VERTICES).props.value).toBe('200,100');
+      expect(label('Snapped to grid')).toHaveLength(1);
+    });
+
+    test('an edge close to horizontal is straightened, which keeps right angles', async () => {
+      await render();
+      await tapCanvas(30, 30);
+      await tapCanvas(152, 33);
+      expect(input(VERTICES).props.value).toBe('100,100; 507,100');
+      expect(label('Snapped to right angle')).toHaveLength(1);
+    });
+
+    test('can be turned off from the toolbar', async () => {
+      await render();
+      await press('Snap to grid and right angles');
+      expect(texts()).toMatch(/Snap off/);
+      await tapCanvas(62, 30); await tapCanvas(152, 33);
+      expect(input(VERTICES).props.value).toBe('207,100; 507,110');
+      expect(label('Snapped to')).toHaveLength(0);
+    });
+
+    test('scale points are never snapped', async () => {
+      await render();
+      await press('Scale');
+      await tapCanvas(62, 31);
+      expect(tree.root.findAll(n => (n.type as any) === 'Circle' && n.props.cx === 207 && n.props.cy === 103)).toHaveLength(1);
+    });
+  });
+
+  describe('corners and edges', () => {
+    test('dragging a roof corner moves it, and Undo and Redo step through the drag', async () => {
+      await withRoof();
+      await gesture([270, 180], [240, 150]);
+      expect(input(VERTICES).props.value).toBe('100,100; 900,100; 800,500');
+      await press('Undo Last Point');
+      expect(input(VERTICES).props.value).toBe('100,100; 900,100; 900,600');
+      await press('Redo');
+      expect(input(VERTICES).props.value).toBe('100,100; 900,100; 800,500');
+    });
+
+    test('a press away from any corner pans instead of moving a corner or adding a point', async () => {
+      await withRoof();
+      await gesture([150, 150], [190, 150]);
+      expect(input(VERTICES).props.value).toBe('100,100; 900,100; 900,600');
+    });
+
+    test('holding a corner deletes it', async () => {
+      await withRoof();
+      jest.useFakeTimers();
+      try {
+        act(() => { canvas().props.onResponderGrant({ nativeEvent: { locationX: 270, locationY: 30, pageX: 270, pageY: 30, touches: [{}] } }); });
+        act(() => { jest.advanceTimersByTime(600); });
+        act(() => { canvas().props.onResponderRelease({ nativeEvent: { locationX: 270, locationY: 30, pageX: 270, pageY: 30, touches: [] } }); });
+      } finally { jest.useRealTimers(); }
+      expect(input(VERTICES).props.value).toBe('100,100; 900,600');
+    });
+
+    test('a short press on a corner neither deletes it nor adds a point', async () => {
+      await withRoof();
+      await gesture([270, 30], [272, 31]);
+      expect(input(VERTICES).props.value).toBe('100,100; 900,100; 900,600');
+    });
+
+    test('tapping an edge inserts a corner on it', async () => {
+      await withRoof();
+      await tapCanvas(150, 31);
+      expect(input(VERTICES).props.value).toBe('100,100; 500,100; 900,100; 900,600');
+    });
+  });
+
+  describe('readouts', () => {
+    test('each roof edge shows its length in metres from the measured scale', async () => {
+      await withRoof();
+      expect(label('Edge ').map(v => v.props.accessibilityLabel)).toEqual(['Edge 1: 12.0 metres', 'Edge 2: 7.5 metres', 'Edge 3: 14.2 metres']);
+    });
+
+    test('no metres are shown without a scale', async () => {
+      await render();
+      await press('Start with a rectangle');
+      expect(label('Edge ')).toHaveLength(0);
+      expect(textsIn(tree.root)).not.toMatch(/\d m\b/);
+    });
+
+    test('clearing the measured distance removes the lengths', async () => {
+      await withRoof();
+      await press('Scale');
+      await type('Measured scale distance (m)', '');
+      expect(label('Edge ')).toHaveLength(0);
+    });
+
+    test('the live bar shows measured roof area, last usable area and panels, and goes Outdated after edits', async () => {
+      await withRoof();
+      const bar = () => textsIn(label('Roof readout')[0]);
+      expect(bar()).toBe('Roof area | 45.0 m² | Usable area | 30.0 m² | Panels | 6');
+      await tapCanvas(150, 150);
+      expect(bar()).toMatch(/Usable area \| — \| Panels \| — \| Outdated/);
+      expect(bar()).toMatch(/^Roof area \| \d+\.\d m²/);
+    });
+
+    test('the live bar shows dashes without a roof or scale', async () => {
+      await render();
+      expect(textsIn(label('Roof readout')[0])).toBe('Roof area | — | Usable area | — | Panels | —');
+    });
+
+    test('the setback band is drawn only when there is a setback and a scale', async () => {
+      await withRoof();
+      const bands = () => tree.root.findAll(n => (n.type as any) === 'Polygon' && n.props.fill === 'url(#setbackHatch)');
+      expect(bands()).toHaveLength(3);
+      expect(tree.root.findAll(n => (n.type as any) === 'Pattern' && n.props.id === 'setbackHatch')).toHaveLength(1);
+      await press('Scale');
+      await type('Measured scale distance (m)', '');
+      expect(bands()).toHaveLength(0);
+    });
+  });
+
+  describe('zoom and pan', () => {
+    const zoomLabel = () => label('Zoom ')[0].props.accessibilityLabel;
+    const content = () => canvas().findAll((n: any) => (n.type as any) === 'View' && n.props.pointerEvents === 'none' && n.props.style?.position === 'absolute' && typeof n.props.style?.width === 'number')[0];
+
+    test('zoom buttons change the zoom and Reset view returns to the whole roof', async () => {
+      await withRoof();
+      expect(zoomLabel()).toBe('Zoom 100 percent');
+      expect(button('Reset view').props.disabled).toBe(true);
+      await press('Zoom in');
+      expect(zoomLabel()).toBe('Zoom 150 percent');
+      expect(content().props.style.width).toBe(450);
+      expect(button('Reset view').props.disabled).toBe(false);
+      await press('Reset view');
+      expect(zoomLabel()).toBe('Zoom 100 percent');
+      expect(content().props.style).toMatchObject({ left: 0, top: 0, width: 300 });
+    });
+
+    test('pinching zooms, up to 4x, and Reset view undoes it', async () => {
+      await withRoof();
+      const two = (d: number) => ({ nativeEvent: { pageX: 150 - d, pageY: 100, touches: [{ pageX: 150 - d, pageY: 100 }, { pageX: 150 + d, pageY: 100 }] } });
+      await act(async () => { canvas().props.onResponderGrant({ nativeEvent: { locationX: 120, locationY: 100, pageX: 120, pageY: 100, touches: [{}] } }); });
+      await act(async () => { canvas().props.onResponderMove(two(30)); });
+      await act(async () => { canvas().props.onResponderMove(two(60)); });
+      expect(zoomLabel()).toBe('Zoom 200 percent');
+      await act(async () => { canvas().props.onResponderMove(two(600)); });
+      expect(zoomLabel()).toBe('Zoom 400 percent');
+      await act(async () => { canvas().props.onResponderRelease({ nativeEvent: { pageX: 150, pageY: 100, locationX: 150, locationY: 100, touches: [] } }); });
+      expect(input(VERTICES).props.value).toBe('100,100; 900,100; 900,600');
+      await press('Reset view');
+      expect(zoomLabel()).toBe('Zoom 100 percent');
+    });
+
+    test('when zoomed, dragging pans and taps still land on the right roof point', async () => {
+      await render();
+      await press('Zoom in');
+      await press('Zoom in');
+      // 2.25x around the centre, then pan fully to the top left.
+      await gesture([20, 20], [300, 300]);
+      expect(content().props.style).toMatchObject({ left: 0, top: 0 });
+      await tapCanvas(45, 45);
+      // 45px at 2.25x is 20px unzoomed, which is 67 roof units.
+      expect(input(VERTICES).props.value).toBe('67,67');
+    });
+  });
+
+  describe('obstacle quick shapes', () => {
+    test('Rectangle adds a rectangle in the middle of the roof, selected and valid', async () => {
+      await withRoof();
+      await press('Obstacle');
+      await press('Add rectangle obstacle');
+      const [ring] = obstacles();
+      expect(ring).toEqual([[583, 227], [683, 227], [683, 307], [583, 307]]);
+      expect(tree.root.findAll(n => (n.type as any) === 'TextInput' && n.props.accessibilityLabel === 'Obstacle 1 name')).toHaveLength(1);
+      expect(texts()).not.toMatch(/outside the roof/);
+    });
+
+    test('Circle adds a 16-sided polygon', async () => {
+      await withRoof();
+      await press('Obstacle');
+      await press('Add circle obstacle');
+      expect(obstacles()[0]).toHaveLength(16);
+    });
+
+    test('dragging a rectangle corner resizes it and keeps it a rectangle', async () => {
+      await withRoof();
+      await press('Obstacle');
+      await press('Add rectangle obstacle');
+      // Corner (683,307) is at about (205,92) on screen.
+      await gesture([205, 92], [235, 112]);
+      const [ring] = obstacles();
+      expect(ring[0]).toEqual([583, 227]);
+      expect(ring[1][1]).toBe(227); expect(ring[3][0]).toBe(583);
+      expect(ring[2][0]).toBe(ring[1][0]); expect(ring[2][1]).toBe(ring[3][1]);
+      expect(ring[2][0]).toBeGreaterThan(683);
+    });
+
+    test('dragging inside an obstacle moves it', async () => {
+      await withRoof();
+      await press('Obstacle');
+      await press('Add rectangle obstacle');
+      await gesture([190, 80], [220, 80]);
+      expect(obstacles()[0][0]).toEqual([683, 227]);
+    });
+
+    test('a name can be typed and is drawn on the obstacle; without a name it reads Obstacle', async () => {
+      await withRoof();
+      await press('Obstacle');
+      await press('Add rectangle obstacle');
+      const nameTexts = () => canvas().findAll((n: any) => (n.type as any) === 'Text').map((n: any) => n.props.children);
+      expect(nameTexts()).toContain('Obstacle');
+      await type('Obstacle 1 name', 'Water tank');
+      expect(nameTexts()).toContain('Water tank');
+      expect(texts()).toMatch(/names are not saved/);
+    });
+
+    test('shapes still go through validation', async () => {
+      await withRoof();
+      await press('Obstacle');
+      await press('Add rectangle obstacle');
+      // Drag the whole rectangle to the left edge, outside the triangle.
+      await gesture([190, 80], [20, 160]);
+      expect(texts()).toMatch(/Obstacle 1 is outside the roof/);
+      await press('Calculate Placement');
+      expect(post).not.toHaveBeenCalled();
+    });
+
+    test('without a roof, a shape cannot be added', async () => {
+      await render();
+      await press('Obstacle');
+      await press('Add circle obstacle');
+      expect(obstacles()).toHaveLength(0);
+      expect(texts()).toMatch(/Draw the roof outline first/);
+    });
+
+    test('Remove and Undo keep names in step with obstacles', async () => {
+      await withRoof();
+      await press('Obstacle');
+      await press('Add rectangle obstacle');
+      await type('Obstacle 1 name', 'Tank');
+      await press('Remove Last Obstacle');
+      expect(obstacles()).toHaveLength(0);
+      await press('Undo Last Point');
+      expect(obstacles()).toHaveLength(1);
+      expect(canvas().findAll((n: any) => (n.type as any) === 'Text').map((n: any) => n.props.children)).toContain('Tank');
+    });
   });
 });
