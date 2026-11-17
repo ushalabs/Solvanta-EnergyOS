@@ -279,7 +279,7 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
         <Action title={advanced ? 'Hide advanced settings' : 'Advanced settings'} variant="secondary" onPress={() => setAdvanced(!advanced)} />
       </Card>
       <Card><CardHeader title="Roof actions" subtitle="Physical scale comes only from your measured distance" />
-        {!unsaved && <Action title="Save Roof" icon={<Save size={15} color={calcOff ? t.textSecondary : t.onLime} />} disabled={calcOff} onPress={() => calculate(true)} />}
+        {!unsaved && <Action title="Save Roof" variant="secondary" icon={<Save size={15} color={calcOff ? t.textSecondary : t.textPrimary} />} disabled={calcOff} onPress={() => calculate(true)} />}
       </Card>
       <View style={shown(advanced)}>
         <Card><CardHeader title="Advanced" subtitle="Vertices, scale, setback and panel size" />

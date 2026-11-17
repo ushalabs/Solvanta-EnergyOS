@@ -409,6 +409,15 @@ describe('Rooftop layout', () => {
     expect(texts()).toMatch(/View in AR/);
   });
 
+  test('only one lime primary button is on screen: the card Save Roof is secondary while Calculate Placement is pinned', async () => {
+    roofResponse = async () => savedRoof;
+    await renderPreview();
+    const bg = (name: string) => [tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === name)[0].props.style].flat(Infinity).reduce((a: any, x: any) => ({ ...a, ...x }), {}).backgroundColor;
+    const { darkTokens } = require('../src/theme/tokens');
+    expect(bg('Calculate Placement')).toBe(darkTokens.lime);
+    expect(bg('Save Roof')).toBe(darkTokens.surfaceElevated);
+  });
+
   test('Calculate Placement is not repeated inside the Roof actions card', async () => {
     await render();
     expect(tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Calculate Placement').length).toBe(1);
