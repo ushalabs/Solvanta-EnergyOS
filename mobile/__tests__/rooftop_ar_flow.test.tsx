@@ -68,6 +68,7 @@ const input = (label: string) => tree.root.findAll(n => (n.type as any) === 'Tex
 const type = async (label: string, value: string) => { await act(async () => { input(label).props.onChangeText(value); }); };
 const canvas = () => tree.root.findAll(n => (n.type as any) === 'View' && !!n.props.onResponderRelease)[0];
 const tapCanvas = async (x: number, y: number) => { await act(async () => { canvas().props.onResponderRelease({ nativeEvent: { locationX: x, locationY: y } }); }); };
+const pressAR = async () => { await press('AR'); await act(async () => { await Promise.resolve(); }); await press('Preview in AR'); };
 const VERTICES = 'Roof vertices (x,y; x,y) — edit to correct';
 
 async function render() {
@@ -78,7 +79,7 @@ async function render() {
 }
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  jest.clearAllMocks(); mockCapability.mockReset();
   roofResponse = () => Promise.reject(notFound());
   jest.spyOn(api, 'getBuildings').mockResolvedValue([{ id: BUILDING, name: 'Test building' }] as any);
   jest.spyOn(api, 'getCurrentUser').mockResolvedValue({ id: 'u1' } as any);
@@ -110,7 +111,7 @@ describe('AR gate on the Rooftop screen', () => {
     roofResponse = async () => savedRoof;
     await render();
     const calls = getSpy.mock.calls.length;
-    await press('Preview in AR');
+    await pressAR();
     expect(texts()).toMatch(GATE);
     expect(router.push).not.toHaveBeenCalled();
     expect(ImagePicker.requestCameraPermissionsAsync).not.toHaveBeenCalled();
@@ -124,7 +125,7 @@ describe('AR gate on the Rooftop screen', () => {
     roofResponse = async () => savedRoof;
     await render();
     const before = input(VERTICES).props.value;
-    await press('Preview in AR');
+    await pressAR();
     await press('Back to 2D layout');
     expect(texts()).not.toMatch(GATE);
     expect(input(VERTICES).props.value).toBe(before);
@@ -134,19 +135,19 @@ describe('AR gate on the Rooftop screen', () => {
 
   test('can be reopened, and the 2D editor keeps working while it is open', async () => {
     await render();
-    await press('Preview in AR');
+    await pressAR();
     await tapCanvas(30, 30);
     expect(input(VERTICES).props.value).toBe('100,100');
     expect(texts()).toMatch(GATE);
     await press('Back to 2D layout');
-    await press('Preview in AR');
+    await pressAR();
     expect(texts()).toMatch(GATE);
   });
 
   test('works with no building or saved roof, because it needs neither', async () => {
     jest.spyOn(api, 'getBuildings').mockResolvedValue([] as any);
     await render();
-    await press('Preview in AR');
+    await pressAR();
     expect(texts()).toMatch(GATE);
   });
 
@@ -156,7 +157,7 @@ describe('AR gate on the Rooftop screen', () => {
     test('ready: opens the AR screen for this building with no gate', async () => {
       mockCapability.mockResolvedValue('ready');
       await render();
-      await press('Preview in AR');
+      await pressAR();
       expect(router.push).toHaveBeenCalledTimes(1);
       expect(router.push).toHaveBeenCalledWith({ pathname: '/rooftop-ar', params: { buildingId: BUILDING } });
       expect(texts()).not.toMatch(/Back to 2D layout/);
@@ -166,14 +167,14 @@ describe('AR gate on the Rooftop screen', () => {
       mockCapability.mockResolvedValue('ready');
       await render();
       await tapCanvas(30, 30);
-      await press('Preview in AR');
+      await pressAR();
       expect(input(VERTICES).props.value).toBe('100,100');
     });
 
     test('unsupported device: names ARCore, stays on the 2D editor and does not navigate', async () => {
       mockCapability.mockResolvedValue('unsupported');
       await render();
-      await press('Preview in AR');
+      await pressAR();
       expect(texts()).toMatch(/ARCORE NOT SUPPORTED/);
       expect(router.push).not.toHaveBeenCalled();
       await tapCanvas(30, 30);
@@ -181,12 +182,17 @@ describe('AR gate on the Rooftop screen', () => {
     });
 
     test('a failed check can be retried from the gate, and a clean answer closes the gate', async () => {
-      mockCapability.mockResolvedValueOnce('check-failed').mockResolvedValueOnce('ready');
+      roofResponse = async () => savedRoof;
+      mockCapability.mockResolvedValueOnce('check-failed').mockResolvedValue('ready');
       await render();
-      await press('Preview in AR');
+      await press('AR');
+      await act(async () => { await Promise.resolve(); });
       expect(texts()).toMatch(/ARCORE CHECK FAILED/);
       await press('Check Again');
+      await act(async () => { await Promise.resolve(); });
       expect(texts()).not.toMatch(/ARCORE CHECK FAILED/);
+      expect(router.push).not.toHaveBeenCalled();
+      await press('Preview in AR');
       expect(router.push).toHaveBeenCalledTimes(1);
     });
   });
@@ -362,10 +368,84 @@ describe('Rooftop layout', () => {
     expect(hiddenTexts()).not.toMatch(/Calculate Placement/);
   });
 
-  test('View in AR is the footer button and keeps its spoken name', async () => {
+  const footerLabels = () => tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && ['Preview in AR', 'Calculate Placement', 'Continue to Design'].includes(n.props.accessibilityLabel)).map(n => n.props.accessibilityLabel);
+  const tabs = async (name: string) => { await press(name); await act(async () => { await Promise.resolve(); }); };
+
+  test('the pinned button follows the tab', async () => {
     await render();
+    expect(footerLabels()).toEqual(['Calculate Placement']);
+    await tabs('Photo');
+    expect(footerLabels()).toEqual(['Continue to Design']);
+    await press('Continue to Design');
+    expect(footerLabels()).toEqual(['Calculate Placement']);
+    await tabs('AR');
+    expect(footerLabels()).toEqual(['Preview in AR']);
     expect(texts()).toMatch(/View in AR/);
-    expect(footerButton()).toBeTruthy();
+  });
+
+  test('Calculate Placement is not repeated inside the Roof actions card', async () => {
+    await render();
+    expect(tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Calculate Placement').length).toBe(1);
+    expect(texts()).toMatch(/Roof actions/);
+    expect(texts()).not.toMatch(/Measurements/);
+  });
+
+  test('without a saved roof the AR button is disabled and the card says why', async () => {
+    mockCapability.mockResolvedValue('ready');
+    await render();
+    await tabs('AR');
+    const button = tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Preview in AR')[0];
+    expect(button.props.disabled).toBe(true);
+    expect(texts()).toMatch(/Save a roof layout first/);
+    expect(texts()).toMatch(/Saved roof \| No/);
+  });
+
+  test('with a saved roof and a supported device the AR button is enabled and shows real data', async () => {
+    mockCapability.mockResolvedValue('ready');
+    roofResponse = async () => savedRoof;
+    await render();
+    await tabs('AR');
+    const button = tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Preview in AR')[0];
+    expect(button.props.disabled).toBe(false);
+    expect(texts()).toMatch(/AR supported/);
+    expect(texts()).toMatch(/Panels \(saved\) \| 6/);
+    expect(texts()).toMatch(/Saved on \| —/);
+    expect(texts()).toMatch(/Tilt angle \| —/);
+  });
+
+  test('an unsupported device disables the button and shows the reason', async () => {
+    mockCapability.mockResolvedValue('unsupported');
+    roofResponse = async () => savedRoof;
+    await render();
+    await tabs('AR');
+    const button = tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Preview in AR')[0];
+    expect(button.props.disabled).toBe(true);
+    expect(texts()).toMatch(/ARCORE NOT SUPPORTED/);
+  });
+
+  test('Roof area sits in Advanced and is not repeated in a second stats block', async () => {
+    roofResponse = async () => savedRoof;
+    await render();
+    expect(texts().match(/Roof area/gi)?.length).toBe(1);
+    expect(texts().match(/Usable area/gi)?.length).toBe(1);
+  });
+
+  test('the three canvas buttons are one compact row with full spoken names', async () => {
+    await render();
+    for (const name of ['Undo Last Point', 'Finish Obstacle', 'Remove Last Obstacle']) {
+      const b = tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === name)[0];
+      const style = [b.props.style].flat(Infinity).reduce((a: any, x: any) => ({ ...a, ...x }), {});
+      expect(style.minHeight).toBe(44);
+      expect(style.flex).toBe(1);
+    }
+  });
+
+  test('panel configuration rows are short and have no chevrons', async () => {
+    await render();
+    const row = tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && /^Panel Type:/.test(n.props.accessibilityLabel))[0];
+    expect(row.props.style.minHeight).toBe(36);
+    expect(row.props.hitSlop).toEqual({ top: 4, bottom: 4 });
+    expect(row.findAll(n => (n.type as any) === 'Icon').length).toBe(0);
   });
 
   test('stats show dashes and the estimate is labelled simulated when nothing is known', async () => {
@@ -390,13 +470,12 @@ describe('Rooftop layout', () => {
     expect(input(VERTICES)).toBeTruthy();
   });
 
-  test('the AR gate switches to the AR tab and Back to 2D returns to Design', async () => {
+  test('the AR gate shows on the AR tab and Back to 2D returns to Design', async () => {
     await render();
-    await press('Preview in AR');
-    expect(hiddenTexts()).not.toMatch(/This build has no AR module/);
-    expect(hiddenTexts()).toMatch(/Calculate Placement/);
+    await tabs('AR');
+    expect(texts()).toMatch(/This build has no AR module/);
     await press('Back to 2D layout');
-    expect(hiddenTexts()).not.toMatch(/Calculate Placement/);
+    expect(footerLabels()).toEqual(['Calculate Placement']);
   });
 
   test('placed panels use the panel fill with the lime outline', async () => {

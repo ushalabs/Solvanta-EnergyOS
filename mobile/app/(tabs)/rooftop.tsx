@@ -3,18 +3,19 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import Svg, { Polygon, Rect, Circle, Image as SvgImage, Line } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
-import { ImagePlus, Camera, Undo2, Check, Eraser, Calculator, Save, ScanLine, PencilRuler, ChevronRight } from 'lucide-react-native';
+import { ImagePlus, Camera, Undo2, Check, Eraser, Calculator, Save, ScanLine, PencilRuler } from 'lucide-react-native';
 import { SolvantaScreen } from '../../src/components/SolvantaScreen';
 import { Card, CardHeader, Label, Message, Metric, MetricGrid, Field, FieldRow, Action, ActionRow, BuildingHeader, useBuildings } from '../../src/components/TwinControls';
 import { api } from '../../src/api/client';
 import { emptyRoof, RoofInput, RoofRecord, Layout, Point, parsePoints, formatPoints, tapToRoofPoint, screenPx } from '../../src/api/roof';
 import { compassPoint } from '../../src/api/pv';
 import { useTheme } from '../../src/theme/ThemeContext';
-import { RADIUS } from '../../src/theme/tokens';
+import { RADIUS, SPACING } from '../../src/theme/tokens';
 import { PVDesigner, PVSummary } from '../../src/components/PVDesigner';
 import { PillSegmentedControl } from '../../src/components/PillSegmentedControl';
 import { ARCapabilityFallback } from '../../src/components/ARCapabilityFallback';
-import type { ARUnavailable } from '../../src/ar/arCapability';
+import { AR_UNAVAILABLE_COPY } from '../../src/ar/arCapability';
+import type { ARCapability } from '../../src/ar/arCapability';
 import { detectARCapability } from '../../src/ar/detectAR';
 
 const geometryLabels = { setback_m: 'Setback (m)', panel_width_m: 'Panel width (m)', panel_height_m: 'Panel height (m)', gap_m: 'Panel gap (m)' };
@@ -23,6 +24,8 @@ type Tab = 'photo' | 'design' | 'ar';
 const shown = (on: boolean) => on ? undefined : { display: 'none' as const };
 const DASH = '—';
 const GRID = [0.25, 0.5, 0.75];
+// Short buttons that still give a 44px touch area.
+const compact = { flex: 1, minHeight: 44, paddingVertical: 8, paddingHorizontal: 8 };
 
 function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
   const { tokens: t } = useTheme();
@@ -30,7 +33,8 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
   const [tab, setTab] = useState<Tab>('design');
   const [advanced, setAdvanced] = useState(false);
   const [pv, setPv] = useState<PVSummary>({ profile: null, wattageW: null, tiltDeg: null, azimuthDeg: null });
-  const [arGate, setArGate] = useState<ARUnavailable | null>(null);
+  const [arCap, setArCap] = useState<ARCapability | null>(null);
+  const [saved, setSaved] = useState<Layout | null>(null);
   const [checkingAR, setCheckingAR] = useState(false);
   const [roof, setRoof] = useState<RoofInput>(emptyRoof);
   const [layout, setLayout] = useState<Layout | null>(null);
@@ -41,10 +45,10 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
   const [message, setMessage] = useState('Draw a roof, then mark two points with a known distance.');
   const [busy, setBusy] = useState(false);
   const [width, setWidth] = useState(300);
-  const apply = (r: RoofRecord) => { setRoof(r.geometry); setDistance(String(r.geometry.scale_distance_m)); setCoords(formatPoints(r.geometry.boundary)); setLayout(r.layout); };
+  const apply = (r: RoofRecord) => { setRoof(r.geometry); setDistance(String(r.geometry.scale_distance_m)); setCoords(formatPoints(r.geometry.boundary)); setLayout(r.layout); setSaved(r.layout); };
   useEffect(() => {
     let active = true;
-    setRoof(emptyRoof()); setLayout(null); setCoords(''); setDistance(''); setDraft([]);
+    setRoof(emptyRoof()); setLayout(null); setSaved(null); setCoords(''); setDistance(''); setDraft([]);
     if (building.id) api.get<RoofRecord>(`/buildings/${building.id}/roof`).then(r => { if (active) { apply(r); setMessage('Loaded saved roof.'); } }).catch(e => { if (active) setMessage(e.status === 404 ? 'No saved roof. Draw a boundary to begin.' : e.message); });
     return () => { active = false; };
   }, [building.id]);
@@ -80,12 +84,18 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
       else { setLayout(await api.post<Layout>(`/buildings/${building.id}/roof/preview`, payload)); setRoof(payload); setMessage('Calculated preview — not saved yet.'); }
     } catch (e: any) { setMessage(e.message); } finally { setBusy(false); }
   };
-  const openAR = async () => {
+  const checkAR = async () => {
     setCheckingAR(true);
     const capability = await detectARCapability();
     setCheckingAR(false);
-    if (capability !== 'ready') { setArGate(capability); setTab('ar'); return; }
-    setArGate(null);
+    setArCap(capability);
+    return capability;
+  };
+  // The device check runs when the AR tab is opened, so the card can say why AR is or is not available.
+  useEffect(() => { if (tab === 'ar' && arCap === null) checkAR(); }, [tab, arCap]);
+  const openAR = async () => {
+    const capability = await checkAR();
+    if (capability !== 'ready') { setTab('ar'); return; }
     router.push({ pathname: '/rooftop-ar', params: { buildingId: building.id } });
   };
   const legend = [{ color: t.limeMark, name: 'Roof / panels' }, { color: t.redText, name: 'Obstacle' }, { color: t.cyanText, name: 'Scale' }];
@@ -95,7 +105,15 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
     { name: 'Tilt Angle', value: pv.tiltDeg === null ? DASH : `${pv.tiltDeg}°` },
     { name: 'Orientation', value: pv.azimuthDeg === null ? DASH : compassPoint(pv.azimuthDeg) },
   ];
-  const footer = <Action title="View in AR" label="Preview in AR" loading={checkingAR} disabled={checkingAR} icon={<ScanLine size={18} color={checkingAR ? t.textSecondary : t.onLime} />} onPress={openAR} />;
+  const savedPanels = saved ? saved.panel_count : null;
+  const arReason = checkingAR ? null : arCap === null ? 'Checking this device for AR…' : arCap !== 'ready' ? AR_UNAVAILABLE_COPY[arCap].title : !saved ? 'Save a roof layout first. AR shows the last saved layout.' : null;
+  const arBlocked = checkingAR || arReason !== null;
+  const calcOff = !building.id || busy;
+  const footer = tab === 'photo'
+    ? <Action title="Continue to Design" onPress={() => setTab('design')} />
+    : tab === 'design'
+      ? <Action title="Calculate Placement" loading={busy} disabled={calcOff} icon={<Calculator size={18} color={calcOff ? t.textSecondary : t.onLime} />} onPress={() => calculate(false)} />
+      : <Action title="View in AR" label="Preview in AR" loading={checkingAR} disabled={arBlocked} icon={<ScanLine size={18} color={arBlocked ? t.textSecondary : t.onLime} />} onPress={openAR} />;
   return <SolvantaScreen banner="PRELIMINARY • measured 2D layout, not engineering drawings" footer={footer}>
     <BuildingHeader title="Rooftop Analysis" building={picker} />
     <PillSegmentedControl a11yLabel="Rooftop view" selectedId={tab} onSelect={id => setTab(id as Tab)} options={[{ id: 'photo', label: 'Photo' }, { id: 'design', label: 'Design' }, { id: 'ar', label: 'AR' }]} />
@@ -122,11 +140,11 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
           </Svg>
         </View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>{legend.map(l => <View key={l.name} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: l.color }} /><Text style={{ color: t.textSecondary, fontSize: 12 }}>{l.name}</Text></View>)}</View>
-        <ActionRow>
-          <Action title="Undo Last Point" variant="secondary" icon={<Undo2 size={15} color={t.textPrimary} />} onPress={() => { if (mode === 'obstacle') setDraft(draft.slice(0, -1)); else if (mode === 'scale') change({ ...roof, scale_points: roof.scale_points.slice(0, -1) }); else { const boundary = roof.boundary.slice(0, -1); change({ ...roof, boundary }); setCoords(formatPoints(boundary)); } }} />
-          <Action title="Finish Obstacle" variant="secondary" icon={<Check size={15} color={draft.length < 3 ? t.textSecondary : t.textPrimary} />} disabled={draft.length < 3} onPress={() => { change({ ...roof, obstacles: [...roof.obstacles, draft] }); setDraft([]); }} />
-          <Action title="Remove Last Obstacle" variant="secondary" icon={<Eraser size={15} color={t.textPrimary} />} onPress={() => { change({ ...roof, obstacles: roof.obstacles.slice(0, -1) }); setDraft([]); }} />
-        </ActionRow>
+        <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
+          <Action title="Undo" label="Undo Last Point" style={compact} variant="secondary" icon={<Undo2 size={15} color={t.textPrimary} />} onPress={() => { if (mode === 'obstacle') setDraft(draft.slice(0, -1)); else if (mode === 'scale') change({ ...roof, scale_points: roof.scale_points.slice(0, -1) }); else { const boundary = roof.boundary.slice(0, -1); change({ ...roof, boundary }); setCoords(formatPoints(boundary)); } }} />
+          <Action title="Finish" label="Finish Obstacle" style={compact} variant="secondary" icon={<Check size={15} color={draft.length < 3 ? t.textSecondary : t.textPrimary} />} disabled={draft.length < 3} onPress={() => { change({ ...roof, obstacles: [...roof.obstacles, draft] }); setDraft([]); }} />
+          <Action title="Remove" label="Remove Last Obstacle" style={compact} variant="secondary" icon={<Eraser size={15} color={t.textPrimary} />} onPress={() => { change({ ...roof, obstacles: roof.obstacles.slice(0, -1) }); setDraft([]); }} />
+        </View>
       </Card>
       <MetricGrid>
         <Metric compact label="Usable Area" value={layout ? layout.usable_area_m2.toFixed(1) : DASH} unit={layout ? 'm²' : undefined} />
@@ -134,20 +152,20 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
         <Metric compact label="Est. Daily (SIMULATED)" value={dailyKwh === undefined || !Number.isFinite(dailyKwh) ? DASH : dailyKwh.toFixed(1)} unit={dailyKwh === undefined ? undefined : 'kWh'} />
       </MetricGrid>
       <Card><CardHeader title="Panel Configuration" subtitle={pv.profile ? 'From the PV record or the last calculation' : 'No PV record yet. Open Advanced to calculate.'} />
-        {configRows.map(r => <TouchableOpacity key={r.name} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={`${r.name}: ${r.value}. Opens advanced settings`} onPress={() => setAdvanced(true)} style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44, gap: 8 }}>
+        <View>{configRows.map(r => <TouchableOpacity key={r.name} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={`${r.name}: ${r.value}. Opens advanced settings`} hitSlop={{ top: 4, bottom: 4 }} onPress={() => setAdvanced(true)} style={{ flexDirection: 'row', alignItems: 'center', minHeight: 36, gap: 8 }}>
           <Text style={{ flex: 1, color: t.textSecondary, fontSize: 14 }}>{r.name}</Text>
           <Text style={{ color: t.textPrimary, fontSize: 14, fontWeight: '600' }}>{r.value}</Text>
-          <ChevronRight size={16} color={t.textSecondary} />
-        </TouchableOpacity>)}
+        </TouchableOpacity>)}</View>
         <Action title={advanced ? 'Hide advanced settings' : 'Advanced settings'} variant="secondary" onPress={() => setAdvanced(!advanced)} />
       </Card>
-      <Card><CardHeader title="Measurements" subtitle="Physical scale comes only from your measured distance" />
-        <ActionRow><Action title="Calculate Placement" variant="secondary" icon={<Calculator size={15} color={!building.id || busy ? t.textSecondary : t.textPrimary} />} disabled={!building.id || busy} onPress={() => calculate(false)} /><Action title="Save Roof" icon={<Save size={15} color={!building.id || busy ? t.textSecondary : t.onLime} />} disabled={!building.id || busy} onPress={() => calculate(true)} /></ActionRow>
+      <Card><CardHeader title="Roof actions" subtitle="Physical scale comes only from your measured distance" />
+        <Action title="Save Roof" icon={<Save size={15} color={calcOff ? t.textSecondary : t.onLime} />} disabled={calcOff} onPress={() => calculate(true)} />
         <Message>{message}</Message>
-        {layout && <><MetricGrid><Metric label="Roof area" value={layout.roof_area_m2.toFixed(2)} unit="m²" /><Metric label="Usable area" value={layout.usable_area_m2.toFixed(2)} unit="m²" /><Metric label="Panels" value={layout.panel_count} tone="accent" /></MetricGrid><Label tone="secondary" caption>{layout.method}</Label></>}
       </Card>
       <View style={shown(advanced)}>
         <Card><CardHeader title="Advanced" subtitle="Vertices, scale, setback and panel size" />
+          <Metric label="Roof area" value={layout ? layout.roof_area_m2.toFixed(2) : DASH} unit={layout ? 'm²' : undefined} />
+          {layout && <Label tone="secondary" caption>{layout.method}</Label>}
           <Field label="Roof vertices (x,y; x,y) — edit to correct" value={coords} onChange={v => { setCoords(v); setLayout(null); try { setRoof({ ...roof, boundary: parsePoints(v) }); } catch {} }} />
           <Field label="Measured scale distance (m)" numeric value={distance} onChange={v => { setDistance(v); setLayout(null); }} />
           <FieldRow>{(['setback_m', 'panel_width_m', 'panel_height_m', 'gap_m'] as const).map(key => <Field key={key} label={geometryLabels[key]} numeric value={String(roof[key])} onChange={v => change({ ...roof, [key]: v === '' ? 0 : Number(v) })} />)}</FieldRow>
@@ -156,9 +174,17 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
       </View>
     </View>
     <View style={shown(tab === 'ar')}>
-      <Card><CardHeader title="AR preview" subtitle="Optional visualization. The 2D layout stays available." icon={<ScanLine size={18} color={t.limeText} />} />
+      <Card><CardHeader title="AR status" subtitle="Optional visualization. The 2D layout stays available." icon={<ScanLine size={18} color={t.limeText} />} />
+        <View style={{ gap: 4 }}>{[
+          ['This device', arCap === null ? DASH : arCap === 'ready' ? 'AR supported' : 'AR not available'],
+          ['Saved roof', saved ? 'Yes' : 'No'],
+          ['Saved on', DASH],
+          ['Panels (saved)', savedPanels === null ? DASH : String(savedPanels)],
+          ['Tilt angle', pv.tiltDeg === null ? DASH : `${pv.tiltDeg}°`],
+        ].map(([k, v]) => <View key={k} style={{ flexDirection: 'row', minHeight: 28, alignItems: 'center' }}><Text style={{ flex: 1, color: t.textSecondary, fontSize: 14 }}>{k}</Text><Text style={{ color: t.textPrimary, fontSize: 14, fontWeight: '600' }}>{v}</Text></View>)}</View>
         <Label tone="secondary" caption>AR shows the last saved layout, not unsaved changes. It is a visualization, not a measurement.</Label>
-        {arGate && <ARCapabilityFallback capability={arGate} onContinue2D={() => { setArGate(null); setTab('design'); }} onRetry={arGate === 'check-failed' ? openAR : undefined} />}
+        {arReason && !checkingAR && arCap === 'ready' && <Message>{arReason}</Message>}
+        {arCap !== null && arCap !== 'ready' && <ARCapabilityFallback capability={arCap} onContinue2D={() => { setArCap(null); setTab('design'); }} onRetry={arCap === 'check-failed' ? () => { setArCap(null); } : undefined} />}
       </Card>
     </View>
   </SolvantaScreen>;
