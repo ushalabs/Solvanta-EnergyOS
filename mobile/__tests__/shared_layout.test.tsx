@@ -78,6 +78,8 @@ describe('FloatingTabDock', () => {
     const ring = flat(glow[0].props.style);
     expect(ring).toMatchObject({ width: 58, height: 58, borderRadius: 29, backgroundColor: darkTokens.limeGlow, position: 'absolute' });
     expect(ring.boxShadow).toBeUndefined();
+    // Faint enough to read as a glow rather than an outline.
+    expect(ring.opacity).toBeLessThanOrEqual(0.5);
     // The ring is centred on the circle.
     expect(ring.left).toBe(-7);
     expect(ring.top).toBe(-7);

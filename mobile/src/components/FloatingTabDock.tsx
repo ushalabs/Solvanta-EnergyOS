@@ -143,6 +143,8 @@ const styles = StyleSheet.create({
     width: DOCK.glowSize,
     height: DOCK.glowSize,
     borderRadius: DOCK.glowSize / 2,
+    // A soft halo, not a ring: the full-strength colour read as a thick olive outline on the dark dock.
+    opacity: 0.45,
   },
   iconCircle: {
     width: DOCK.activeSize,
