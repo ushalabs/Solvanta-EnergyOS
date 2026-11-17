@@ -17,13 +17,10 @@ import { PlanCard } from '../../src/components/PlanCard';
 import { AutomationCard } from '../../src/components/AutomationCard';
 import { TelemetryCard } from '../../src/components/TelemetryCard';
 import { TwinReplay } from '../../src/components/TwinReplay';
-import { EnergyRun, parseOutages } from '../../src/api/simulation';
+import { EnergyRun, parseOutages, Scenario, OUTAGE_PRESET, scenarioOutages } from '../../src/api/simulation';
 import { loadActivity } from '../../src/api/replay';
 import { socPoints, clock } from '../../src/api/lineChart';
 
-type Scenario = 'normal' | 'outage' | 'custom';
-/** The Outage preset is the screen's original example range, 08:00 to 10:00. */
-const OUTAGE_PRESET = '480-600';
 const DASH = '—';
 const hours = (minutes: number) => { const h = minutes / 60; return Number.isInteger(h) ? String(h) : h.toFixed(1); };
 
@@ -41,7 +38,7 @@ function SimulationWorkspace({ picker }: { picker: ReturnType<typeof useBuilding
   const [comparison, setComparison] = useState<ResilienceTraces | null>(null);
   const [startSoc, setStartSoc] = useState<number | null>(null);
   // The text the existing run and cards use. Normal means no outage, Outage is the preset, Custom is the typed field.
-  const outages = scenario === 'normal' ? '' : scenario === 'outage' ? OUTAGE_PRESET : customText;
+  const outages = scenarioOutages(scenario, customText);
   useEffect(() => { let active = true; setRun(null); setHistory([]); setStep(0); if (building.id) api.get<Array<{ id: string; created_at: string }>>(`/buildings/${building.id}/simulations`).then(r => { if (active) setHistory(r); }).catch(e => { if (active) setMessage(e.message); }); return () => { active = false; }; }, [building.id]);
   useEffect(() => { let active = true; setStartSoc(null); if (building.id) api.getBuildingEquipment(building.id).then(e => { if (active && Number.isFinite(e?.battery?.initial_soc_pct)) setStartSoc(e.battery.initial_soc_pct); }).catch(() => {}); return () => { active = false; }; }, [building.id]);
   // A comparison belongs to one scenario, as the card itself restarts when the scenario changes.

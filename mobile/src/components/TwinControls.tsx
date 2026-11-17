@@ -141,12 +141,12 @@ export function useBuildings() {
   return { buildings, id, setId:select, error };
 }
 /** Screen title with the building as one line and a chevron; tapping it opens the building picker. */
-export function BuildingHeader({ title, building }: { title: string; building: ReturnType<typeof useBuildings> }) {
+export function BuildingHeader({ title, building, onBack, backLabel }: { title: string; building: ReturnType<typeof useBuildings>; onBack?: () => void; backLabel?: string }) {
   const [choosing, setChoosing] = useState(false);
   const selected = building.buildings.find(b => b.id === building.id);
   const place = selected?.address?.split(',')[0].trim();
   return <>
-    <ScreenHeader title={title} subtitle={selected ? `${selected.name}${place ? ` · ${place}` : ''}` : 'Choose a building'} onTitlePress={() => setChoosing(!choosing)} titlePressLabel={selected ? `Change building: ${selected.name}` : 'Choose a building'} />
+    <ScreenHeader title={title} onBack={onBack} backLabel={backLabel} subtitle={selected ? `${selected.name}${place ? ` · ${place}` : ''}` : 'Choose a building'} onTitlePress={() => setChoosing(!choosing)} titlePressLabel={selected ? `Change building: ${selected.name}` : 'Choose a building'} />
     {(choosing || !!building.error || !building.id) && <BuildingPicker state={building} />}
   </>;
 }

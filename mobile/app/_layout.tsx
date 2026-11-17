@@ -79,13 +79,6 @@ function AuthNavigationWatcher() {
         }}
       />
       <Stack.Screen
-        name="scheduling"
-        options={{
-          presentation: 'card',
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
         name="settings"
         options={{
           presentation: 'modal',

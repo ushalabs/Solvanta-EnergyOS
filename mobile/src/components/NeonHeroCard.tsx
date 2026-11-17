@@ -9,6 +9,8 @@ interface NeonHeroCardProps {
   subtitle?: string;
   badgeText?: string;
   rightElement?: ReactNode;
+  /** A round tile on the left, for example an icon. */
+  icon?: ReactNode;
   onPress?: () => void;
   style?: ViewStyle;
   children?: ReactNode;
@@ -19,6 +21,7 @@ export const NeonHeroCard: React.FC<NeonHeroCardProps> = ({
   subtitle,
   badgeText,
   rightElement,
+  icon,
   onPress,
   style,
   children,
@@ -33,6 +36,7 @@ export const NeonHeroCard: React.FC<NeonHeroCardProps> = ({
       style={[styles.gradient, style]}
     >
       <View style={styles.topRow}>
+        {icon ? <View testID="hero-icon" style={[styles.iconTile, { backgroundColor: tokens.onLime }]}>{icon}</View> : null}
         <View style={styles.textContainer}>
           {badgeText && (
             <View style={[styles.badge, { backgroundColor: tokens.onLime }]}>
@@ -79,6 +83,14 @@ const styles = StyleSheet.create({
   textContainer: {
     flex: 1,
     paddingRight: SPACING.sm,
+  },
+  iconTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md,
   },
   badge: {
     alignSelf: 'flex-start',
