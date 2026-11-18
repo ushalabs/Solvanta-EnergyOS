@@ -4,16 +4,20 @@
     "slug": "solvanta-energyos",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/brand/icon.png",
     "scheme": "solvanta",
     "userInterfaceStyle": "dark",
+    "notification": {
+      "icon": "./assets/brand/notification-icon.png"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.solvanta.energyos"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#090B0A"
+        "foregroundImage": "./assets/brand/adaptive-icon-foreground.png",
+        "backgroundColor": "#0B0D0A"
       },
       "package": "com.solvanta.energyos",
       "googleServicesFile": "./google-services.json",
@@ -27,14 +31,14 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/brand/favicon.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/icon.png",
+          "image": "./assets/brand/splash-icon.png",
           "imageWidth": 200,
           "backgroundColor": "#090B0A",
           "resizeMode": "contain"

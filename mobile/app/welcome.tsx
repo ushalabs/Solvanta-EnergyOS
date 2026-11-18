@@ -10,15 +10,15 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Zap, ShieldCheck, LogIn, UserPlus, Globe, Sparkles } from 'lucide-react-native';
+import { ShieldCheck, LogIn, UserPlus, Globe, Sparkles } from 'lucide-react-native';
 import { useTheme } from '../src/theme/ThemeContext';
 import { useAuth } from '../src/auth/AuthContext';
 import { SPACING, RADIUS } from '../src/theme/tokens';
+import { SolvantaLogo } from '../src/components/SolvantaLogo';
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const { tokens, heroGradient } = useTheme();
+  const { tokens } = useTheme();
   const { continueAsGuest, signInWithGoogle, isGoogleAvailable } = useAuth();
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [loadingGuest, setLoadingGuest] = useState(false);
@@ -69,9 +69,7 @@ export default function WelcomeScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Brand Header */}
         <View style={styles.brandContainer}>
-          <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.logoWell}>
-            <Zap size={36} color={tokens.onLime} />
-          </LinearGradient>
+          <View style={styles.logoWell}><SolvantaLogo ring size={72} /></View>
           <Text style={[styles.title, { color: tokens.textPrimary }]}>SOLVANTA</Text>
           <Text style={[styles.titleAccent, { color: tokens.limeText }]}>ENERGYOS</Text>
           <Text style={[styles.tagline, { color: tokens.textSecondary }]}>
@@ -205,9 +203,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xl,
   },
   logoWell: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.md,

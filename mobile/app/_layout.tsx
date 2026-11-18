@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Zap } from 'lucide-react-native';
+import { SolvantaLogo } from '../src/components/SolvantaLogo';
 import { ThemeProvider, useTheme } from '../src/theme/ThemeContext';
 import { AuthProvider, useAuth } from '../src/auth/AuthContext';
 
@@ -32,9 +32,7 @@ function AuthNavigationWatcher() {
   if (isLoading) {
     return (
       <View style={[styles.splashContainer, { backgroundColor: tokens.background }]}>
-        <View style={[styles.splashIconWell, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
-          <Zap size={36} color={tokens.limeText} />
-        </View>
+        <View style={styles.splashIconWell}><SolvantaLogo ring size={80} /></View>
         <Text style={[styles.splashTitle, { color: tokens.textPrimary }]}>SOLVANTA</Text>
         <Text style={[styles.splashSubtitle, { color: tokens.limeText }]}>ENERGYOS</Text>
         <ActivityIndicator color={tokens.limeText} size="large" style={{ marginTop: 24 }} />
@@ -108,10 +106,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   splashIconWell: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,

@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { AlertTriangle, Battery, Building2, CalendarClock, ClipboardCheck, Leaf, LineChart, Layers, ShieldCheck, TrendingUp, Zap } from 'lucide-react-native';
+import { AlertTriangle, Battery, Building2, CalendarClock, ClipboardCheck, LineChart, Layers, ShieldCheck, TrendingUp, Zap } from 'lucide-react-native';
 import { api } from '../api/client';
 import { useTheme } from '../theme/ThemeContext';
 import { RADIUS, SPACING } from '../theme/tokens';
 import { Action, Chip, ChipGroup, Label, Message } from './TwinControls';
 import { Collapsible } from './Collapsible';
+import { SolvantaLogo } from './SolvantaLogo';
 import { Disclosure, MCPToolResultCard } from './MCPToolResultCard';
 import { TOOLS, PRIMARY_TOOLS, ToolInfo, ToolResultData, friendlyToolError, needsScenario, rawErrorText, runLabel, toolInfo } from '../api/toolResult';
 
@@ -77,7 +78,7 @@ export function OperationsTools({ buildingId, onFooter, onScrollTo }: { building
 
   return <View style={{ gap: SPACING.md }} onLayout={e => { rootY.current = e.nativeEvent.layout.y; }}>
     <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm }}>
-      <View testID="assistant-avatar" style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: t.surface, borderWidth: 1, borderColor: t.border }}><Leaf size={18} color={t.limeText} /></View>
+      <View testID="assistant-avatar"><SolvantaLogo ring size={40} /></View>
       <View testID="greeting-bubble" style={{ flex: 1, gap: 4, padding: 14, borderRadius: RADIUS.card, borderTopLeftRadius: 6, backgroundColor: t.surface, borderWidth: 1, borderColor: t.border }}>
         <Text style={{ color: t.textPrimary, fontSize: 16, lineHeight: 22, fontWeight: '600' }}>Hi, I can run these checks on your saved building.</Text>
         <Text style={{ color: t.textPrimary, fontSize: 14, lineHeight: 20 }}>These are guided shortcuts to your system's tools. Tap one to run it on your saved building data.</Text>
