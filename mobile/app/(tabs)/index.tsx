@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Image, View } from 'react-native';
 import { router } from 'expo-router';
-import { Activity, Bell, Bot, CalendarClock, Leaf, Settings, Sliders, Sun } from 'lucide-react-native';
+import { Activity, Bell, Bot, CalendarClock, Settings, Sliders, Sun } from 'lucide-react-native';
+import { SolvantaLogo } from '../../src/components/SolvantaLogo';
 import { SolvantaScreen } from '../../src/components/SolvantaScreen';
 import { WeatherCard } from '../../src/components/WeatherCard';
 import { EnergyFlowSvg } from '../../src/components/EnergyFlowSvg';
@@ -79,7 +80,7 @@ export default function Overview() {
     <ScreenHeader
       title="Solvanta"
       subtitle={selected ? `${selected.name}${place ? ` · ${place}` : ''}` : 'Choose a building'}
-      left={<Leaf size={28} color={t.limeText} fill={t.limeText} />}
+      left={<SolvantaLogo size={28} />}
       onTitlePress={() => setChoosing(!choosing)}
       titlePressLabel={selected ? `Change building: ${selected.name}` : 'Choose a building'}
       right={<View>
