@@ -12,7 +12,6 @@ Open items:
 
 - **Native build blocker:** `mobile/google-services.json` is not in this checkout, and prebuild fails without it. It must be downloaded from Firebase and given to EAS. See [AR test plan](AR_TEST_PLAN.md).
 - Native AR: no Gradle build, no device run. All manual cases are unexecuted. See [AR compatibility](AR_COMPATIBILITY.md) and [AR test plan](AR_TEST_PLAN.md).
-- `mobile/assets/favicon.png` is still a crop of a design mockup. Only the app icon was replaced.
 - For the sign-in owner: a guest tapping **Sign In or Link Account** is redirected to Home, and the Firebase observer can restore guest mode over a successful sign-in.
 - Production `npm audit`: 21 findings (1 low, 11 moderate, 9 high). Sources include Firebase's `@grpc/grpc-js`, and `@expo/cli` and `expo-router` on the pinned SDK.
 - MCP startup annotation warning recorded; protocol initialization and all tools passed when last run.
