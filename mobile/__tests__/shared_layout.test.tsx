@@ -55,6 +55,14 @@ describe('FloatingTabDock', () => {
     expect(tabs.every(t => t.props.accessibilityRole === 'tab')).toBe(true);
   });
 
+  test('a screen-coloured band covers everything from the middle of the dock down, so scrolled content hides behind it', async () => {
+    const tree = await render(<FloatingTabDock currentTab="index" onSelectTab={() => {}} />);
+    const band = tree.root.findAll(n => n.props.testID === 'dock-backdrop' && (n.type as any) === 'View');
+    expect(band).toHaveLength(1);
+    expect(band[0].props.pointerEvents).toBe('none');
+    expect(flat(band[0].props.style)).toMatchObject({ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: darkTokens.background, height: 12 + 32 });
+  });
+
   test('shows icons only: no visible label text', async () => {
     const tree = await render(<FloatingTabDock currentTab="simulation" onSelectTab={() => {}} />);
     expect(hosts(tree, 'Text')).toHaveLength(0);
@@ -123,7 +131,10 @@ describe('FloatingTabDock', () => {
   test('sits above the device inset', async () => {
     mockInsets = { top: 0, bottom: 34, left: 0, right: 0 };
     const tree = await render(<FloatingTabDock currentTab="index" onSelectTab={() => {}} />);
-    expect(flat(hosts(tree, 'View')[0].props.style).bottom).toBe(34);
+    const [band, dock] = hosts(tree, 'View');
+    expect(flat(dock.props.style).bottom).toBe(34);
+    // The band reaches from the screen edge to the middle of the dock above the inset.
+    expect(flat(band.props.style)).toMatchObject({ bottom: 0, height: 34 + 32 });
   });
 });
 
