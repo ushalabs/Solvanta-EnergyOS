@@ -17,9 +17,6 @@ import {
   Save,
   Fuel,
   Network,
-  User as UserIcon,
-  LogIn,
-  LogOut,
   Building as BuildingIcon,
 } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeContext';
@@ -53,11 +50,8 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
   const { tokens } = useTheme();
 
   // Authentication State
+  // The device's local profile: buildings are stored on this device, no server account is involved.
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
-  const [loginEmail, setLoginEmail] = useState('demo@solvanta.energy');
-  const [loginPassword, setLoginPassword] = useState('Solvanta2026!');
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
 
   // Buildings list & active selection
   const [availableBuildings, setAvailableBuildings] = useState<BuildingOption[]>([]);
@@ -122,30 +116,23 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
     async function init() {
       setLoading(true);
       try {
-        // 1. Check existing token
-        const token = await api.getToken();
-        if (token) {
-          try {
-            const me = await api.getCurrentUser();
-            if (isMounted && me) {
-              setCurrentUser(me);
-              await loadUserBuildings(me.id);
-            }
-          } catch {
-            // Token expired or invalid
-            await api.clearToken();
-            if (isMounted) setCurrentUser(null);
-          }
-        } else {
-          // Unauthenticated: load default local draft
+        const me = await api.getCurrentUser();
+        if (!isMounted) return;
+        setCurrentUser(me);
+        const found = await loadUserBuildings(me.id);
+        // Before buildings lived on the device, a signed-out edit was kept as a draft: offer it as the starting point.
+        if (!found && isMounted) {
           const draft = await AsyncStorage.getItem(getStorageKey(null, null));
-          if (draft && isMounted) {
+          if (draft) {
             applyLoadedValues(JSON.parse(draft));
             setSyncStatus('local_draft');
           }
         }
-      } catch {
-        // Continue with defaults
+      } catch (err: any) {
+        if (isMounted) {
+          setSyncStatus('error');
+          setErrorMsg(`Could not open the on-device database: ${err?.message || 'unknown error'}`);
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -157,7 +144,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
     };
   }, []);
 
-  async function loadUserBuildings(userId: string) {
+  async function loadUserBuildings(userId: string): Promise<boolean> {
     try {
       const buildings = await api.getBuildings();
       if (buildings && buildings.length > 0) {
@@ -179,14 +166,15 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
           applyLoadedValues(activeBld);
           setSyncStatus('synced');
         }
-      } else {
-        setAvailableBuildings([]);
-        setBuildingId(null);
+        return true;
       }
+      setAvailableBuildings([]);
+      setBuildingId(null);
+      return false;
     } catch (err: any) {
-      // Backend error loading buildings
       setSyncStatus('error');
-      setErrorMsg(`Failed to load buildings: ${err.message || 'Network error'}`);
+      setErrorMsg(`Failed to load buildings: ${err.message || 'unknown error'}`);
+      return false;
     }
   }
 
@@ -209,40 +197,6 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
     } finally {
       setLoading(false);
     }
-  }
-
-  async function handleLogin() {
-    if (!loginEmail.trim() || !loginPassword.trim()) {
-      setAuthError('Email and password required');
-      return;
-    }
-    setAuthLoading(true);
-    setAuthError(null);
-    try {
-      await api.login(loginEmail.trim(), loginPassword);
-      const me = await api.getCurrentUser();
-      setCurrentUser(me);
-      await loadUserBuildings(me.id);
-    } catch (err: any) {
-      setAuthError(err.message || 'Login failed. Check server connection and credentials.');
-    } finally {
-      setAuthLoading(false);
-    }
-  }
-
-  async function handleLogout() {
-    await api.clearToken();
-    setCurrentUser(null);
-    setAvailableBuildings([]);
-    setBuildingId(null);
-    setSyncStatus('local_draft');
-    setSuccessMsg(null);
-    setErrorMsg(null);
-  }
-
-  function handleDemoFill() {
-    setLoginEmail('demo@solvanta.energy');
-    setLoginPassword('Solvanta2026!');
   }
 
   function applyLoadedValues(data: any, rootMeta?: any) {
@@ -467,14 +421,9 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
       },
     };
 
-    // If user is unauthenticated: save to local storage only as draft
     if (!currentUser) {
-      const guestKey = getStorageKey(null, null);
-      await AsyncStorage.setItem(guestKey, JSON.stringify(payload));
-      setSyncStatus('local_draft');
-      setSuccessMsg('Saved to local device storage as draft. Sign in with FastAPI credentials to persist to PostgreSQL.');
+      setErrorMsg('The on-device database is not open yet. Reopen Settings and try again.');
       setSaving(false);
-      if (onSaved) onSaved(payload);
       return;
     }
 
@@ -487,24 +436,24 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
         if (authoritativeResult?.id) setBuildingId(authoritativeResult.id);
       }
 
-      // Re-read authoritative profile from PostgreSQL
+      // Re-read the stored profile, so the form shows exactly what was saved
       const confirmedEquip = await api.getBuildingEquipment(authoritativeResult.id || buildingId!);
       applyLoadedValues(confirmedEquip, authoritativeResult);
 
-      // Cache server-confirmed data
+      // Keep a copy for this building's form
       const scopedKey = getStorageKey(currentUser.id, authoritativeResult.id || buildingId);
       await AsyncStorage.setItem(scopedKey, JSON.stringify(confirmedEquip));
 
       setSyncStatus('synced');
-      setSuccessMsg(`Server Confirmed: Equipment twin persisted to PostgreSQL (Building: ${authoritativeResult.name})`);
+      setSuccessMsg(`Saved on this device (Building: ${authoritativeResult.name})`);
       if (onSaved) onSaved(payload);
     } catch (err: any) {
       setSyncStatus('error');
       if (err instanceof SolvantaApiError) {
         const detailMsg = err.data?.error?.message || err.data?.detail || err.message;
-        setErrorMsg(`Server Rejected Save (HTTP ${err.status}): ${detailMsg}`);
+        setErrorMsg(`Not saved: ${detailMsg}`);
       } else {
-        setErrorMsg(`Save Failed: ${err.message || 'Unknown network error'}`);
+        setErrorMsg(`Save Failed: ${err.message || 'Unknown error'}`);
       }
     } finally {
       setSaving(false);
@@ -516,7 +465,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
       <View style={[styles.loadingBox, { backgroundColor: tokens.surface }]}>
         <ActivityIndicator color={tokens.limeText} size="small" />
         <Text style={[styles.loadingText, { color: tokens.textSecondary }]}>
-          Loading equipment digital twin from PostgreSQL...
+          Loading equipment digital twin...
         </Text>
       </View>
     );
@@ -529,7 +478,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
         <View accessibilityLiveRegion="polite" style={[styles.feedbackBanner, { backgroundColor: tokens.limeTint, borderColor: tokens.limeText }]}>
           <CheckCircle size={16} color={tokens.limeText} style={{ marginRight: 8 }} />
           <Text style={[styles.feedbackText, { color: tokens.limeText }]}>
-            {successMsg || 'Server Confirmed • Authoritative configuration synchronized with PostgreSQL'}
+            {successMsg || 'Saved on this device'}
           </Text>
         </View>
       )}
@@ -538,7 +487,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
         <View accessibilityLiveRegion="polite" style={[styles.feedbackBanner, { backgroundColor: tokens.amberTint, borderColor: tokens.amberText }]}>
           <AlertTriangle size={16} color={tokens.amberText} style={{ marginRight: 8 }} />
           <Text style={[styles.feedbackText, { color: tokens.amberText }]}>
-            {successMsg || 'Local Device Draft • Unsynchronized. Sign in below to persist changes to PostgreSQL.'}
+            {successMsg || 'Unsaved draft • Press Save to store this building on the device.'}
           </Text>
         </View>
       )}
@@ -550,138 +499,39 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
         </View>
       )}
 
-      {/* 0. Authentication & Scoped Identity Card */}
-      <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
-        <View style={styles.cardHeader}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <UserIcon size={16} color={currentUser ? tokens.limeText : tokens.textSecondary} style={{ marginRight: 8 }} />
-            <Text style={[styles.cardTitle, { color: tokens.textPrimary }]}>ACCOUNT & FASTAPI AUTH</Text>
+      {/* 0. Buildings stored on this device */}
+      {availableBuildings.length > 1 && (
+        <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
+          <View style={styles.cardHeader}>
+            <Text style={[styles.cardTitle, { color: tokens.textPrimary }]}>BUILDINGS ON THIS DEVICE</Text>
           </View>
-          <Text
-            style={[
-              styles.unitBadge,
-              {
-                backgroundColor: tokens.surfaceElevated,
-                color: currentUser ? tokens.limeText : tokens.amberText,
-              },
-            ]}
-          >
-            {currentUser ? 'AUTHENTICATED' : 'GUEST / OFFLINE'}
-          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+            {availableBuildings.map((b) => (
+              <TouchableOpacity
+                accessibilityRole="button"
+                key={b.id}
+                activeOpacity={0.8}
+                onPress={() => selectBuilding(b.id)}
+                style={[
+                  styles.chipBtn,
+                  {
+                    backgroundColor: buildingId === b.id ? tokens.lime : tokens.surfaceElevated,
+                    borderColor: buildingId === b.id ? tokens.lime : tokens.border,
+                  },
+                ]}
+              >
+                <BuildingIcon size={12} color={buildingId === b.id ? tokens.onLime : tokens.textSecondary} style={{ marginRight: 4 }} />
+                <Text style={[styles.chipText, { color: buildingId === b.id ? tokens.onLime : tokens.textPrimary }]}>
+                  {b.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-
-        {currentUser ? (
-          <View>
-            <View style={styles.infoRow}>
-              <Text style={[styles.infoLabel, { color: tokens.textSecondary }]}>User</Text>
-              <Text style={[styles.infoVal, { color: tokens.textPrimary }]}>{currentUser.email}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={[styles.infoLabel, { color: tokens.textSecondary }]}>Role</Text>
-              <Text style={[styles.infoVal, { color: tokens.limeText }]}>{currentUser.role.toUpperCase()}</Text>
-            </View>
-
-            {/* Building Selection */}
-            {availableBuildings.length > 0 && (
-              <View style={{ marginTop: 8 }}>
-                <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Target Building Twin</Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                  {availableBuildings.map((b) => (
-                    <TouchableOpacity
-                      accessibilityRole="button"
-                      key={b.id}
-                      activeOpacity={0.8}
-                      onPress={() => selectBuilding(b.id)}
-                      style={[
-                        styles.chipBtn,
-                        {
-                          backgroundColor: buildingId === b.id ? tokens.lime : tokens.surfaceElevated,
-                          borderColor: buildingId === b.id ? tokens.lime : tokens.border,
-                        },
-                      ]}
-                    >
-                      <BuildingIcon size={12} color={buildingId === b.id ? tokens.onLime : tokens.textSecondary} style={{ marginRight: 4 }} />
-                      <Text style={[styles.chipText, { color: buildingId === b.id ? tokens.onLime : tokens.textPrimary }]}>
-                        {b.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            <TouchableOpacity
-              accessibilityRole="button"
-              activeOpacity={0.8}
-              onPress={handleLogout}
-              style={[styles.smallBtn, { borderColor: tokens.border, backgroundColor: tokens.surfaceElevated, marginTop: 12 }]}
-            >
-              <LogOut size={14} color={tokens.textPrimary} style={{ marginRight: 6 }} />
-              <Text style={[styles.smallBtnText, { color: tokens.textPrimary }]}>Sign Out</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View>
-            {authError && (
-              <Text accessibilityRole="alert" style={{ color: tokens.redText, fontSize: 13, lineHeight: 18, marginBottom: 8 }}>{authError}</Text>
-            )}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Email</Text>
-              <TextInput
-                accessibilityLabel="Email"
-                style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
-                value={loginEmail}
-                onChangeText={setLoginEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                placeholder="demo@solvanta.energy"
-                placeholderTextColor={tokens.textSecondary}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Password</Text>
-              <TextInput
-                accessibilityLabel="Password"
-                style={[styles.input, { backgroundColor: tokens.surfaceElevated, color: tokens.textPrimary, borderColor: tokens.border }]}
-                value={loginPassword}
-                onChangeText={setLoginPassword}
-                secureTextEntry
-                placeholder="••••••••"
-                placeholderTextColor={tokens.textSecondary}
-              />
-            </View>
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-              <TouchableOpacity
-                accessibilityRole="button"
-                activeOpacity={0.8}
-                onPress={handleLogin}
-                disabled={authLoading}
-                style={[styles.smallBtn, { flex: 1, backgroundColor: tokens.lime, borderColor: tokens.lime }]}
-              >
-                {authLoading ? (
-                  <ActivityIndicator size="small" color={tokens.onLime} />
-                ) : (
-                  <>
-                    <LogIn size={14} color={tokens.onLime} style={{ marginRight: 6 }} />
-                    <Text style={[styles.smallBtnText, { color: tokens.onLime, fontWeight: '700' }]}>Sign In</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                accessibilityRole="button"
-                activeOpacity={0.8}
-                onPress={handleDemoFill}
-                style={[styles.smallBtn, { backgroundColor: tokens.surfaceElevated, borderColor: tokens.border }]}
-              >
-                <Text style={[styles.smallBtnText, { color: tokens.textSecondary }]}>Demo Credentials</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-      </View>
+      )}
 
       {/* 1. Building Site Metadata */}
-      <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border, marginTop: SPACING.md }]}>
+      <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border, marginTop: availableBuildings.length > 1 ? SPACING.md : 0 }]}>
         <View style={styles.cardHeader}>
           <Text style={[styles.cardTitle, { color: tokens.textPrimary }]}>SITE IDENTITY</Text>
           <Text style={[styles.unitBadge, { backgroundColor: tokens.surfaceElevated, color: tokens.limeText }]}>
@@ -1135,7 +985,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
       {/* Save Button */}
       <View style={{ marginTop: SPACING.lg }}>
         <LimeCTA
-          title={saving ? 'PERSISTING TO POSTGRESQL...' : (currentUser ? 'SAVE TO POSTGRESQL' : 'SAVE LOCAL DRAFT')}
+          title={saving ? 'SAVING...' : 'SAVE BUILDING'}
           onPress={handleSave}
           loading={saving}
           icon={<Save size={18} color={tokens.onLime} style={{ marginRight: 8 }} />}
@@ -1219,20 +1069,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  infoLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  infoVal: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
   chipBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1248,19 +1084,5 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontSize: 12,
     fontWeight: '700',
-  },
-  smallBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    minHeight: 48,
-    paddingHorizontal: 12,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-  },
-  smallBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
 });

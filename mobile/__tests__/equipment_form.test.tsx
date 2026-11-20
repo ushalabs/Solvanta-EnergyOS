@@ -56,7 +56,6 @@ describe('BuildingEquipmentEditor Form Interactions', () => {
     jest.clearAllMocks();
     storage.getItem.mockResolvedValue(null);
     storage.setItem.mockResolvedValue();
-    jest.spyOn(api, 'getToken').mockResolvedValue(null);
     jest.spyOn(api, 'getCurrentUser').mockResolvedValue({
       id: 'usr_test_123',
       email: 'demo@solvanta.energy',
@@ -170,7 +169,9 @@ describe('BuildingEquipmentEditor Form Interactions', () => {
     const root = tree.root;
     // Section headers
     const textNodes = root.findAllByType(MockText).map((n) => n.props.children);
-    expect(textNodes).toContain('ACCOUNT & FASTAPI AUTH');
+    // Buildings live on the device: there is no server sign-in card any more.
+    expect(textNodes).not.toContain('ACCOUNT & FASTAPI AUTH');
+    expect(textNodes).toContain('Saved on this device');
     expect(textNodes).toContain('SITE IDENTITY');
     expect(textNodes).toContain('SOLAR PV ARRAY');
     expect(textNodes).toContain('INVERTER');
@@ -189,9 +190,9 @@ describe('BuildingEquipmentEditor Form Interactions', () => {
       );
     });
 
-    // Find usable battery input and set it greater than nominal (e.g. 15 kWh vs 10 kWh)
+    // Find usable battery input (loaded from the stored building) and set it greater than nominal (15 kWh vs 10 kWh)
     const inputs = tree.root.findAllByType(MockTextInput);
-    const usableInput = inputs.find((i) => i.props.value === '9.0');
+    const usableInput = inputs.find((i) => i.props.value === '9');
     expect(usableInput).toBeDefined();
 
     await act(async () => {
@@ -217,7 +218,7 @@ describe('BuildingEquipmentEditor Form Interactions', () => {
 
     // Verify no success banner is rendered
     const successText = tree.root.findAllByType(MockText).find((t) => {
-      return typeof t.props.children === 'string' && t.props.children.includes('Server Confirmed');
+      return typeof t.props.children === 'string' && t.props.children.includes('Saved on this device (Building');
     });
     expect(successText).toBeUndefined();
   });
@@ -234,7 +235,7 @@ describe('BuildingEquipmentEditor Form Interactions', () => {
 
     // Change generator rating to 0.0
     const inputs = tree.root.findAllByType(MockTextInput);
-    const genRatingInput = inputs.find((i) => i.props.value === '5.0');
+    const genRatingInput = inputs.find((i) => i.props.value === '5');
     expect(genRatingInput).toBeDefined();
 
     await act(async () => {
@@ -258,8 +259,7 @@ describe('BuildingEquipmentEditor Form Interactions', () => {
     expect(errorText).toBeDefined();
   });
 
-  test('server HTTP 422 or 401 failure displays server error and never claims success', async () => {
-    jest.spyOn(api, 'getToken').mockResolvedValue('valid_test_token');
+  test('a rejected save displays the validation error and never claims success', async () => {
     jest.spyOn(api, 'updateBuilding').mockRejectedValue(
       new SolvantaApiError(422, {
         error: {
@@ -291,19 +291,18 @@ describe('BuildingEquipmentEditor Form Interactions', () => {
 
     // Verify server error message is displayed
     const errorText = tree.root.findAllByType(MockText).find((t) => {
-      return typeof t.props.children === 'string' && t.props.children.includes('Server Rejected Save (HTTP 422)');
+      return typeof t.props.children === 'string' && t.props.children.includes('Not saved: PV capacity mismatch');
     });
     expect(errorText).toBeDefined();
 
     // Verify success banner is NOT displayed
     const successText = tree.root.findAllByType(MockText).find((t) => {
-      return typeof t.props.children === 'string' && t.props.children.includes('Server Confirmed');
+      return typeof t.props.children === 'string' && t.props.children.includes('Saved on this device');
     });
     expect(successText).toBeUndefined();
   });
 
-  test('authenticated save calls updateBuilding and reloads authoritative state', async () => {
-    jest.spyOn(api, 'getToken').mockResolvedValue('valid_test_token');
+  test('save calls updateBuilding and reloads the stored state', async () => {
     const updateSpy = jest.spyOn(api, 'updateBuilding').mockResolvedValue({
       id: 'bld_001',
       name: 'Residential Solar Twin',
@@ -368,9 +367,9 @@ describe('BuildingEquipmentEditor Form Interactions', () => {
       })
     );
 
-    // Verify success banner is rendered with server-confirmed message
+    // Verify success banner confirms the save on the device
     const successText = tree.root.findAllByType(MockText).find((t) => {
-      return typeof t.props.children === 'string' && t.props.children.includes('Server Confirmed');
+      return typeof t.props.children === 'string' && t.props.children.includes('Saved on this device (Building: Residential Solar Twin)');
     });
     expect(successText).toBeDefined();
   });

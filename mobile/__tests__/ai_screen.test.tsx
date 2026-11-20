@@ -595,14 +595,14 @@ describe('incidents and links', () => {
     expect(joined()).toMatch(/Inverter offline/);
   });
 
-  test('with no incidents it says so, and when the server is not ready it says that', async () => {
+  test('with no incidents it says so, and when the engine is not ready it says that', async () => {
     (api.get as jest.Mock).mockImplementation(async (path: string) => { if (path === '/operations/tools') return { tools: [] }; if (path.endsWith('/incidents')) return []; return runs; });
     await render();
     expect(joined()).toMatch(/No incidents found\./);
     await act(async () => tree.unmount());
     (api.getReady as jest.Mock).mockResolvedValue({ ready: false, database: 'down', engines: 'x', timestamp: 'x' });
     await render();
-    expect(joined()).toMatch(/The server is not ready yet\./);
+    expect(joined()).toMatch(/The on-device engine is not ready yet\./);
     expect(joined()).not.toMatch(/database down/);
   });
 

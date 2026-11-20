@@ -20,6 +20,11 @@ import {
   BuildingPayload,
   EquipmentSummary,
 } from '../src/api/client';
+import { LocalApi } from '../src/local/localApi';
+import { memoryDb } from './helpers/nodeSqlite';
+
+// Equipment is stored by the on-device engine; these run the real client against it on SQLite.
+const deviceClient = () => { const local = new LocalApi(memoryDb()); return new SolvantaApiClient(undefined, () => local); };
 
 describe('Phase 3 Equipment Configuration API & Validation', () => {
   beforeEach(() => {
@@ -28,7 +33,7 @@ describe('Phase 3 Equipment Configuration API & Validation', () => {
   });
 
   test('calls GET /buildings/:id/equipment and parses equipment summary', async () => {
-    const client = new SolvantaApiClient('http://test-server/api/v1');
+    const client = deviceClient();
     const mockSummary: EquipmentSummary = {
       building_id: 'bld-uuid-123',
       building_name: 'Test Solar Twin',
@@ -72,25 +77,23 @@ describe('Phase 3 Equipment Configuration API & Validation', () => {
       validation_messages: [],
     };
 
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => mockSummary,
+    const created = await client.createBuilding({
+      name: mockSummary.building_name, pv_capacity_kwp: 12, inverter_rating_kw: 10,
+      solar: mockSummary.solar, inverter: mockSummary.inverter, battery: mockSummary.battery,
+      generator: mockSummary.generator, grid: mockSummary.grid,
     });
 
-    const result = await client.getBuildingEquipment('bld-uuid-123');
-    expect(result.building_id).toBe('bld-uuid-123');
-    expect(result.solar.pv_capacity_kwp).toBe(12.0);
-    expect(result.inverter.inverter_type).toBe('hybrid');
-    expect(result.battery.chemistry).toBe('LFP');
-    expect(result.generator.enabled).toBe(true);
-
-    const callArgs = (globalThis as any).fetch.mock.calls[0];
-    expect(callArgs[0]).toBe('http://test-server/api/v1/buildings/bld-uuid-123/equipment');
+    const result = await client.getBuildingEquipment(created.id);
+    expect(result).toEqual({ ...mockSummary, building_id: created.id });
+    expect((globalThis as any).fetch).not.toHaveBeenCalled();
   });
 
   test('calls PATCH /buildings/:id to update equipment parameters', async () => {
-    const client = new SolvantaApiClient('http://test-server/api/v1');
+    const client = deviceClient();
+    const created = await client.createBuilding({
+      name: 'Twin', pv_capacity_kwp: 11, inverter_rating_kw: 8,
+      battery: { nominal_capacity_kwh: 10, usable_capacity_kwh: 9, initial_soc_pct: 70, minimum_soc_pct: 20, max_charge_kw: 4, max_discharge_kw: 4, round_trip_efficiency: 0.9 },
+    });
     const updatePayload: Partial<BuildingPayload> = {
       solar: {
         pv_capacity_kwp: 15.0,
@@ -107,18 +110,12 @@ describe('Phase 3 Equipment Configuration API & Validation', () => {
       },
     };
 
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ id: 'bld-uuid-123', ...updatePayload }),
-    });
-
-    await client.updateBuilding('bld-uuid-123', updatePayload);
-    const callArgs = (globalThis as any).fetch.mock.calls[0];
-    expect(callArgs[0]).toBe('http://test-server/api/v1/buildings/bld-uuid-123');
-    expect(callArgs[1].method).toBe('PATCH');
-    const sentBody = JSON.parse(callArgs[1].body);
-    expect(sentBody.solar.pv_capacity_kwp).toBe(15.0);
-    expect(sentBody.battery.nominal_capacity_kwh).toBe(20.0);
+    const updated = await client.updateBuilding(created.id, { ...updatePayload, solar: { ...updatePayload.solar!, module_count: 27, module_wattage_w: 550 } });
+    expect(updated.pv_capacity_kwp).toBe(15.0);
+    expect(updated.battery.nominal_capacity_kwh).toBe(20.0);
+    const equipment = await client.getBuildingEquipment(created.id);
+    expect(equipment.solar.panel_tilt_deg).toBe(30.0);
+    expect(equipment.battery.initial_soc_pct).toBe(85.0);
+    await expect(client.updateBuilding(created.id, { battery: { ...updatePayload.battery!, usable_capacity_kwh: 25 } })).rejects.toMatchObject({ status: 422 });
   });
 });

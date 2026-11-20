@@ -20,7 +20,7 @@ export default function Operations() {
   const scroll = useRef<ScrollView>(null);
   useEffect(() => {
     let active = true; setIncidents([]);
-    if (building.id) Promise.all([api.getReady(), api.get<typeof incidents>(`/buildings/${building.id}/incidents`)]).then(([r, i]) => { if (active) { setStatus(r.ready ? (i.length ? '' : 'No incidents found.') : 'The server is not ready yet.'); setIncidents(i); } }).catch(e => { if (active) setStatus(friendlyToolError(e)); });
+    if (building.id) Promise.all([api.getReady(), api.get<typeof incidents>(`/buildings/${building.id}/incidents`)]).then(([r, i]) => { if (active) { setStatus(r.ready ? (i.length ? '' : 'No incidents found.') : 'The on-device engine is not ready yet.'); setIncidents(i); } }).catch(e => { if (active) setStatus(friendlyToolError(e)); });
     return () => { active = false; };
   }, [building.id]);
   return <SolvantaScreen banner="GUIDED SHORTCUTS • no language model is connected" footer={quickRow} scrollRef={scroll}>

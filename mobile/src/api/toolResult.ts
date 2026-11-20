@@ -171,7 +171,7 @@ export function technicalDetails(result: ToolResultData): Array<{ label: string;
   ];
 }
 
-export const COULD_NOT_RUN = "Couldn't run this right now. Check that the backend is running and try again.";
+export const COULD_NOT_RUN = "Couldn't run this right now. Try again.";
 /**
  * A short, friendly message for a failed tool call. The raw server text is never part of it: it can carry field paths,
  * identifiers or validation wording that means nothing to a homeowner. The screen keeps the raw text under Technical details.
