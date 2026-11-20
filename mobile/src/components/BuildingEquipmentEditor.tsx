@@ -23,6 +23,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { SPACING, RADIUS } from '../theme/tokens';
 import { api, BuildingPayload, SolvantaApiError } from '../api/client';
 import { LimeCTA } from './LimeCTA';
+import { addDemoBuilding } from '../local/demo';
 import { Toggle } from './Toggle';
 
 export const EQUIPMENT_STORAGE_PREFIX = '@solvanta_equipment_';
@@ -175,6 +176,23 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
       setSyncStatus('error');
       setErrorMsg(`Failed to load buildings: ${err.message || 'unknown error'}`);
       return false;
+    }
+  }
+
+  const [addingDemo, setAddingDemo] = useState(false);
+  async function handleAddDemo() {
+    if (!currentUser) return;
+    setAddingDemo(true);
+    setErrorMsg(null);
+    try {
+      const id = await addDemoBuilding(api);
+      await AsyncStorage.setItem(`@solvanta_selected_building_${currentUser.id}`, id);
+      await loadUserBuildings(currentUser.id);
+      setSuccessMsg('Demo building added on this device, with appliances, a roof and a saved outage simulation.');
+    } catch (err: any) {
+      setErrorMsg(`Could not add the demo building: ${err?.message || 'unknown error'}`);
+    } finally {
+      setAddingDemo(false);
     }
   }
 
@@ -496,6 +514,16 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
         <View accessibilityRole="alert" style={[styles.feedbackBanner, { backgroundColor: tokens.redTint, borderColor: tokens.redText }]}>
           <AlertTriangle size={16} color={tokens.redText} style={{ marginRight: 8 }} />
           <Text style={[styles.feedbackText, { color: tokens.redText }]}>{errorMsg}</Text>
+        </View>
+      )}
+
+      {currentUser && availableBuildings.length === 0 && (
+        <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border, marginBottom: SPACING.md }]}>
+          <Text style={[styles.cardTitle, { color: tokens.textPrimary, marginBottom: 6 }]}>NO BUILDING YET</Text>
+          <Text style={{ color: tokens.textSecondary, fontSize: 13, lineHeight: 18, marginBottom: 10 }}>
+            Fill in your building below and save it, or start from a ready-made demo home in Lahore.
+          </Text>
+          <LimeCTA title={addingDemo ? 'ADDING DEMO...' : 'ADD DEMO BUILDING'} onPress={handleAddDemo} loading={addingDemo} />
         </View>
       )}
 

@@ -24,7 +24,7 @@ import { LocalApi } from '../src/local/localApi';
 import { memoryDb } from './helpers/nodeSqlite';
 
 // Equipment is stored by the on-device engine; these run the real client against it on SQLite.
-const deviceClient = () => { const local = new LocalApi(memoryDb()); return new SolvantaApiClient(undefined, () => local); };
+const deviceClient = () => { const local = new LocalApi(memoryDb()); return new SolvantaApiClient(() => local); };
 
 describe('Phase 3 Equipment Configuration API & Validation', () => {
   beforeEach(() => {

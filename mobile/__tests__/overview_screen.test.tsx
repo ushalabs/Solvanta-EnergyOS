@@ -25,6 +25,7 @@ jest.mock('react-native-reanimated', () => {
     createAnimatedComponent,
     useSharedValue: (value: number) => React.useRef({ value }).current,
     useAnimatedProps: (worklet: () => object) => worklet(),
+    useAnimatedStyle: (worklet: () => object) => worklet(),
     useReducedMotion: () => mockReducedMotion,
     withRepeat: (animation: unknown) => mockWithRepeat(animation),
     withTiming: (value: number) => value,
@@ -113,6 +114,7 @@ const hosts = (type: string, within: any = tree.root) => within.findAll((n: any)
 const flatText = (n: any): string => [n.props.children].flat(Infinity).map((c: any) => typeof c === 'string' || typeof c === 'number' ? c : c?.props ? flatText(c) : '').join('');
 const texts = (within: any = tree.root): string[] => hosts('Text', within).map(flatText);
 const byTestId = (id: string) => tree.root.findAll((n: any) => n.props.testID === id && typeof n.type === 'string');
+const icons = (within: any): string[] => within.findAll((n: any) => n.type === 'Icon').map((n: any) => n.props.name);
 const button = (label: string | RegExp) => hosts('TouchableOpacity').find((b: any) => typeof label === 'string' ? b.props.accessibilityLabel === label : label.test(b.props.accessibilityLabel));
 const press = async (label: string | RegExp) => {
   const target = button(label);
@@ -269,7 +271,7 @@ describe('node cards', () => {
 
 describe('flow diagram', () => {
   const lines = () => byTestId('flow-line');
-  const pulses = () => tree.root.findAll((n: any) => n.type === 'Animated');
+  const pulses = () => tree.root.findAll((n: any) => n.type === 'Animated' && n.props.d !== undefined);
 
   test('draws nothing until the layout has been measured', async () => {
     await render();
@@ -444,8 +446,36 @@ describe('weather', () => {
     (AsyncStorage.setItem as jest.Mock).mockClear();
     serve({ weather: new SolvantaApiError(503, { detail: 'Live weather is not configured yet.' }) });
     await render();
-    expect(button(/^Weather: Weather unavailable/)).toBeDefined();
+    const card = button(/^Weather: Weather unavailable/);
+    expect(card).toBeDefined();
     expect((AsyncStorage.setItem as jest.Mock).mock.calls.some(([key]) => key === WEATHER_CITY_KEY)).toBe(false);
+    // Offline the box shows only the sun or moon for the time of day: no text, no cloud or rain.
+    expect(texts(card)).toEqual([]);
+    expect(icons(card).filter(n => n === 'Sun' || n === 'Moon')).toHaveLength(1);
+    expect(icons(card)).not.toContain('Cloud');
+  });
+
+  test('rain at night shows the moon behind a cloud with falling drops', async () => {
+    mockStore[WEATHER_CITY_KEY] = 'Lahore';
+    serve({ weather: { ...WEATHER, current: { ...WEATHER.current, condition: 'Rain', kind: 'rain', is_day: false, temperature_c: 14 } } });
+    await render();
+    const card = button(/^Live weather in Lahore, Pakistan: Rain/);
+    expect(icons(card)).toEqual(expect.arrayContaining(['Moon', 'Cloud']));
+    expect(icons(card)).not.toContain('Sun');
+    expect(card.findAll((n: any) => n.props.testID === 'weather-drop' && typeof n.type !== 'string').length).toBeGreaterThan(0);
+  });
+
+  test('a clear hot day shows the sun in red, a clear cold night the moon in blue', async () => {
+    mockStore[WEATHER_CITY_KEY] = 'Lahore';
+    serve({ weather: { ...WEATHER, current: { ...WEATHER.current, kind: 'clear', is_day: true, temperature_c: 38 } } });
+    await render();
+    const sun = button(/^Live weather/).findAll((n: any) => n.props.name === 'Sun')[0];
+    expect(sun.props.color).toBe(darkTokens.redText);
+    await act(async () => tree.unmount());
+    serve({ weather: { ...WEATHER, current: { ...WEATHER.current, condition: 'Clear sky', kind: 'clear', is_day: false, temperature_c: 4 } } });
+    await render();
+    const moon = button(/^Live weather/).findAll((n: any) => n.props.name === 'Moon')[0];
+    expect(moon.props.color).toBe(darkTokens.cyanText);
   });
 });
 
