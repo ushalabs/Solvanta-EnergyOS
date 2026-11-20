@@ -144,7 +144,7 @@ export function WeatherCard({ buildingId, compact = false }: { buildingId?: stri
       {weather && <>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.md }}>
           <WeatherScene kind={weather.kind} isDay={weather.is_day ?? daytime} temperatureC={weather.temperature_c} size={64} testID="weather-scene-large" />
-          <View style={{ flexShrink: 1 }}><Message>{weather.location} · {weather.condition}</Message></View>
+          <View style={{ flex: 1 }}><Message>{weather.location} · {weather.condition}</Message></View>
         </View>
         <MetricGrid>
           <Metric label="Temperature" value={weather.temperature_c} unit="°C" />
@@ -157,7 +157,7 @@ export function WeatherCard({ buildingId, compact = false }: { buildingId?: stri
       {forecast?.days.map(day => (
         <View key={day.date} style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
           <WeatherScene kind={day.kind} isDay temperatureC={day.max_c} size={28} testID="weather-scene-day" />
-          <View style={{ flexShrink: 1 }}><Message>
+          <View style={{ flex: 1 }}><Message>
             {day.date} · {day.condition} · {day.min_c}–{day.max_c} °C · {day.rain_chance_pct}% chance of rain
           </Message></View>
         </View>
