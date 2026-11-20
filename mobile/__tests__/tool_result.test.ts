@@ -196,7 +196,7 @@ describe('technicalDetails', () => {
 describe('friendlyToolError', () => {
   const err = (status: number, detail: string) => Object.assign(new Error(detail), { status });
   test('an unreachable backend, a timeout, a server error and anything unexpected share the one friendly sentence', () => {
-    expect(COULD_NOT_RUN).toBe("Couldn't run this right now. Check that the backend is running and try again.");
+    expect(COULD_NOT_RUN).toBe("Couldn't run this right now. Try again.");
     for (const e of [err(0, 'Network failure connecting to http://x'), err(408, 'API request timed out after 30000ms'), err(500, 'Traceback: boom'), err(502, 'Bad gateway'), new Error('Something odd'), undefined, 'text']) expect(friendlyToolError(e)).toBe(COULD_NOT_RUN);
   });
   test('cancel, sign-in, missing scenario, generator and other validation keep their own wording', () => {

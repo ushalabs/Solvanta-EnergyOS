@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Platform } from 'react-native';
 import { router } from 'expo-router';
-import { api, SolvantaApiError } from '../src/api/client';
 import { BillPickerUnavailableError, loadBillPicker } from '../src/api/billPicker';
+import { readBillOnDevice } from '../src/local/billOcr';
 import { billingMonths, pakistanSolarYield, sizeSolar } from '../src/api/solarSizing';
 import { SolvantaScreen } from '../src/components/SolvantaScreen';
 import {
@@ -11,7 +11,6 @@ import {
 } from '../src/components/TwinControls';
 
 type City = keyof typeof pakistanSolarYield;
-type BillHistory = { readings: Array<{ month: string; units_kwh: number }> };
 const maxBillBytes = 8 * 1024 * 1024;
 
 function previousMonth() {
@@ -38,25 +37,20 @@ export default function SolarSizing() {
     setReadingBill(true);
     setNotice(undefined);
     try {
-      const { DocumentPicker, File } = loadBillPicker(Platform.OS);
+      const { DocumentPicker } = loadBillPicker(Platform.OS);
       const picked = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/jpeg', 'image/png'],
+        type: ['image/jpeg', 'image/png'],
         base64: false,
       });
       if (picked.canceled) return;
       const asset = picked.assets[0];
       if (asset.size && asset.size > maxBillBytes) {
-        setNotice({ text: 'Choose a PDF, JPG, or PNG under 8 MB.', warning: true });
+        setNotice({ text: 'Choose a JPG or PNG under 8 MB.', warning: true });
         return;
       }
 
-      const form = new FormData();
-      const file = File ? new File(asset.uri) : asset.file;
-      if (!file) throw new Error('The browser could not open the selected file.');
-      form.append('bill', file, asset.name);
-      const { readings } = await api.request<BillHistory>('/solar-sizing/bill-history', {
-        method: 'POST', body: form,
-      }, 45000);
+      // Text recognition runs on the phone; the bill never leaves the device.
+      const readings = await readBillOnDevice(asset);
       if (!readings.length) {
         setNotice({ text: 'No month-and-unit readings found. Try a clearer bill or enter the units below.', warning: true });
         return;
@@ -73,9 +67,7 @@ export default function SolarSizing() {
         setNotice({ text: error.message, warning: true });
         return;
       }
-      const text = error instanceof SolvantaApiError && error.status === 401
-        ? 'Sign in to the Solvanta backend in Settings to read a bill. You can enter the units manually here.'
-        : error instanceof Error ? error.message : 'The bill could not be read.';
+      const text = error instanceof Error ? error.message : 'The bill could not be read.';
       setNotice({ text, warning: true });
     } finally {
       setReadingBill(false);
@@ -88,7 +80,7 @@ export default function SolarSizing() {
       <Card>
         <CardHeader title="Read a Pakistani electricity bill" subtitle="Use a recent bill that shows your monthly usage history." />
         <Action title="Upload bill" variant="secondary" onPress={uploadBill} loading={readingBill} disabled={readingBill} />
-        <Label caption tone="secondary">PDF, JPG, or PNG up to 8 MB. Your Solvanta backend processes the file and returns the readings.</Label>
+        <Label caption tone="secondary">JPG or PNG up to 8 MB, such as a photo or screenshot of the bill. It is read on this device.</Label>
         <Label caption tone="secondary">Use the Month and Units history table. For bills that only show a usage chart, enter the readings below.</Label>
         {notice && <Message tone={notice.warning ? 'warning' : 'info'}>{notice.text}</Message>}
       </Card>

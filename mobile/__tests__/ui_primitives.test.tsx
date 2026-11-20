@@ -188,6 +188,6 @@ describe('BuildingPicker', () => {
   });
   test('errors offer a way forward', async () => {
     const tree = await render(<BuildingPicker state={state({ error: 'Not authenticated' })} />);
-    expect(tree.root.findAll(n => (n.type as any) === 'TouchableOpacity')[0].props.accessibilityLabel).toBe('Open Settings / Sign In');
+    expect(tree.root.findAll(n => (n.type as any) === 'TouchableOpacity')[0].props.accessibilityLabel).toBe('Open Settings');
   });
 });

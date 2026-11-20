@@ -368,7 +368,7 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
           </View>}
           {mode === 'obstacle' && selected !== null && selected < roof.obstacles.length && <View style={{ gap: 4 }}>
             <Field label={`Obstacle ${selected + 1} name`} value={names[selected] ?? ''} onChange={v => setNames(names.map((n, i) => i === selected ? v.slice(0, 40) : n))} />
-            <Label tone="secondary" caption>Names show on the drawing on this device. The server stores obstacles as shapes only, so names are not saved.</Label>
+            <Label tone="secondary" caption>Names show on the drawing on this device. Obstacles are saved as shapes only, so names are not saved.</Label>
           </View>}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
             <Chip compact label={snapOn ? 'Snap on' : 'Snap off'} a11yLabel="Snap to grid and right angles" selected={snapOn} onPress={() => { setSnapOn(!snapOn); setSnapNote(null); }} />

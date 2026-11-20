@@ -415,7 +415,7 @@ describe('Appliances list layout', () => {
     jest.spyOn(api, 'getBuildings').mockRejectedValue(new SolvantaApiError(401, { detail: 'Not authenticated' }));
     await render();
     expect(texts()).toContain('Not authenticated');
-    expect(buttonIn(tree.root, 'Open Settings / Sign In')).toBeDefined();
+    expect(buttonIn(tree.root, 'Open Settings')).toBeDefined();
   });
 
   test('the provenance banner is one short line that still says nothing real is switched', async () => {

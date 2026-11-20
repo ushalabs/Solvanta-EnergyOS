@@ -152,5 +152,5 @@ export function BuildingHeader({ title, building, onBack, backLabel }: { title: 
 }
 export function BuildingPicker({ state }: { state: ReturnType<typeof useBuildings> }) {
   const { tokens: t } = useTheme();
-  return <Card><CardHeader title="Building digital twin" icon={<Building2 size={18} color={t.limeText} />} />{state.error ? <><Message tone="warning">{state.error}</Message><Action title="Open Settings / Sign In" onPress={() => router.push('/settings')} /></> : <ChipGroup>{state.buildings.map(b => <Chip key={b.id} label={b.name} a11yLabel={`${state.id === b.id ? '✓ ' : ''}${b.name}`} selected={state.id === b.id} onPress={() => state.setId(b.id)} />)}</ChipGroup>}</Card>;
+  return <Card><CardHeader title="Building digital twin" icon={<Building2 size={18} color={t.limeText} />} />{state.error ? <><Message tone="warning">{state.error}</Message><Action title="Open Settings" onPress={() => router.push('/settings')} /></> : <ChipGroup>{state.buildings.map(b => <Chip key={b.id} label={b.name} a11yLabel={`${state.id === b.id ? '✓ ' : ''}${b.name}`} selected={state.id === b.id} onPress={() => state.setId(b.id)} />)}</ChipGroup>}</Card>;
 }

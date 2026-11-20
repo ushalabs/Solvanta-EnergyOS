@@ -16,7 +16,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   },
 }));
 
-import { SolvantaApiClient, getBaseApiUrl, SolvantaApiError, AUTH_TOKEN_KEY } from '../src/api/client';
+import { SolvantaApiClient, getBaseApiUrl, SolvantaApiError, AUTH_TOKEN_KEY, isNetworkPath } from '../src/api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 describe('Solvanta Mobile API Client', () => {
@@ -67,12 +67,12 @@ describe('Solvanta Mobile API Client', () => {
       json: async () => ({ status: 'ok', version: '1.0.0' }),
     });
 
-    const res = await client.get('/system/health');
+    const res = await client.get('/weather/forecast?city=Lahore');
     expect(res).toEqual({ status: 'ok', version: '1.0.0' });
 
     expect((globalThis as any).fetch).toHaveBeenCalled();
     const callArgs = (globalThis as any).fetch.mock.calls[0];
-    expect(callArgs[0]).toBe('http://test-server/api/v1/system/health');
+    expect(callArgs[0]).toBe('http://test-server/api/v1/weather/forecast?city=Lahore');
   });
 
   test('handles bounded request timeouts with 408 SolvantaApiError', async () => {
@@ -82,9 +82,9 @@ describe('Solvanta Mobile API Client', () => {
 
     (globalThis as any).fetch = jest.fn().mockRejectedValue(abortErr);
 
-    await expect(client.get('/system/health')).rejects.toThrow(SolvantaApiError);
+    await expect(client.get('/weather/current?city=Lahore')).rejects.toThrow(SolvantaApiError);
     try {
-      await client.get('/system/health');
+      await client.get('/weather/current?city=Lahore');
     } catch (e: any) {
       expect(e.status).toBe(408);
       expect(e.data.error.code).toBe('REQUEST_TIMEOUT');
@@ -95,9 +95,9 @@ describe('Solvanta Mobile API Client', () => {
     const client = new SolvantaApiClient('http://test-server/api/v1');
     (globalThis as any).fetch = jest.fn().mockRejectedValue(new Error('Failed to fetch'));
 
-    await expect(client.get('/system/health')).rejects.toThrow(SolvantaApiError);
+    await expect(client.get('/weather/current?city=Lahore')).rejects.toThrow(SolvantaApiError);
     try {
-      await client.get('/system/health');
+      await client.get('/weather/current?city=Lahore');
     } catch (e: any) {
       expect(e.status).toBe(0);
       expect(e.data.error.code).toBe('NETWORK_ERROR');
@@ -109,7 +109,7 @@ describe('Solvanta Mobile API Client', () => {
     (globalThis as any).fetch = jest.fn((_url, options) => new Promise((_resolve, reject) => {
       options.signal.addEventListener('abort', () => reject(new TypeError('Fetch request has been canceled')));
     }));
-    await expect(client.get('/system/health', 5)).rejects.toMatchObject({ status: 408 });
+    await expect(client.get('/weather/current?city=Lahore', 5)).rejects.toMatchObject({ status: 408 });
   });
 });
 
@@ -135,6 +135,17 @@ test('caller cancellation retains a bounded timeout and distinct cancellation st
   if(options.signal.aborted)fail();else options.signal.addEventListener('abort',fail);
  }));
  const external=new AbortController();
- await expect(client.request('/slow',{signal:external.signal},5)).rejects.toMatchObject({status:408});
- external.abort();await expect(client.request('/cancelled',{signal:external.signal},100)).rejects.toMatchObject({status:499});
+ await expect(client.request('/weather/slow',{signal:external.signal},5)).rejects.toMatchObject({status:408});
+ external.abort();await expect(client.request('/weather/cancelled',{signal:external.signal},100)).rejects.toMatchObject({status:499});
+});
+
+test('serves everything except weather from the on-device engine, without the network', async () => {
+ const handle = jest.fn(async (method: string, path: string, body?: unknown) => ({ method, path, body }));
+ const client = new SolvantaApiClient('http://test/api/v1', () => ({ handle }));
+ (globalThis as any).fetch = jest.fn();
+ expect(await client.post('/buildings/b1/simulations', { use_generator: false })).toEqual({ method: 'POST', path: '/buildings/b1/simulations', body: { use_generator: false } });
+ expect(await client.get('/buildings')).toEqual({ method: 'GET', path: '/buildings', body: undefined });
+ expect((globalThis as any).fetch).not.toHaveBeenCalled();
+ expect(isNetworkPath('/weather/solar/b1?city=Lahore')).toBe(true);
+ expect(isNetworkPath('/weatherstation')).toBe(false);
 });

@@ -1,9 +1,23 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SolvantaApiError, type ApiProblemDetails } from './errors';
+
+export { SolvantaApiError, type ApiProblemDetails } from './errors';
 
 export const AUTH_TOKEN_KEY = '@solvanta_auth_token';
 
+/**
+ * Paths still served over the network. Everything else (buildings, energy engines, plans, ...) runs on the device
+ * from SQLite: see src/local/localApi.ts.
+ */
+export const NETWORK_PATHS = ['/weather'];
+
+export function isNetworkPath(endpoint: string): boolean {
+  return endpoint.startsWith('http') || NETWORK_PATHS.some(prefix => endpoint === prefix || endpoint.startsWith(`${prefix}/`) || endpoint.startsWith(`${prefix}?`));
+}
+
+/** Network base URL, used only by NETWORK_PATHS (weather). */
 export function getBaseApiUrl(): string {
   // 1. Explicit environment override (physical device LAN or custom cloud endpoint)
   const envUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -28,31 +42,6 @@ export function getBaseApiUrl(): string {
 
   // 3. Fallback for iOS simulator and Web preview
   return 'http://localhost:8000/api/v1';
-}
-
-export interface ApiProblemDetails {
-  error?: {
-    code: string;
-    message: string;
-    status: number;
-    details?: Array<{ field?: string; issue?: string }>;
-    timestamp?: string;
-  };
-  detail?: string | Array<{ loc?: Array<string | number>; msg?: string }>;
-}
-
-export class SolvantaApiError extends Error {
-  status: number;
-  data: ApiProblemDetails;
-
-  constructor(status: number, data: ApiProblemDetails) {
-    const detail = Array.isArray(data.detail) ? data.detail.map(d => `${d.loc?.join('.') || 'input'}: ${d.msg || 'Invalid value'}`).join('; ') : data.detail;
-    const message = data.error?.message || detail || `API request failed with status ${status}`;
-    super(message);
-    this.name = 'SolvantaApiError';
-    this.status = status;
-    this.data = data;
-  }
 }
 
 export interface SolarConfig {
@@ -121,11 +110,20 @@ export interface EquipmentSummary {
   validation_messages: string[];
 }
 
+export type LocalHandler = { handle(method: string, path: string, body?: unknown): Promise<unknown> };
+
 export class SolvantaApiClient {
   private baseUrl?: string;
+  private local?: () => LocalHandler;
 
-  constructor(baseUrl?: string) {
+  constructor(baseUrl?: string, local?: () => LocalHandler) {
     this.baseUrl = baseUrl;
+    this.local = local;
+  }
+
+  private localHandler(): LocalHandler {
+    if (this.local) return this.local();
+    return require('../local/device').deviceApi();
   }
 
   setBaseUrl(url: string) {
@@ -153,6 +151,10 @@ export class SolvantaApiClient {
   }
 
   async request<T>(endpoint: string, options: RequestInit = {}, timeoutMs: number = 10000): Promise<T> {
+    if (!isNetworkPath(endpoint)) {
+      const body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body ?? undefined;
+      return await this.localHandler().handle(options.method || 'GET', endpoint, body) as T;
+    }
     const url = endpoint.startsWith('http') ? endpoint : `${this.getBaseUrl()}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
     
     const headers = new Headers(options.headers || {});
@@ -202,7 +204,7 @@ export class SolvantaApiClient {
         throw new SolvantaApiError(408, {
           error: {
             code: 'REQUEST_TIMEOUT',
-            message: `API request timed out after ${timeoutMs}ms: ${url}. Start the LAN backend and check that the phone and PC can reach each other.`,
+            message: `API request timed out after ${timeoutMs}ms: ${url}. Check the internet connection.`,
             status: 408,
           },
           detail: `API request timed out after ${timeoutMs}ms`,
@@ -251,25 +253,6 @@ export class SolvantaApiClient {
 
   async getReady() {
     return this.get<{ ready: boolean; database: string; engines: string; timestamp: string }>('/system/ready');
-  }
-
-  async login(username: string, password: string) {
-    const formData = new URLSearchParams();
-    formData.append('username', username);
-    formData.append('password', password);
-
-    const data = await this.request<{ access_token: string; token_type: string }>('/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: formData.toString(),
-    });
-
-    if (data.access_token) {
-      await this.setToken(data.access_token);
-    }
-    return data;
   }
 
   async getCurrentUser() {

@@ -175,7 +175,7 @@ describe('header', () => {
     jest.spyOn(api, 'getBuildings').mockRejectedValue(new SolvantaApiError(401, { detail: 'Not authenticated' }));
     await render();
     expect(texts()).toContain('Not authenticated');
-    expect(button('Open Settings / Sign In')).toBeDefined();
+    expect(button('Open Settings')).toBeDefined();
     expect(button('Choose a building')).toBeDefined();
   });
 

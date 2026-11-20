@@ -31,11 +31,13 @@ class MockFile extends Blob { constructor(public uri: string) { super(['bill']);
 // The screen tests replace only the loader, so React stays a single copy. The loader has its own tests below.
 const mockLoad = jest.fn();
 jest.mock('../src/api/billPicker', () => ({ ...jest.requireActual('../src/api/billPicker'), loadBillPicker: (...args: unknown[]) => mockLoad(...args) }));
+// Bill text recognition runs on the device; the screen tests replace it, it has its own tests in bill_ocr.test.ts.
+const mockReadBill = jest.fn();
+jest.mock('../src/local/billOcr', () => ({ ...jest.requireActual('../src/local/billOcr'), readBillOnDevice: (...args: unknown[]) => mockReadBill(...args) }));
 
 import React from 'react';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import SolarSizing from '../app/solar-sizing';
-import { api } from '../src/api/client';
 import { BillPickerUnavailableError, PICKER_UNAVAILABLE } from '../src/api/billPicker';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
@@ -54,6 +56,7 @@ async function render() {
 
 beforeEach(() => {
   mockGetDocument.mockReset();
+  mockReadBill.mockReset();
   mockLoad.mockReset();
   ok();
 });
@@ -139,35 +142,34 @@ describe('Size Solar from Bill screen', () => {
     mockGetDocument.mockResolvedValue({ canceled: true });
     await render();
     await act(async () => { upload().props.onPress(); });
-    expect(mockGetDocument).toHaveBeenCalledWith({ type: ['application/pdf', 'image/jpeg', 'image/png'], base64: false });
+    expect(mockGetDocument).toHaveBeenCalledWith({ type: ['image/jpeg', 'image/png'], base64: false });
     expect(texts()).not.toContain(PICKER_UNAVAILABLE);
   });
 
-  test('with the modules present a picked file is uploaded and the readings are used', async () => {
-    mockGetDocument.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///bill.pdf', name: 'bill.pdf', size: 1000 }] });
-    const request = jest.spyOn(api, 'request').mockResolvedValue({ readings: [{ month: '2026-01', units_kwh: 500 }] } as any);
+  test('with the modules present a picked image is read on the device and the readings are used', async () => {
+    const asset = { uri: 'file:///bill.png', name: 'bill.png', size: 1000, mimeType: 'image/png' };
+    mockGetDocument.mockResolvedValue({ canceled: false, assets: [asset] });
+    mockReadBill.mockResolvedValue([{ month: '2026-01', units_kwh: 500 }]);
     await render();
     await act(async () => { upload().props.onPress(); });
-    expect(request).toHaveBeenCalledTimes(1);
-    expect(request.mock.calls[0][0]).toBe('/solar-sizing/bill-history');
+    expect(mockReadBill).toHaveBeenCalledWith(asset);
     expect(texts().join(' ')).toContain('Read 1 month.');
   });
 
   test('a file over 8 MB is refused before any upload', async () => {
-    mockGetDocument.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///big.pdf', name: 'big.pdf', size: 9 * 1024 * 1024 }] });
-    const request = jest.spyOn(api, 'request');
+    mockGetDocument.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///big.png', name: 'big.png', size: 9 * 1024 * 1024 }] });
     await render();
     await act(async () => { upload().props.onPress(); });
-    expect(request).not.toHaveBeenCalled();
-    expect(texts()).toContain('Choose a PDF, JPG, or PNG under 8 MB.');
+    expect(mockReadBill).not.toHaveBeenCalled();
+    expect(texts()).toContain('Choose a JPG or PNG under 8 MB.');
   });
 
-  test('an upload failure still shows its own error, not the build message', async () => {
-    mockGetDocument.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///bill.pdf', name: 'bill.pdf', size: 10 }] });
-    jest.spyOn(api, 'request').mockRejectedValue(new Error('Bill service is down'));
+  test('a reading failure still shows its own error, not the build message', async () => {
+    mockGetDocument.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///bill.png', name: 'bill.png', size: 10 }] });
+    mockReadBill.mockRejectedValue(new Error('The bill could not be read.'));
     await render();
     await act(async () => { upload().props.onPress(); });
-    expect(texts()).toContain('Bill service is down');
+    expect(texts()).toContain('The bill could not be read.');
     expect(texts()).not.toContain(PICKER_UNAVAILABLE);
   });
 });
