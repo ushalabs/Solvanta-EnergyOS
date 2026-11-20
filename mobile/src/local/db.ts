@@ -152,6 +152,18 @@ export const MIGRATIONS: string[] = [
     UNIQUE (actor_id, event_id)
   );
   `,
+  // v2: twelve months of electricity-bill usage per building, for solar sizing.
+  `
+  CREATE TABLE bill_histories (
+    building_id TEXT PRIMARY KEY REFERENCES buildings(id) ON DELETE CASCADE,
+    ending_month TEXT NOT NULL,
+    readings TEXT NOT NULL,
+    city TEXT,
+    custom_yield REAL,
+    source TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  `,
 ];
 
 export async function migrate(db: SqlDb): Promise<void> {

@@ -246,6 +246,30 @@ export function roofInput(raw: unknown): RoofInput {
   return data;
 }
 
+// ---- Bill history ----
+
+export const BILL_SOURCES = ['bill', 'manual', 'demo'] as const;
+
+/** Twelve months of units ending at `ending_month`; blank months are allowed while the user fills them in. */
+export function billHistoryInput(raw: unknown) {
+  const body = object(raw);
+  forbidExtra(body, ['ending_month', 'readings', 'city', 'custom_yield', 'source']);
+  const ending = str(body, 'ending_month', { pattern: /^20\d{2}-(0[1-9]|1[0-2])$/ });
+  const readings = object(body.readings ?? {}, 'readings');
+  const clean: Record<string, number> = {};
+  for (const [month, value] of Object.entries(readings)) {
+    if (!/^20\d{2}-(0[1-9]|1[0-2])$/.test(month)) fail(`readings.${month}`, 'Months look like 2026-10');
+    clean[month] = num(readings, month, { ge: 0, lt: 10_000_000 });
+  }
+  if (Object.keys(clean).length > 24) fail('readings', 'At most 24 months');
+  return {
+    ending_month: ending, readings: clean,
+    city: body.city === undefined || body.city === null ? null : str(body, 'city', { min: 1, max: 60 }),
+    custom_yield: optionalNum(body, 'custom_yield', { ge: 100, le: 4000 }),
+    source: oneOf(body, 'source', BILL_SOURCES, 'manual'),
+  };
+}
+
 /** Python's json.dumps(..., sort_keys=True): one canonical string per request, for idempotency checks. */
 export function stableStringify(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;

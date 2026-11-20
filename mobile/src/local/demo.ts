@@ -36,6 +36,20 @@ const ROOF = {
   setback_m: 0.6, panel_width_m: 1.13, panel_height_m: 2.28, gap_m: 0.05,
 };
 
+/** Typical monthly units (kWh) for a Lahore home with air conditioning, January to December. */
+const MONTHLY_UNITS = [310, 285, 340, 480, 690, 860, 910, 880, 740, 520, 360, 330];
+
+/** Twelve months of bill history ending last month, as a PITC bill's Month / Units table would show. */
+export function demoBillHistory(now = new Date()) {
+  const readings: Record<string, number> = {};
+  for (let back = 12; back >= 1; back--) {
+    const month = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1));
+    readings[month.toISOString().slice(0, 7)] = MONTHLY_UNITS[month.getUTCMonth()];
+  }
+  const months = Object.keys(readings);
+  return { ending_month: months[months.length - 1], readings, city: 'Lahore', source: 'demo' as const };
+}
+
 /** Evening load-shedding, 18:00–21:00. */
 export const DEMO_OUTAGES = [{ start_min: h(18), end_min: h(21) }];
 
@@ -47,6 +61,7 @@ export async function addDemoBuilding(api: Handler): Promise<string> {
   }
   await api.handle('PUT', `/buildings/${id}/roof`, ROOF);
   await api.handle('POST', `/buildings/${id}/simulations`, { outages: DEMO_OUTAGES, use_generator: false });
+  await api.handle('PUT', `/buildings/${id}/bills`, demoBillHistory());
   return id;
 }
 

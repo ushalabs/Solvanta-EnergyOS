@@ -5,7 +5,7 @@ import { migrate, type SqlDb, type SqlValue } from './db';
 import { BUILDING_COLUMNS, buildingCreate, buildingRead, buildingUpdate, equipmentSummary, plantFor, toRow } from './buildings';
 import {
   applianceInput, eventInput, forecastInput, object, planAction, planInput, pvInput, roofInput, simulationInput,
-  stableStringify, telemetryInput, verificationInput, bool,
+  stableStringify, telemetryInput, verificationInput, bool, billHistoryInput,
 } from './validation';
 import { estimatePv, type PVInput } from './engines/pv';
 import { placePanels, type RoofInput } from './engines/geometry';
@@ -314,6 +314,24 @@ export class LocalApi {
       await this.run(`INSERT INTO pv_designs (building_id, parameters, updated_at) VALUES (?, ?, ?)
         ON CONFLICT (building_id) DO UPDATE SET parameters = excluded.parameters, updated_at = excluded.updated_at`, [id, json(data), this.now()]);
       return { parameters: data, saved: true, profile };
+    });
+
+    // Electricity-bill usage history, for solar sizing
+    this.on('GET', '/buildings/:id/bills', async ([id]) => {
+      await this.building(id);
+      const row = await this.one('SELECT * FROM bill_histories WHERE building_id = ?', [id]);
+      if (!row) throw httpError(404, 'No bill history saved for this building');
+      return { building_id: id, ending_month: row.ending_month, readings: parse(row.readings), city: row.city ?? null, custom_yield: row.custom_yield ?? null, source: row.source, updated_at: row.updated_at };
+    });
+    this.on('PUT', '/buildings/:id/bills', async ([id], body) => {
+      await this.building(id);
+      const data = billHistoryInput(body);
+      const at = this.now();
+      await this.run(`INSERT INTO bill_histories (building_id, ending_month, readings, city, custom_yield, source, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (building_id) DO UPDATE SET ending_month = excluded.ending_month, readings = excluded.readings, city = excluded.city,
+        custom_yield = excluded.custom_yield, source = excluded.source, updated_at = excluded.updated_at`,
+        [id, data.ending_month, json(data.readings), data.city, data.custom_yield, data.source, at]);
+      return { building_id: id, ...data, updated_at: at };
     });
 
     // Simulation, forecast, scheduling, resilience
