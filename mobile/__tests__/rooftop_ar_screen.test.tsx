@@ -30,6 +30,11 @@ jest.mock('react-native', () => {
     },
   };
 });
+jest.mock('react-native-svg', () => {
+  const React = require('react');
+  const host = (name: string) => (props: any) => React.createElement(name, props, props.children);
+  return new Proxy({ __esModule: true, default: host('Svg') }, { get: (target: any, key) => (key in target ? target[key] : host(String(key))) });
+});
 jest.mock('lucide-react-native', () => {
   const React = require('react');
   const Icon = (props: any) => React.createElement('Icon', props);
@@ -101,11 +106,15 @@ describe('capability', () => {
     ['an unsupported device', () => mockProbe.mockResolvedValue('UNSUPPORTED'), /ARCORE NOT SUPPORTED/],
     ['a build without the module', () => mockHasModule.mockReturnValue(false), /This build has no AR module/],
     ['Expo Go', () => { mockConstants = { expoConfig: {}, executionEnvironment: 'storeClient' }; }, /Expo Go cannot open AR/],
-  ])('%s gets a clear message, with no roof request, camera request or AR view', async (_name, arrange, message) => {
+  ])('%s gets a clear message and a simulated preview of the saved layout, with no camera request or AR view', async (_name, arrange, message) => {
     arrange();
     await render();
     expect(texts()).toMatch(message);
-    expect(getRoof).not.toHaveBeenCalled();
+    // The saved layout is only read, for the simulated preview.
+    expect(getRoof).toHaveBeenCalledWith('/buildings/b1/roof');
+    expect(tree.root.findAll(n => n.props.testID === 'simulated-ar-preview' && (n.type as any) === 'View')).toHaveLength(1);
+    expect(tree.root.findAll(n => n.props.testID === 'ar-panel' && (n.type as any) === 'Polygon')).toHaveLength(2);
+    expect(texts()).toMatch(/SIMULATED AR/);
     expect(mockCheck).not.toHaveBeenCalled();
     expect(mockRequest).not.toHaveBeenCalled();
     expect(arView()).toBeUndefined();

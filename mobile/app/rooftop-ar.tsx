@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { SolvantaScreen } from '../src/components/SolvantaScreen';
 import { Action, Card, CardHeader, Message, ScreenHeader } from '../src/components/TwinControls';
 import { ARCapabilityFallback } from '../src/components/ARCapabilityFallback';
+import { SimulatedARPreview } from '../src/components/SimulatedARPreview';
 import { api } from '../src/api/client';
 import type { RoofRecord } from '../src/api/roof';
 import type { ARCapability } from '../src/ar/arCapability';
@@ -47,15 +48,16 @@ export default function RooftopARScreen() {
   }, []);
 
   useEffect(() => { check(); }, [check]);
+  // The layout is needed for real AR and, on devices without AR, for the simulated preview.
   useEffect(() => {
-    if (capability !== 'ready') return;
+    if (capability === 'checking') return;
     let active = true;
     setRoof({ status: 'loading' });
     loadLayout(buildingId).then(result => { if (active) setRoof(result); });
     return () => { active = false; };
   }, [capability, buildingId]);
   const roofReady = roof.status === 'ready';
-  useEffect(() => { if (roofReady) askCamera(); }, [roofReady, askCamera]);
+  useEffect(() => { if (roofReady && capability === 'ready') askCamera(); }, [roofReady, capability, askCamera]);
   // The user may grant the permission in Settings. Only upgrade here: a plain check cannot tell denied from blocked.
   useEffect(() => {
     if (camera !== 'denied' && camera !== 'blocked') return;
@@ -74,13 +76,16 @@ export default function RooftopARScreen() {
   );
 
   if (capability === 'checking') return panel(<Message>Checking AR support on this device.</Message>);
+  // Without AR, show what AR would place: a simulated preview of the saved layout, then why real AR is unavailable.
+  const simulated = (unavailable: React.ReactNode) => (
+    <SolvantaScreen banner="AR PREVIEW - Visualization only, not a measurement">
+      <ScreenHeader title="AR preview" subtitle="Your saved panel layout on a flat surface" />
+      {roof.status === 'ready' ? <SimulatedARPreview layout={roof.layout} /> : roof.status === 'unavailable' ? <Card><Message tone="warning">{roof.message}</Message></Card> : null}
+      {unavailable}
+    </SolvantaScreen>
+  );
   if (capability !== 'ready') {
-    return (
-      <SolvantaScreen banner="AR PREVIEW - Visualization only, not a measurement">
-        <ScreenHeader title="AR preview" subtitle="Your saved panel layout on a flat surface" />
-        <ARCapabilityFallback capability={capability} onContinue2D={back} onRetry={capability === 'check-failed' ? check : undefined} />
-      </SolvantaScreen>
-    );
+    return simulated(<ARCapabilityFallback capability={capability} onContinue2D={back} onRetry={capability === 'check-failed' ? check : undefined} />);
   }
   if (roof.status === 'loading') return panel(<Message>Loading the saved panel layout.</Message>);
   if (roof.status === 'unavailable') return panel(<Message tone="warning">{roof.message}</Message>);
@@ -90,6 +95,6 @@ export default function RooftopARScreen() {
 
   const RoofARView = loadRoofARView();
   const failed = panel(<Message tone="danger">The AR view could not start on this device. The 2D layout is unaffected.</Message>);
-  if (!RoofARView) return <ARCapabilityFallback capability="no-module" onContinue2D={back} />;
+  if (!RoofARView) return simulated(<ARCapabilityFallback capability="no-module" onContinue2D={back} />);
   return <ARErrorBoundary fallback={failed}><RoofARView layout={roof.layout} onBack={back} /></ARErrorBoundary>;
 }

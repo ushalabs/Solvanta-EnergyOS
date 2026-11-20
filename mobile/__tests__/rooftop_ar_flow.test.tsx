@@ -21,7 +21,7 @@ jest.mock('react-native', () => {
 jest.mock('react-native-svg', () => {
   const React = require('react');
   const host = (name: string) => (props: any) => React.createElement(name, props, props.children);
-  return { __esModule: true, default: host('Svg'), Polygon: host('Polygon'), Rect: host('Rect'), Circle: host('Circle'), Image: host('SvgImage'), Line: host('Line'), Defs: host('Defs'), Pattern: host('Pattern'), Path: host('Path') };
+  return { __esModule: true, default: host('Svg'), Polygon: host('Polygon'), Rect: host('Rect'), Circle: host('Circle'), Image: host('SvgImage'), Line: host('Line'), Defs: host('Defs'), Pattern: host('Pattern'), Path: host('Path'), LinearGradient: host('LinearGradient'), RadialGradient: host('RadialGradient'), Stop: host('Stop') };
 });
 jest.mock('lucide-react-native', () => {
   const React = require('react');
@@ -456,6 +456,11 @@ describe('Rooftop layout', () => {
     const button = tree.root.findAll(n => (n.type as any) === 'TouchableOpacity' && n.props.accessibilityLabel === 'Preview in AR')[0];
     expect(button.props.disabled).toBe(true);
     expect(texts()).toMatch(/ARCORE NOT SUPPORTED/);
+    // Instead of an empty tab, the saved layout is shown as a simulated AR preview.
+    const preview = tree.root.findAll(n => n.props.testID === 'simulated-ar-preview' && (n.type as any) === 'View');
+    expect(preview).toHaveLength(1);
+    expect(preview[0].findAll(n => n.props.testID === 'ar-panel' && (n.type as any) === 'Polygon')).toHaveLength(savedRoof.layout.panels.length);
+    expect(texts()).toMatch(/SIMULATED AR/);
   });
 
   test('Roof area sits in Advanced and is not repeated in a second stats block', async () => {
