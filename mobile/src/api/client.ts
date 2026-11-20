@@ -1,48 +1,6 @@
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SolvantaApiError, type ApiProblemDetails } from './errors';
-
+// The app's data client. There is no Solvanta server: building data and every engine run on the device
+// (src/local/localApi.ts, SQLite), and weather comes straight from Open-Meteo (src/local/weather.ts).
 export { SolvantaApiError, type ApiProblemDetails } from './errors';
-
-export const AUTH_TOKEN_KEY = '@solvanta_auth_token';
-
-/**
- * Paths still served over the network. Everything else (buildings, energy engines, plans, ...) runs on the device
- * from SQLite: see src/local/localApi.ts.
- */
-export const NETWORK_PATHS = ['/weather'];
-
-export function isNetworkPath(endpoint: string): boolean {
-  return endpoint.startsWith('http') || NETWORK_PATHS.some(prefix => endpoint === prefix || endpoint.startsWith(`${prefix}/`) || endpoint.startsWith(`${prefix}?`));
-}
-
-/** Network base URL, used only by NETWORK_PATHS (weather). */
-export function getBaseApiUrl(): string {
-  // 1. Explicit environment override (physical device LAN or custom cloud endpoint)
-  const envUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
-  if (envUrl && envUrl.trim().length > 0) {
-    const trimmed = envUrl.trim().replace(/\/+$/, '');
-    return trimmed.endsWith('/api/v1') ? trimmed : `${trimmed}/api/v1`;
-  }
-
-  // Follow the host used to open Expo Go on this network.
-  const hostUri = Constants.expoConfig?.hostUri;
-  if (hostUri) {
-    const host = new URL(hostUri.includes('://') ? hostUri : `http://${hostUri}`).hostname;
-    return `http://${host}:8000/api/v1`;
-  }
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return `${window.location.protocol}//${window.location.hostname}:8000/api/v1`;
-  }
-  // No development manifest: emulator fallback. Deployed builds need an HTTPS override.
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:8000/api/v1';
-  }
-
-  // 3. Fallback for iOS simulator and Web preview
-  return 'http://localhost:8000/api/v1';
-}
 
 export interface SolarConfig {
   pv_capacity_kwp: number;
@@ -112,116 +70,20 @@ export interface EquipmentSummary {
 
 export type LocalHandler = { handle(method: string, path: string, body?: unknown): Promise<unknown> };
 
+const isWeather = (endpoint: string) => endpoint === '/weather' || endpoint.startsWith('/weather/') || endpoint.startsWith('/weather?');
+
 export class SolvantaApiClient {
-  private baseUrl?: string;
-  private local?: () => LocalHandler;
+  constructor(private local?: () => LocalHandler, private weather?: () => LocalHandler) {}
 
-  constructor(baseUrl?: string, local?: () => LocalHandler) {
-    this.baseUrl = baseUrl;
-    this.local = local;
+  private handler(endpoint: string): LocalHandler {
+    if (isWeather(endpoint)) return this.weather ? this.weather() : require('../local/device').deviceWeather();
+    return this.local ? this.local() : require('../local/device').deviceApi();
   }
 
-  private localHandler(): LocalHandler {
-    if (this.local) return this.local();
-    return require('../local/device').deviceApi();
-  }
-
-  setBaseUrl(url: string) {
-    this.baseUrl = url;
-  }
-
-  getBaseUrl(): string {
-    return this.baseUrl || getBaseApiUrl();
-  }
-
-  async getToken(): Promise<string | null> {
-    try {
-      return await AsyncStorage.getItem(AUTH_TOKEN_KEY);
-    } catch {
-      return null;
-    }
-  }
-
-  async setToken(token: string): Promise<void> {
-    await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
-  }
-
-  async clearToken(): Promise<void> {
-    await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
-  }
-
-  async request<T>(endpoint: string, options: RequestInit = {}, timeoutMs: number = 10000): Promise<T> {
-    if (!isNetworkPath(endpoint)) {
-      const body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body ?? undefined;
-      return await this.localHandler().handle(options.method || 'GET', endpoint, body) as T;
-    }
-    const url = endpoint.startsWith('http') ? endpoint : `${this.getBaseUrl()}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
-    
-    const headers = new Headers(options.headers || {});
-    if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
-      headers.set('Content-Type', 'application/json');
-    }
-    
-    const token = await this.getToken();
-    if (token && !headers.has('Authorization')) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
-
-    const controller = new AbortController();
-    const cancel = () => controller.abort();
-    if (options.signal?.aborted) controller.abort();
-    options.signal?.addEventListener('abort', cancel, { once: true });
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers,
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        let errorData: ApiProblemDetails;
-        try {
-          errorData = await response.json();
-        } catch {
-          errorData = { detail: response.statusText };
-        }
-        throw new SolvantaApiError(response.status, errorData);
-      }
-
-      if (response.status === 204) {
-        return {} as T;
-      }
-
-      return await response.json();
-    } catch (err: any) {
-      if (err instanceof SolvantaApiError) {
-        throw err;
-      }
-      if (options.signal?.aborted) throw new SolvantaApiError(499, { detail: 'Request cancelled' });
-      if (controller.signal.aborted || err?.name === 'AbortError') {
-        throw new SolvantaApiError(408, {
-          error: {
-            code: 'REQUEST_TIMEOUT',
-            message: `API request timed out after ${timeoutMs}ms: ${url}. Check the internet connection.`,
-            status: 408,
-          },
-          detail: `API request timed out after ${timeoutMs}ms`,
-        });
-      }
-      throw new SolvantaApiError(0, {
-        error: {
-          code: 'NETWORK_ERROR',
-          message: `Network failure connecting to ${url}: ${err?.message || 'Host unreachable'}`,
-          status: 0,
-        },
-        detail: `Network failure connecting to ${url}`,
-      });
-    } finally {
-      clearTimeout(timer);
-      options.signal?.removeEventListener('abort', cancel);
-    }
+  /** Same call shape as the old HTTP client: `body` is a JSON string. `_timeoutMs` is kept for existing callers. */
+  async request<T>(endpoint: string, options: { method?: string; body?: unknown } = {}, _timeoutMs?: number): Promise<T> {
+    const body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body ?? undefined;
+    return await this.handler(endpoint).handle(options.method || 'GET', endpoint, body) as T;
   }
 
   async get<T>(endpoint: string, timeoutMs?: number): Promise<T> {
@@ -229,17 +91,11 @@ export class SolvantaApiClient {
   }
 
   async post<T>(endpoint: string, body?: unknown, timeoutMs?: number): Promise<T> {
-    return this.request<T>(endpoint, {
-      method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
-    }, timeoutMs);
+    return this.request<T>(endpoint, { method: 'POST', body: body ? JSON.stringify(body) : undefined }, timeoutMs);
   }
 
   async patch<T>(endpoint: string, body?: unknown, timeoutMs?: number): Promise<T> {
-    return this.request<T>(endpoint, {
-      method: 'PATCH',
-      body: body ? JSON.stringify(body) : undefined,
-    }, timeoutMs);
+    return this.request<T>(endpoint, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined }, timeoutMs);
   }
 
   async delete<T>(endpoint: string, timeoutMs?: number): Promise<T> {

@@ -1,151 +1,45 @@
-jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: {} } }));
-import Constants from 'expo-constants';
-let mockStorage: Record<string, string> = {};
+// The data client has no server: routes go to the on-device engine, /weather to the weather service.
+import { SolvantaApiClient, SolvantaApiError } from '../src/api/client';
 
-jest.mock('react-native', () => ({
-  Platform: { OS: 'android', select: (objs: any) => objs.android },
-}));
+const handlers = () => {
+  const local = jest.fn(async (method: string, path: string, body?: unknown) => ({ via: 'local', method, path, body }));
+  const weather = jest.fn(async (method: string, path: string) => ({ via: 'weather', method, path }));
+  return { local, weather, client: new SolvantaApiClient(() => ({ handle: local }), () => ({ handle: weather })) };
+};
 
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  __esModule: true,
-  default: {
-    getItem: jest.fn(async (key: string) => mockStorage[key] || null),
-    setItem: jest.fn(async (key: string, val: string) => { mockStorage[key] = val; }),
-    removeItem: jest.fn(async (key: string) => { delete mockStorage[key]; }),
-    clear: jest.fn(async () => { mockStorage = {}; }),
-  },
-}));
-
-import { SolvantaApiClient, getBaseApiUrl, SolvantaApiError, AUTH_TOKEN_KEY, isNetworkPath } from '../src/api/client';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-describe('Solvanta Mobile API Client', () => {
-  const originalEnv = process.env.EXPO_PUBLIC_API_BASE_URL;
-
-  beforeEach(async () => {
-    mockStorage = {};
-    (Constants.expoConfig as any).hostUri = undefined;
-    (globalThis as any).fetch = jest.fn();
-    delete process.env.EXPO_PUBLIC_API_BASE_URL;
+describe('Solvanta data client', () => {
+  test('sends building and engine routes to the on-device engine with parsed JSON bodies', async () => {
+    const { client, local, weather } = handlers();
+    expect(await client.post('/buildings/b1/simulations', { use_generator: false })).toEqual({ via: 'local', method: 'POST', path: '/buildings/b1/simulations', body: { use_generator: false } });
+    expect(await client.get('/buildings')).toEqual({ via: 'local', method: 'GET', path: '/buildings', body: undefined });
+    expect(await client.request('/buildings/b1/roof', { method: 'PUT', body: JSON.stringify({ a: 1 }) })).toMatchObject({ method: 'PUT', body: { a: 1 } });
+    await client.patch('/buildings/b1', { name: 'x' });
+    await client.delete('/buildings/b1');
+    expect(local.mock.calls.map(c => c[0])).toEqual(['POST', 'GET', 'PUT', 'PATCH', 'DELETE']);
+    expect(weather).not.toHaveBeenCalled();
   });
 
-  afterAll(() => {
-    process.env.EXPO_PUBLIC_API_BASE_URL = originalEnv;
+  test('sends only /weather routes to the weather service', async () => {
+    const { client, local } = handlers();
+    expect(await client.get('/weather/forecast?city=Lahore')).toMatchObject({ via: 'weather' });
+    expect(await client.get('/weather/solar/b1?city=Lahore')).toMatchObject({ via: 'weather' });
+    expect(await client.get('/weatherstation')).toMatchObject({ via: 'local' });
+    expect(local).toHaveBeenCalledTimes(1);
   });
 
-  test('resolves default Android emulator base API url', () => {
-    const url = getBaseApiUrl();
-    expect(url).toBe('http://10.0.2.2:8000/api/v1');
+  test('domain shortcuts use the same routes as before', async () => {
+    const { client, local } = handlers();
+    await client.getBuildings(); await client.getCurrentUser(); await client.getBuildingEquipment('b1');
+    expect(local.mock.calls.map(c => c[1])).toEqual(['/buildings', '/auth/me', '/buildings/b1/equipment']);
   });
 
-  test('supports EXPO_PUBLIC_API_BASE_URL custom LAN configuration', () => {
-    process.env.EXPO_PUBLIC_API_BASE_URL = 'http://192.168.1.42:8000';
-    expect(getBaseApiUrl()).toBe('http://192.168.1.42:8000/api/v1');
-
-    process.env.EXPO_PUBLIC_API_BASE_URL = 'http://192.168.1.42:8000/api/v1/';
-    expect(getBaseApiUrl()).toBe('http://192.168.1.42:8000/api/v1');
-  });
-
-  test('stores and clears auth tokens in AsyncStorage', async () => {
-    const client = new SolvantaApiClient('http://test-server/api/v1');
-    expect(await client.getToken()).toBeNull();
-
-    await client.setToken('test-token-xyz');
-    expect(await client.getToken()).toBe('test-token-xyz');
-
-    await client.clearToken();
-    expect(await client.getToken()).toBeNull();
-  });
-
-  test('attaches Authorization header when token is present', async () => {
-    const client = new SolvantaApiClient('http://test-server/api/v1');
-    await client.setToken('jwt-access-token-123');
-
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ status: 'ok', version: '1.0.0' }),
-    });
-
-    const res = await client.get('/weather/forecast?city=Lahore');
-    expect(res).toEqual({ status: 'ok', version: '1.0.0' });
-
-    expect((globalThis as any).fetch).toHaveBeenCalled();
-    const callArgs = (globalThis as any).fetch.mock.calls[0];
-    expect(callArgs[0]).toBe('http://test-server/api/v1/weather/forecast?city=Lahore');
-  });
-
-  test('handles bounded request timeouts with 408 SolvantaApiError', async () => {
-    const client = new SolvantaApiClient('http://test-server/api/v1');
-    const abortErr = new Error('The user aborted a request');
-    abortErr.name = 'AbortError';
-
-    (globalThis as any).fetch = jest.fn().mockRejectedValue(abortErr);
-
-    await expect(client.get('/weather/current?city=Lahore')).rejects.toThrow(SolvantaApiError);
-    try {
-      await client.get('/weather/current?city=Lahore');
-    } catch (e: any) {
-      expect(e.status).toBe(408);
-      expect(e.data.error.code).toBe('REQUEST_TIMEOUT');
-    }
-  });
-
-  test('handles network failure with status 0 SolvantaApiError', async () => {
-    const client = new SolvantaApiClient('http://test-server/api/v1');
-    (globalThis as any).fetch = jest.fn().mockRejectedValue(new Error('Failed to fetch'));
-
-    await expect(client.get('/weather/current?city=Lahore')).rejects.toThrow(SolvantaApiError);
-    try {
-      await client.get('/weather/current?city=Lahore');
-    } catch (e: any) {
-      expect(e.status).toBe(0);
-      expect(e.data.error.code).toBe('NETWORK_ERROR');
-    }
-  });
-
-  test('recognizes React Native cancellation errors as deadline expiry', async () => {
-    const client = new SolvantaApiClient('http://test-server/api/v1');
-    (globalThis as any).fetch = jest.fn((_url, options) => new Promise((_resolve, reject) => {
-      options.signal.addEventListener('abort', () => reject(new TypeError('Fetch request has been canceled')));
-    }));
-    await expect(client.get('/weather/current?city=Lahore', 5)).rejects.toMatchObject({ status: 408 });
+  test('engine errors reach screens unchanged', async () => {
+    const client = new SolvantaApiClient(() => ({ handle: async () => { throw new SolvantaApiError(404, { detail: 'Building not found' }); } }));
+    await expect(client.get('/buildings/x')).rejects.toMatchObject({ status: 404, message: 'Building not found' });
   });
 });
 
- test('follows changing LAN hosts without pinning an IP', () => {
-   delete process.env.EXPO_PUBLIC_API_BASE_URL;
-   const client = new SolvantaApiClient();
-   for (const host of ['192.168.1.7', '172.17.247.130', '192.168.43.25', '127.0.0.1']) {
-     (Constants.expoConfig as any).hostUri = `${host}:8081`;
-     expect(client.getBaseUrl()).toBe(`http://${host}:8000/api/v1`);
-   }
-   process.env.EXPO_PUBLIC_API_BASE_URL = 'https://api.example.com';
-   expect(client.getBaseUrl()).toBe('https://api.example.com/api/v1');
- });
-
-test('renders structured validation errors as readable field messages',()=>{
- const error=new SolvantaApiError(422,{detail:[{loc:['body','rated_power_w'],msg:'Input should be greater than 0'}]});
- expect(error.message).toContain('rated_power_w');expect(error.message).toContain('greater than 0');
-});
-test('caller cancellation retains a bounded timeout and distinct cancellation status',async()=>{
- const client=new SolvantaApiClient('http://test/api/v1');
- (globalThis as any).fetch=jest.fn((_url,options)=>new Promise((_resolve,reject)=>{
-  const fail=()=>reject(Object.assign(new Error('cancelled'),{name:'AbortError'}));
-  if(options.signal.aborted)fail();else options.signal.addEventListener('abort',fail);
- }));
- const external=new AbortController();
- await expect(client.request('/weather/slow',{signal:external.signal},5)).rejects.toMatchObject({status:408});
- external.abort();await expect(client.request('/weather/cancelled',{signal:external.signal},100)).rejects.toMatchObject({status:499});
-});
-
-test('serves everything except weather from the on-device engine, without the network', async () => {
- const handle = jest.fn(async (method: string, path: string, body?: unknown) => ({ method, path, body }));
- const client = new SolvantaApiClient('http://test/api/v1', () => ({ handle }));
- (globalThis as any).fetch = jest.fn();
- expect(await client.post('/buildings/b1/simulations', { use_generator: false })).toEqual({ method: 'POST', path: '/buildings/b1/simulations', body: { use_generator: false } });
- expect(await client.get('/buildings')).toEqual({ method: 'GET', path: '/buildings', body: undefined });
- expect((globalThis as any).fetch).not.toHaveBeenCalled();
- expect(isNetworkPath('/weather/solar/b1?city=Lahore')).toBe(true);
- expect(isNetworkPath('/weatherstation')).toBe(false);
+test('renders structured validation errors as readable field messages', () => {
+  const error = new SolvantaApiError(422, { detail: [{ loc: ['body', 'rated_power_w'], msg: 'Input should be greater than 0' }] });
+  expect(error.message).toContain('rated_power_w'); expect(error.message).toContain('greater than 0');
 });

@@ -1,6 +1,7 @@
 // The app's single on-device database (expo-sqlite), opened on first use.
 import type { SqlDb } from './db';
 import { LocalApi } from './localApi';
+import { WeatherService } from './weather';
 
 export function expoSqliteDb(name = 'solvanta.db'): SqlDb {
   let database: Promise<any> | null = null;
@@ -18,4 +19,11 @@ let instance: LocalApi | null = null;
 
 export function deviceApi(): LocalApi {
   return (instance ??= new LocalApi(expoSqliteDb()));
+}
+
+let weather: WeatherService | null = null;
+
+/** Live weather from Open-Meteo; the solar forecast reads the building from the on-device database. */
+export function deviceWeather(): WeatherService {
+  return (weather ??= new WeatherService(id => deviceApi().handle('GET', `/buildings/${encodeURIComponent(id)}`) as Promise<Record<string, any>>));
 }
