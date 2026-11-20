@@ -19,10 +19,10 @@ Solvanta is an Android building-energy digital twin. It brings rooftop solar des
     <th width="25%">Rooftop &amp; PV design</th>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/01-home.png" alt="Home: energy flow between solar, battery, grid and home, with the live weather box" width="220" /></td>
-    <td><img src="docs/screenshots/02-appliances.png" alt="Appliances: loads with power, priority and runtime windows" width="220" /></td>
-    <td><img src="docs/screenshots/03-simulation.png" alt="Simulation: battery state of charge and unmet demand through an outage" width="220" /></td>
-    <td><img src="docs/screenshots/04-rooftop.png" alt="Rooftop: calibrated roof outline, obstacles and placed panels" width="220" /></td>
+    <td><img src="docs/screenshots/android/01-home.png" alt="Home: energy flow between solar, battery, grid and home, with the live weather box" width="220" /></td>
+    <td><img src="docs/screenshots/android/02-appliances.png" alt="Appliances: loads with power, priority and runtime windows" width="220" /></td>
+    <td><img src="docs/screenshots/android/03-simulation.png" alt="Simulation: battery state of charge and unmet demand through an outage" width="220" /></td>
+    <td><img src="docs/screenshots/android/04-rooftop.png" alt="Rooftop: calibrated roof outline, obstacles and placed panels" width="220" /></td>
   </tr>
   <tr>
     <th>Appliance scheduling</th>
@@ -31,10 +31,10 @@ Solvanta is an Android building-energy digital twin. It brings rooftop solar des
     <th>Engine tools</th>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/05-scheduling.png" alt="Scheduling: when each appliance runs within the solar and grid budget" width="220" /></td>
-    <td><img src="docs/screenshots/06-rooftop-ar.png" alt="AR preview: the saved panel layout in perspective on a detected surface; simulated where ARCore is unavailable" width="220" /></td>
-    <td><img src="docs/screenshots/07-solar-sizing.png" alt="Bills: twelve months of electricity use saved for the building, used to size the solar array" width="220" /></td>
-    <td><img src="docs/screenshots/08-operations.png" alt="Engine tools: comparing the current system with a bigger battery and more PV" width="220" /></td>
+    <td><img src="docs/screenshots/android/05-scheduling.png" alt="Scheduling: when each appliance runs within the solar and grid budget" width="220" /></td>
+    <td><img src="docs/screenshots/android/06-rooftop-ar.png" alt="AR preview: the saved panel layout in perspective on a detected surface; simulated where ARCore is unavailable" width="220" /></td>
+    <td><img src="docs/screenshots/android/07-solar-sizing.png" alt="Bills: twelve months of electricity use saved for the building, used to size the solar array" width="220" /></td>
+    <td><img src="docs/screenshots/android/08-operations.png" alt="Engine tools: comparing the current system with a bigger battery and more PV" width="220" /></td>
   </tr>
 </table>
 
