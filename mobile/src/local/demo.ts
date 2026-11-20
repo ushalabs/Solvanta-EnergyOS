@@ -1,6 +1,6 @@
 // A ready-made demo building, stored on this device through the normal routes: the Lahore hybrid home the old
 // backend seeded, plus typical appliances, a measured roof and one saved outage simulation, so every screen has data.
-import type { SolvantaApiClient } from '../api/client';
+type Handler = { handle(method: string, path: string, body?: unknown): Promise<unknown> };
 
 export const DEMO_BUILDING_NAME = 'Demo Residential Hybrid Solar';
 
@@ -39,14 +39,32 @@ const ROOF = {
 /** Evening load-shedding, 18:00–21:00. */
 export const DEMO_OUTAGES = [{ start_min: h(18), end_min: h(21) }];
 
-export async function addDemoBuilding(client: SolvantaApiClient): Promise<string> {
-  const building = await client.createBuilding(BUILDING);
-  const id = building.id;
+export async function addDemoBuilding(api: Handler): Promise<string> {
+  const { id } = await api.handle('POST', '/buildings', BUILDING) as { id: string };
   for (const appliance of APPLIANCES) {
-    const created = await client.post<{ id: string }>(`/buildings/${id}/appliances`, appliance);
-    await client.request(`/buildings/${id}/appliances/${created.id}/selection`, { method: 'PUT', body: JSON.stringify({ selected: true }) });
+    const created = await api.handle('POST', `/buildings/${id}/appliances`, appliance) as { id: string };
+    await api.handle('PUT', `/buildings/${id}/appliances/${created.id}/selection`, { selected: true });
   }
-  await client.request(`/buildings/${id}/roof`, { method: 'PUT', body: JSON.stringify(ROOF) });
-  await client.post(`/buildings/${id}/simulations`, { outages: DEMO_OUTAGES, use_generator: false });
+  await api.handle('PUT', `/buildings/${id}/roof`, ROOF);
+  await api.handle('POST', `/buildings/${id}/simulations`, { outages: DEMO_OUTAGES, use_generator: false });
   return id;
+}
+
+/**
+ * Wraps the on-device API so that, when the device has no building yet, the demo building is created before the
+ * first request is answered. Screens then open with real data instead of empty states.
+ */
+export function withDemoBuilding(api: Handler): Handler {
+  let ready: Promise<void> | null = null;
+  const seed = async () => {
+    const buildings = await api.handle('GET', '/buildings') as unknown[];
+    if (!buildings.length) await addDemoBuilding(api);
+  };
+  return {
+    async handle(method, path, body) {
+      // A failed seed is retried on the next request instead of blocking the app.
+      await (ready ??= seed().catch(error => { ready = null; throw error; }));
+      return api.handle(method, path, body);
+    },
+  };
 }

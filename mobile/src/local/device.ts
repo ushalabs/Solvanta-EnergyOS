@@ -2,6 +2,7 @@
 import type { SqlDb } from './db';
 import { LocalApi } from './localApi';
 import { WeatherService } from './weather';
+import { withDemoBuilding } from './demo';
 
 export function expoSqliteDb(name = 'solvanta.db'): SqlDb {
   let database: Promise<any> | null = null;
@@ -16,9 +17,12 @@ export function expoSqliteDb(name = 'solvanta.db'): SqlDb {
 }
 
 let instance: LocalApi | null = null;
+let seeded: ReturnType<typeof withDemoBuilding> | null = null;
 
-export function deviceApi(): LocalApi {
-  return (instance ??= new LocalApi(expoSqliteDb()));
+/** The on-device API. A device without any building gets the demo building on first use. */
+export function deviceApi(): ReturnType<typeof withDemoBuilding> {
+  instance ??= new LocalApi(expoSqliteDb());
+  return (seeded ??= withDemoBuilding(instance));
 }
 
 let weather: WeatherService | null = null;

@@ -185,7 +185,7 @@ export const BuildingEquipmentEditor: React.FC<BuildingEquipmentEditorProps> = (
     setAddingDemo(true);
     setErrorMsg(null);
     try {
-      const id = await addDemoBuilding(api);
+      const id = await addDemoBuilding({ handle: (method, path, body) => api.request(path, { method, body: body === undefined ? undefined : JSON.stringify(body) }) });
       await AsyncStorage.setItem(`@solvanta_selected_building_${currentUser.id}`, id);
       await loadUserBuildings(currentUser.id);
       setSuccessMsg('Demo building added on this device, with appliances, a roof and a saved outage simulation.');
