@@ -1,83 +1,112 @@
 <p align="center">
-  <img src="docs/assets/solvanta-banner.png" alt="Solvanta — Building Energy Intelligence. Prototype to MVP. React Native, Expo, TypeScript, FastAPI, PostgreSQL, OR-Tools, Docker, n8n and MCP." width="100%" />
+  <img src="docs/assets/solvanta-banner.png" alt="Solvanta — Building Energy Intelligence. Prototype to MVP." width="100%" />
 </p>
 
 <p align="center">
-  <strong>PROTOTYPE PHASE · MOVING TOWARDS MVP</strong><br />
+  <strong>LOCAL-FIRST · ANDROID · PROTOTYPE → MVP</strong><br />
   Model your energy. Understand your backup. Plan for the outage.
 </p>
 
-Solvanta is an Android-first building energy digital twin that brings solar design, appliance priorities and backup planning into one workflow. Explore what happens during a power outage, compare alternatives and review a plan before running its simulation.
+Solvanta is an Android building-energy digital twin. It brings rooftop solar design, appliance priorities and outage planning into one workflow. Every calculation runs on the phone and every record is stored in an on-device SQLite database. There is no server to run and nothing to deploy; the app works offline. Only sign-in and live weather use the internet.
 
-## Inside the prototype
+## Screenshots
 
 <table>
   <tr>
-    <th width="25%">Energy overview</th>
-    <th width="25%">Load priorities</th>
-    <th width="25%">Outage scenarios</th>
-    <th width="25%">Rooftop studio</th>
+    <th width="25%">Home &amp; live weather</th>
+    <th width="25%">Appliances &amp; priorities</th>
+    <th width="25%">Outage simulation</th>
+    <th width="25%">Rooftop &amp; PV design</th>
   </tr>
   <tr>
-    <td><img src="docs/ui-evidence/android/01-overview-dark.png" alt="Earlier Android prototype: neon energy overview and flow diagram" width="220" /></td>
-    <td><img src="docs/ui-evidence/android/02-appliances-dark.png" alt="Earlier Android prototype: appliance selection and load priorities" width="220" /></td>
-    <td><img src="docs/ui-evidence/android/03-simulation-dark.png" alt="Earlier Android prototype: battery reserve gauge and outage scenario" width="220" /></td>
-    <td><img src="docs/ui-evidence/android/05-rooftop-dark.png" alt="Earlier Android prototype: rooftop geometry and solar panel layout" width="220" /></td>
+    <td><img src="docs/screenshots/01-home.png" alt="Home: energy flow between solar, battery, grid and home, with the live weather box" width="220" /></td>
+    <td><img src="docs/screenshots/02-appliances.png" alt="Appliances: loads with power, priority and runtime windows" width="220" /></td>
+    <td><img src="docs/screenshots/03-simulation.png" alt="Simulation: battery state of charge and unmet demand through an outage" width="220" /></td>
+    <td><img src="docs/screenshots/04-rooftop.png" alt="Rooftop: calibrated roof outline, obstacles and placed panels" width="220" /></td>
+  </tr>
+  <tr>
+    <th>Appliance scheduling</th>
+    <th>AR preview</th>
+    <th>Bills &amp; solar sizing</th>
+    <th>Engine tools</th>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/05-scheduling.png" alt="Scheduling: when each appliance runs within the solar and grid budget" width="220" /></td>
+    <td><img src="docs/screenshots/06-rooftop-ar.png" alt="AR preview: the saved panel layout in perspective on a detected surface; simulated where ARCore is unavailable" width="220" /></td>
+    <td><img src="docs/screenshots/07-solar-sizing.png" alt="Bills: twelve months of electricity use saved for the building, used to size the solar array" width="220" /></td>
+    <td><img src="docs/screenshots/08-operations.png" alt="Engine tools: comparing the current system with a bigger battery and more PV" width="220" /></td>
   </tr>
 </table>
 
-*Screenshots show the earlier Android UI prototype with fixture data. The current integrated build and its validation are documented in the [project status](docs/STATUS.md); the final visual overhaul is still ahead.*
+*Screenshots from the Android development build with the built-in demo building. Weather is live; energy results are simulated, and the app never switches real equipment. The AR shot is the simulated preview shown on devices without ARCore; on an ARCore phone the same layout is placed through the camera.*
 
-## Product modules
+## What it does
 
 ### Building & appliance digital twin
-
-Create a building profile with its solar array, inverter, battery, grid connection and optional generator. Register individual appliances with power ratings, criticality, required runtime and operating windows, then select the loads to include in a scenario. This turns equipment specifications into a model of the building's energy needs.
+Describe the building: solar array, inverter, battery, grid connection and an optional generator. Add appliances with their power, priority, required runtime and the hours they may run in, then choose which loads a scenario includes.
 
 ### Rooftop & solar planning
+Trace the roof on a top-down photo, calibrate it with one measured distance, mark obstacles, and let Solvanta place panels with setbacks. The saved layout gives a PV capacity and an hour-by-hour generation estimate. **Preview in AR** places the saved layout on a real surface through ARCore.
 
-Calibrate a roof drawing to real dimensions, define boundaries and obstacles, and explore panel placement with setbacks. Estimate PV capacity and daily generation from the saved layout and irradiance assumptions to connect rooftop space with the energy available to the building.
+### Solar sizing from an electricity bill
+Photograph a Pakistani electricity bill. The phone reads the monthly *Units* history with on-device text recognition (the image never leaves the device). It then suggests an array size for your city's solar yield.
 
-### Outage simulation & shortage forecasting
+### Outage simulation & shortage forecast
+Simulate a day in 15-minute steps: how solar, battery, grid and generator serve demand through the outages you set. See battery charge, unmet demand and shortages of critical loads, plus a next-day projection.
 
-Explore how solar, batteries, grid supply and an optional generator serve demand across a day in 15-minute intervals. Inspect battery state of charge, unmet demand and critical-load shortages during configured outages. Persistence-based projections use configured or saved simulated profiles to estimate where shortages may occur.
+### Appliance scheduling
+A constraint scheduler decides when each selected appliance runs. Every load completes its runtime inside its window, interruption limits are respected, and the available solar + grid power is never exceeded. Higher-priority loads are delayed least. It is a branch-and-bound search on the phone, checked against Google OR-Tools on reference cases.
 
-### Appliance scheduling & backup resilience
+### Backup resilience & what-if plans
+Compare normal battery use with a critical-reserve strategy that keeps energy back for essential loads. Compare the current system with a bigger battery or more PV. Then take a plan through review: submit, approve, simulate and verify, with every step kept in an audit trail.
 
-Schedule selected appliances within their runtime, flexibility and interruption constraints using the available solar and grid power budget. Compare baseline dispatch with a critical-reserve strategy that preserves battery energy for essential loads. Results expose unmet demand and infeasible schedules so users can see where their configuration falls short.
+### Replay & operations
+Replay a saved simulation step by step. Generate clearly labelled simulated telemetry, flag mismatches against the expected trace as incidents, and check them against a verified plan.
 
-### What-if comparisons & human approval
+### Live weather
+Current conditions and a three-day forecast for your city, plus a solar production forecast for your saved array, from [Open-Meteo](https://open-meteo.com) (no API key). The weather box animates sun, moon, clouds, rain, snow and lightning, and its colour follows the temperature. Offline, it shows only the sun or the moon for the time of day.
 
-Compare the current configuration with hypothetical battery or PV capacity changes and inspect the resulting energy tradeoffs. Submit a plan for review, approve or reject it, then simulate the approved snapshot and verify its results. Revision checks and audit records keep each decision tied to the inputs that were reviewed.
+## How it works
 
-### Digital twin replay
+```
+React Native app (Expo, TypeScript)
+├── Screens ──────────► api client (same routes as the old REST API)
+│                         ├── on-device engine ── SQLite (expo-sqlite)
+│                         │     simulation · PV · roof geometry · scheduler
+│                         │     forecast · resilience · plans · telemetry
+│                         └── weather ─────────── Open-Meteo (online)
+├── Sign-in ──────────► Firebase Authentication (online) or guest mode
+├── Bill reading ─────► ML Kit text recognition (on device)
+└── AR preview ───────► ViroReact + ARCore (on device)
+```
 
-Play, pause and seek through a saved simulation to follow energy flows, battery charge and requested appliance activity over time. Replay uses the recorded scenario rather than silently substituting the building's latest settings, making it easier to explain and revisit a result.
-
-### Energy operations & incident evidence
-
-Generate explicitly simulated telemetry and examine persistent PV, battery or load mismatches against the expected trace. Incident records include supporting evidence and possible causes, with post-plan checks that evaluate synthetic model consistency. This provides an operations workflow for investigating scenarios without claiming real hardware diagnosis.
-
-### Workflow automation & engineering tools
-
-Coordinate shortage response, daily planning and anomaly incidents through n8n workflows with durable approval waits. Nine authenticated MCP tools expose building profiles, saved scenarios, simulation, forecasting, scheduling, resilience, configuration comparison, anomalies and plan proposals. The mobile Operations page calls the same engineering services; proposals stay pending until explicitly approved.
-
-## One connected workflow
-
-**Model the building → Explore an outage → Compare options → Review a plan → Approve → Simulate & verify → Replay the outcome.**
-
-Solvanta connects design assumptions with operational decisions, helping users understand which loads can be supported, when appliances can run and how changes affect backup resilience.
+The engines began as a Python/FastAPI backend and were ported to TypeScript. A parity test still compares them with the reference outputs of the original Python code (`mobile/__tests__/local_engine_parity.test.ts`).
 
 ## Tech stack
 
-| Layer | Technologies |
+| Area | Technologies |
 |---|---|
-| Mobile | React Native · Expo · TypeScript · Expo Router |
-| API & data | Python · FastAPI · Pydantic · SQLAlchemy · PostgreSQL |
-| Engines & operations | OR-Tools · Docker · n8n · Official Python MCP SDK |
+| App | React Native 0.86 · Expo SDK 57 · TypeScript · Expo Router · Reanimated |
+| Data | SQLite (expo-sqlite), on the device |
+| Engines | TypeScript: energy simulation, PV model, Clipper polygon geometry, branch-and-bound scheduler |
+| On-device ML & AR | Google ML Kit text recognition · ViroReact · ARCore |
+| Online services | Firebase Authentication · Open-Meteo weather |
+| Testing | Jest (900+ tests) · TypeScript strict mode |
 
-## Towards MVP
+## Run it
 
-The core simulation workflow is implemented. Next are the remaining GUI overhaul, AR/VR, native dev-client/APK validation and user testing. Energy results and telemetry are simulated; the prototype does not control electrical equipment.
+The app needs a development build, not Expo Go, because AR, text recognition and Google sign-in are native modules.
 
-[Product status](docs/STATUS.md) · [Architecture](docs/ARCHITECTURE.md) · [MCP tools](docs/MCP.md)
+```bash
+cd mobile
+npm install --legacy-peer-deps
+npx expo run:android        # builds and installs the development build on a device or emulator
+```
+
+AR needs a real ARM phone with ARCore: ViroReact ships its renderer only for ARM (arm64-v8a, armeabi-v7a), so an x86_64 emulator cannot run the AR preview. Run the tests with `npm test` and the type check with `npx tsc --noEmit`.
+
+## Status
+
+The full workflow runs on the device. Next: user testing on phones, the remaining visual polish, and removing the retired Python backend from the repository. Energy figures are simulated estimates for planning, not engineering sign-off.
+
+[Product status](docs/STATUS.md) · [Architecture](docs/ARCHITECTURE.md)

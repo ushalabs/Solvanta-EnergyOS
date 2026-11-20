@@ -33,14 +33,23 @@ export const FloatingTabDock: React.FC<FloatingTabDockProps> = ({
 }) => {
   const { tokens, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const bottom = Math.max(insets.bottom, DOCK.minBottom);
 
   return (
+    <>
+    {/* Screen-coloured band from the middle of the dock to the screen edge: scrolled content passes behind it
+        instead of showing through below and around the dock. */}
+    <View
+      pointerEvents="none"
+      testID="dock-backdrop"
+      style={[styles.backdrop, { height: bottom + DOCK.height / 2, backgroundColor: tokens.background }]}
+    />
     <View
       pointerEvents="box-none"
       style={[
         styles.dockWrapper,
         {
-          bottom: Math.max(insets.bottom, DOCK.minBottom),
+          bottom,
         },
       ]}
     >
@@ -99,10 +108,18 @@ export const FloatingTabDock: React.FC<FloatingTabDockProps> = ({
         })}
       </View>
     </View>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
+  backdrop: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 998,
+  },
   dockWrapper: {
     position: 'absolute',
     left: 16,

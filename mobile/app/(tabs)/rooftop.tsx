@@ -17,6 +17,8 @@ import { PVDesigner, PVSummary, PVControl } from '../../src/components/PVDesigne
 import { ModalSheet } from '../../src/components/ModalSheet';
 import { PillSegmentedControl } from '../../src/components/PillSegmentedControl';
 import { ARCapabilityFallback } from '../../src/components/ARCapabilityFallback';
+import { SimulatedARPreview } from '../../src/components/SimulatedARPreview';
+import { layoutToAR } from '../../src/ar/roofToAr';
 import { AR_UNAVAILABLE_COPY } from '../../src/ar/arCapability';
 import type { ARCapability } from '../../src/ar/arCapability';
 import { detectARCapability } from '../../src/ar/detectAR';
@@ -259,6 +261,11 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
   const savedPanels = saved ? saved.panel_count : null;
   const arReason = checkingAR ? null : arCap === null ? 'Checking this device for AR…' : arCap !== 'ready' ? AR_UNAVAILABLE_COPY[arCap].title : !saved ? 'Save a roof layout first. AR shows the last saved layout.' : null;
   const arBlocked = checkingAR || arReason !== null;
+  // Without AR on this device, show what AR would place: the saved layout, simulated in perspective.
+  const simulatedAR = (() => {
+    if (arCap === null || arCap === 'ready' || !saved?.panels.length) return null;
+    try { return layoutToAR(saved); } catch { return null; }
+  })();
   const calcOff = !building.id || busy;
   const footer = tab === 'photo'
     ? <Action title="Continue to Design" onPress={() => setTab('design')} />
@@ -318,6 +325,7 @@ function RooftopWorkspace({picker}:{picker:ReturnType<typeof useBuildings>}) {
       </View>
     </View>
     <View style={shown(tab === 'ar')}>
+      {simulatedAR && <SimulatedARPreview layout={simulatedAR} />}
       <Card><CardHeader title="AR status" subtitle="Optional visualization. The 2D layout stays available." icon={<ScanLine size={18} color={t.limeText} />} />
         <View style={{ gap: 4 }}>{[
           ['This device', arCap === null ? DASH : arCap === 'ready' ? 'AR supported' : 'AR not available'],
